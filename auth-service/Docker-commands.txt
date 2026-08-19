@@ -1,0 +1,6 @@
+docker login -u karthick1986 -p Kart96860!
+mvn clean package -DskipTests
+docker build -t auth-service .
+docker run -d -p 4001:8080 auth-service
+docker tag auth-service karthick1986/easternfin-microservices:auth-service-v1.0.11
+docker push karthick1986/easternfin-microservices:auth-service-v1.0.11

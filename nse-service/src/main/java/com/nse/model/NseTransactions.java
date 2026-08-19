@@ -1,0 +1,76 @@
+package com.nse.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.util.Date;
+
+@Entity
+@Data
+@Table(name = "nse_transactions")
+public class NseTransactions {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String url;
+    @Column(columnDefinition = "TEXT")
+    private String nse_request;
+    @Column(columnDefinition = "TEXT")
+    private String nse_response;
+
+    private String return_msg;
+    private String service_return_code;
+    private String service_msg;
+    private String reg_id;
+    private String payment_link;
+    private String pan;
+    private String name;
+    private String branch;
+    private String rm_name;
+    private String subbroker_name;
+    private String client_name;
+    private String iin_number;
+    private String scheme_name;
+    private String scheme_code;
+    private String folio_no;
+    private String amount_units;
+    private Date start_date;
+    private Date end_date;
+    private String frequency;
+    private String period_day;
+    private String umrn_no;
+    private String purchase_type;
+    private String payment_ref_no;
+    private String unique_number;
+    private String auto_trxn_no;
+    private String sip_reg_no;
+    private String payment_mode;
+    private Double topup_amount;
+    private String bank_acc_no;
+    private String transaction_number;
+    private String application_number;
+    private String to_scheme_code;
+    private String to_scheme_name;
+    private String transaction_type;
+    private String transaction_status;
+    private String payment_status;
+    private String active_ceased_status;
+    private String remarks;
+    private String mandate_id;
+    private String mandate_status;
+    private String emandate_auth_flag;
+    private String app_received_flag;
+    private Date transaction_date;
+    private Integer user_id;
+    private String register_source;
+    private String broker_code;
+    private String euin_number;
+    private String cc_received;
+    private String fund_trans_to_amc;
+    private String refund_status;
+    private String refund_amount;
+    private Integer first_order_today;
+    @Transient
+    private String logo;
+}

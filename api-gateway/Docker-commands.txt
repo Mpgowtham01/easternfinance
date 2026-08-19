@@ -1,0 +1,10 @@
+docker login -u karthick1986 -p Kart96860!
+mvn clean package -DskipTests
+docker build -t api-gateway .
+#docker run -d -p 4002:8080 api-gateway
+docker tag api-gateway karthick1986/easternfin-microservices:api-gateway-v1.0.05
+docker push karthick1986/easternfin-microservices:api-gateway-v1.0.05
+
+docker run -d --name product-service --network easternfin -p 4003:8080 product-service
+docker run -d --name auth-service --network easternfin -p 4001:8080 auth-service
+docker run -d --name api-gateway --network easternfin -p 4002:8080 api-gateway

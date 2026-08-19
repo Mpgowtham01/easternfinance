@@ -1,0 +1,104 @@
+package com.nse.response;
+
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class InvestorSchemeWiseTransactionResponse
+{
+    String AMC_CODE;
+    String FOLIO_NO;
+    String PRODCODE;
+    String SCHEME;
+    String scheme_amfi_short_name;
+    String INV_NAME;
+    String TRXNTYPE;
+    Integer TRXNNO;
+    String TRXNMODE;
+    String TRXNSTAT;
+    String USERCODE;
+    Integer USRTRXNO;
+    Date TRADDATE;
+    Date POSTDATE;
+    Double PURPRICE;
+    Double UNITS;
+    Double AMOUNT;
+    String BROKCODE;
+    String SUBBROK;
+    Double BROKPERC;
+    Double BROKCOMM;
+    Integer ALTFOLIO;
+    Date REP_DATE;
+    String TIME1;
+    String TRXNSUBTYP;
+    String APPLICATIO;
+    String TRXN_NATUR;
+    Double TAX;
+    Double TOTAL_TAX;
+    String TE_15H;
+    String MICR_NO;
+    String REMARKS;
+    String SWFLAG;
+    String OLD_FOLIO;
+    Integer SEQ_NO;
+    String REINVEST_F;
+    String MULT_BROK;
+    Double STT;
+    String LOCATION;
+    String SCHEME_TYP;
+    String TAX_STATUS;
+    Double LOADS;
+    String SCANREFNO;
+    String PAN;
+    Integer INV_IIN;
+    String TARG_SRC_S;
+    String TRXN_TYPE_;
+    String TICOB_TRTY;
+    String TICOB_TRNO;
+    String TICOB_POST;
+    String DP_ID;
+    Double TRXN_CHARG;
+    Double ELIGIB_AMT;
+    String SRC_OF_TXN;
+    String TRXN_SUFFI;
+    Double SIPTRXNNO;
+    String TER_LOCATI;
+    String EUIN;
+    String EUIN_VALID;
+    String EUIN_OPTED;
+    String SUB_BRK_AR;
+    Double TOTAL_UNITS;
+    Double purchase_average_price;
+    Double total_amount;
+    Double current_cost;
+    Double current_value;
+    Double total_inflow_amount;
+    Integer user_id;
+    String branch;
+    String rm_name;
+    String subbroker_name;
+    Date redemption_date;
+    Double redemption_nav;
+    Double redemption_units;
+    Double redemption_amount;
+    Double STAMP_DUTY;
+    String ind_amt = "0";
+    String TRADDATE_str = "";
+    String PURPRICE_str = "0";
+    String UNITS_str = "0";
+    String STAMP_DUTY_str = "0";
+    String TOTAL_TAX_str = "0";
+    String STT_str = "0";
+    String total_amount_str = "0";
+    String TOTAL_UNITS_str = "0";
+    String Registrar;
+
+    String AMOUNT_str;
+    String BANK_NAME;
+    String ACCOUNT_NUMBER;
+    String  LOADS_str = "0";
+    Double purchase_units;
+
+    private String logo;
+}

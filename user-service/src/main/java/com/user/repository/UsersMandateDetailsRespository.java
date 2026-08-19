@@ -1,0 +1,65 @@
+package com.user.repository;
+
+import com.user.model.UsersMandateDetails;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface UsersMandateDetailsRespository extends JpaRepository<UsersMandateDetails, Integer>
+{
+    @Query("FROM UsersMandateDetails u WHERE u.user_id = :user_id AND u.online_flag = 'NSE' AND u.online_code = :online_code AND u.nse_ach = :nse_ach AND u.client_name = :client_name")
+    Optional<UsersMandateDetails> getNseUserMandateDetailsByUmrn(
+            @Param("user_id") Integer userId,
+            @Param("online_code") String onlineCode,
+            @Param("nse_ach") String nseAch,
+            @Param("client_name") String clientName
+    );
+
+    @Query("FROM UsersMandateDetails u WHERE u.user_id = :userId AND u.online_flag = :onlineFlag AND u.online_code = :onlineCode AND u.bank_account_number = :bankAccountNumber AND u.client_name = :clientName")
+    List<UsersMandateDetails> findByAllFields(
+            @Param("userId") Integer userId,
+            @Param("onlineFlag") String onlineFlag,
+            @Param("onlineCode") String onlineCode,
+            @Param("bankAccountNumber") String bankAccountNumber,
+            @Param("clientName") String clientName
+    );
+
+    @Query("FROM UsersMandateDetails m WHERE m.online_id = :online_id ORDER BY m.id ASC")
+    List<UsersMandateDetails> findByOnlineId(@Param("online_id") Integer online_id);
+
+    @Query(
+            value = "SELECT * FROM users_mandate_details " +
+                    "WHERE user_id = :user_id " +
+                    "AND client_name = :client_name " +
+                    "AND online_code = :online_code " +
+                    "AND online_flag = :online_flag " +
+                    "AND broker_code = :broker_code",
+            nativeQuery = true
+    )
+    List<UsersMandateDetails> findMandateDetails(
+            @Param("user_id") Integer user_id,
+            @Param("client_name") String client_name,
+            @Param("online_code") String online_code,
+            @Param("online_flag") String online_flag,
+            @Param("broker_code") String broker_code
+    );
+
+    @Query(
+            value = "SELECT * FROM users_mandate_details " +
+                    "WHERE client_name = :client_name " +
+                    "AND online_code = :online_code " +
+                    "AND online_flag = :online_flag",
+            nativeQuery = true
+    )
+    List<UsersMandateDetails> findMandateDetailsByClientCode(
+            @Param("client_name") String client_name,
+            @Param("online_code") String online_code,
+            @Param("online_flag") String online_flag
+    );
+
+}
