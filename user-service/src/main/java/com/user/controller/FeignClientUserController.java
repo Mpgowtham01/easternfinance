@@ -404,11 +404,11 @@ public class FeignClientUserController
     @Hidden
     @PostMapping("/saveUserRegStatus")
     public ResponseEntity<?> saveUserRegStatus(@RequestHeader("Authorization") String token) {
-        User user = null;
+        UsersOnlineRegDetails user = null;
         try {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
 
-            Optional<User> userOpt = userService.getUserById(Integer.parseInt(userid));
+            Optional<UsersOnlineRegDetails> userOpt = userService.getUserById(Integer.parseInt(userid));
 
             if (userOpt.isPresent()) {
                 user = userOpt.get();
@@ -1383,7 +1383,7 @@ public class FeignClientUserController
 
 	@Hidden
 	@PostMapping("/saveUser")
-	public ResponseEntity<String> saveUserFromNse(@RequestBody User user) {
+	public ResponseEntity<String> saveUserFromNse(@RequestBody UsersOnlineRegDetails user) {
         System.out.println("user = " + user);
 		userService.saveOrUpdateUser(user);
 		return ResponseEntity.ok("User saved successfully");

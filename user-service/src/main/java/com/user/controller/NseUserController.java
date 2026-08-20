@@ -80,10 +80,10 @@ public class NseUserController
     UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
 
     @Autowired
-    UsersBankDetailsRepository usersBankDetailsRepository;
+    UsersNomineeDetailsRepository usersNomineeDetailsRepository;
 
     @Autowired
-    UsersNomineeDetailsRepository usersNomineeDetailsRepository;
+    UsersBankDetailsRepository usersBankDetailsRepository;
 
     @Operation
     (
@@ -1246,15 +1246,15 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<UsersOnlineRegDetails> userOpt = userService.getUserById(userId);
 
             if (userOpt.isEmpty())
             {
                 return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
 
-            User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails user = userOpt.get();
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1276,7 +1276,7 @@ public class NseUserController
                 return UserUtils.errorResponse("Could not create onboarding record", HttpStatus.INTERNAL_SERVER_ERROR);
             }
             if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number())) {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
+                List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
 
                 if (userDetailsOpt != null && !userDetailsOpt.isEmpty()) {
                     userDetails = userDetailsOpt.get(0);
@@ -1361,15 +1361,17 @@ public class NseUserController
 
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
-            Optional<User> userOpt = userService.getUserById(Integer.parseInt(userid));
+            Optional<UsersOnlineRegDetails> userOpt = userService.getUserById(Integer.parseInt(userid));
 
             if (userOpt.isEmpty())
             {
                 return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
 
-            User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+
+            UsersOnlineRegDetails user = userOpt.get();
+
+            UsersBankDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1392,7 +1394,7 @@ public class NseUserController
             }
             if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
             {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
+                List<UsersBankDetails> userDetailsOpt = usersBankDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
 
                 if (userDetailsOpt != null && !userDetailsOpt.isEmpty()) {
                     userDetails = userDetailsOpt.get(0);
@@ -1400,7 +1402,7 @@ public class NseUserController
 
                 if (userDetails != null) {
                     userDetails = BankInfoMapper.dtoToUserBseNseDetails(dto, userDetails);
-                    userBseNseDetailsService.saveOrUpdateUserBseNseDetails(userDetails);
+                    usersBankDetailsRepository.save(userDetails);
                 }
                 {
                     user = BankInfoMapper.dtoToUser(dto, user);

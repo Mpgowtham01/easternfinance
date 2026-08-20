@@ -2,6 +2,7 @@ package com.user.mapper;
 
 import com.user.dto.JointHolderInfoDTO;
 import com.user.model.User;
+import com.user.model.UsersOnlineRegDetails;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,7 +10,8 @@ import java.util.List;
 
 public class JoinHolderInfoMapper
 {
-    public static User dtoToUser(List<JointHolderInfoDTO> dtoList, User user) {
+    public static
+    UsersOnlineRegDetails dtoToUser(List<JointHolderInfoDTO> dtoList, UsersOnlineRegDetails user) {
         if (dtoList == null || user == null) return null;
 
         for (JointHolderInfoDTO dto : dtoList)
@@ -58,7 +60,8 @@ public class JoinHolderInfoMapper
         return user;
     }
 
-    public static List<JointHolderInfoDTO> userToDto(User user)
+    public static List<JointHolderInfoDTO> userToDto(
+            UsersOnlineRegDetails user)
     {
         if (user == null) return Collections.emptyList();
 
@@ -105,7 +108,7 @@ public class JoinHolderInfoMapper
         return dtoList;
     }
 
-    public static UserBseNseDetails dtoToUserBseNseDetails(List<JointHolderInfoDTO> dtoList, UserBseNseDetails user) {
+    public static UsersOnlineRegDetails dtoToUserBseNseDetails(List<JointHolderInfoDTO> dtoList, UsersOnlineRegDetails user) {
         if (dtoList == null || user == null) return null;
 
         for (JointHolderInfoDTO dto : dtoList)
@@ -158,7 +161,8 @@ public class JoinHolderInfoMapper
         return value == null ? "" : value.trim();
     }
 
-    public static List<JointHolderInfoDTO> userBseNseDetailsToDto(UserBseNseDetails user) {
+    public static List<JointHolderInfoDTO> userBseNseDetailsToDto(
+            UsersOnlineRegDetails user) {
         if (user == null) return Collections.emptyList();
 
         List<JointHolderInfoDTO> dtoList = new ArrayList<>();

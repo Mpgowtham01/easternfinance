@@ -2,13 +2,15 @@ package com.user.mapper;
 
 import com.user.dto.BankInfoDTO;
 import com.user.model.User;
+import com.user.model.UsersBankDetails;
+import com.user.model.UsersOnlineRegDetails;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class BankInfoMapper
 {
-    public static User dtoToUser(BankInfoDTO dto, User user)
+    public static UsersOnlineRegDetails dtoToUser(BankInfoDTO dto, UsersOnlineRegDetails user)
     {
         if (dto == null || user == null) return null;
 
@@ -44,21 +46,21 @@ public class BankInfoMapper
         return dto;
     }
 
-    public static UserBseNseDetails dtoToUserBseNseDetails(BankInfoDTO dto, UserBseNseDetails user)
+    public static UsersBankDetails dtoToUserBseNseDetails(BankInfoDTO dto, UsersBankDetails user)
     {
         if (dto == null || user == null) return null;
 
-        user.setBank_ifsc_code1(dto.getIfscCode());
-        user.setBank_micr_code1(dto.getMicrCode());
-        user.setBank_code1(dto.getBankCode());
-        user.setBank_name1(dto.getBankName());
-        user.setBank_address1(dto.getBankAddress());
-        user.setBank_branch1(dto.getBranchName());
-        user.setBank_account_number1(dto.getAccountNumber());
-        user.setBank_account_holder_name1(dto.getAccountHolderName());
-        user.setBank_account_type1(dto.getAccountType());
+        user.setBank_ifsc_code(dto.getIfscCode());
+        user.setBank_micr_code(dto.getMicrCode());
+        user.setBank_code(dto.getBankCode());
+        user.setBank_name(dto.getBankName());
+        user.setBank_address(dto.getBankAddress());
+        user.setBank_branch(dto.getBranchName());
+        user.setBank_account_number(dto.getAccountNumber());
+        user.setBank_account_holder_name(dto.getAccountHolderName());
+        user.setBank_account_type(dto.getAccountType());
 //        user.setBank_proof1("");
-        user.setDefault_bank1("Y"); // hardcoded as default
+        user.setDefault_bank("Y"); // hardcoded as default
 
         return user;
     }
