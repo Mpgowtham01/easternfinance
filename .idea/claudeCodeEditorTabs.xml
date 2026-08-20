@@ -14,7 +14,7 @@
     </option>
     <option name="sessionTitles">
       <map>
-        <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="@Entity @Table(name = &quot;users_online_reg_details&quot;)" />
+        <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="localhost:61789/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821?workingDir=D%3A%2FGithub%2Feasternfinance&amp;panelId=98933a04-11fb-477c-b714-16ffb21df484&amp;theme=dark" />
       </map>
     </option>
   </component>

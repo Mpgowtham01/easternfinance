@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -74,9 +75,6 @@ public class NseUserController
     private String vendorLogoPath;
 
     @Autowired
-    UserBseNseDetailsRespository userBseNseDetailsRespository;
-
-    @Autowired
     UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
 
     @Autowired
@@ -84,6 +82,9 @@ public class NseUserController
 
     @Autowired
     UsersBankDetailsRepository usersBankDetailsRepository;
+
+    @Autowired
+    UsersOnlineRegDetailsService usersOnlineRegDetailsService;
 
     @Operation
     (
@@ -1062,9 +1063,11 @@ public class NseUserController
 
             MymfboxOnboarding onboarding = null;
 
-            if(!is_MultiReg.isEmpty()) {
+            if(!is_MultiReg.isEmpty())
+            {
                 onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
-            }else{
+            }else
+            {
                 onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
             }
 
@@ -1076,32 +1079,21 @@ public class NseUserController
             if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
             {
 
-                List<UsersNomineeDetails> userDetailsOpts = usersNomineeDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
+                UsersNomineeDetails userDetailsOpts = usersNomineeDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
 
-                if (userDetailsOpts != null && !userDetailsOpts.isEmpty()) {
-                    nomineeDetails = userDetailsOpts.get(0);
+                if (userDetailsOpts != null) {
+                    nomineeDetails = userDetailsOpts;
                 }
 
-                if(userDetailsOpts != null && !userDetailsOpts.isEmpty())
-                {
-                    UsersNomineeDetails nomineeInfo = NomineeInfoMapper.dtoToUserBseNseDetails(dtoList, nomineeDetails);
-                    nomineeInfo.setUser_id(nomineeDetails.getUser_id());
-                    nomineeInfo.setOnline_code(nomineeDetails.getOnline_code());
-                    nomineeInfo.setBroker_code(nomineeDetails.getBroker_code());
-                    nomineeInfo.setNumber_of_nominee(String.valueOf(dtoList.size()));
-                    nomineeInfo.setCreated_date(new Date());
-                    nomineeInfo.setClient_name(nomineeDetails.getClient_name());
+                UsersNomineeDetails nomineeInfo = NomineeInfoMapper.dtoToUserBseNseDetails(dtoList, nomineeDetails);
+                nomineeInfo.setUser_id(nomineeDetails.getUser_id());
+                nomineeInfo.setOnline_code(nomineeDetails.getOnline_code());
+                nomineeInfo.setBroker_code(nomineeDetails.getBroker_code());
+                nomineeInfo.setNumber_of_nominee(String.valueOf(dtoList.size()));
+                nomineeInfo.setCreated_date(new Date());
+                nomineeInfo.setClient_name(nomineeDetails.getClient_name());
 
-                    usersNomineeDetailsRepository.save(nomineeInfo);
-                }
-                else
-                {
-                    user = NomineeInfoMapper.dtoToUser(dtoList, user);
-                    userService.saveOrUpdateUser(user);
-                }
-            }else{
-                user = NomineeInfoMapper.dtoToUser(dtoList, user);
-                userService.saveOrUpdateUser(user);
+                usersNomineeDetailsRepository.save(nomineeInfo);
             }
             onboarding.setNomiee_info(true);
             onboardingService.saveOnboarding(onboarding);
@@ -1371,7 +1363,7 @@ public class NseUserController
 
             UsersOnlineRegDetails user = userOpt.get();
 
-            UsersBankDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1392,36 +1384,35 @@ public class NseUserController
             {
                 return UserUtils.errorResponse("Could not create onboarding record", HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
-            {
-                List<UsersBankDetails> userDetailsOpt = usersBankDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
 
-                if (userDetailsOpt != null && !userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                }
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.findByUseridAndClientName(onboarding.getUser_id(), user.getClient_name());
 
-                if (userDetails != null) {
-                    userDetails = BankInfoMapper.dtoToUserBseNseDetails(dto, userDetails);
-                    usersBankDetailsRepository.save(userDetails);
-                }
-                {
-                    user = BankInfoMapper.dtoToUser(dto, user);
-                    userService.saveOrUpdateUser(user);
-                }
-            }else
+            if(userDetailsOpt.isEmpty())
             {
-                user = BankInfoMapper.dtoToUser(dto, user);
-                userService.saveOrUpdateUser(user);
+                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
-//            UserBseNseDetails bankInfo = BankInfoMapper.dtoToUserBseNseDetails(dto, userDetails);
-//
-//            bankInfo.setUser_id(userDetails.getUser_id());
-//            bankInfo.setNse_iin_number(userDetails.getNse_iin_number());
-//            bankInfo.setBroker_code(userDetails.getBroker_code());
-//            bankInfo.setClient_name(userDetails.getClient_name());
-//            bankInfo.setCreated_date(new Date());
-//
-//            userBseNseDetailsRespository.save(bankInfo);
+
+            userDetails = userDetailsOpt.get(0);
+
+            List<UsersBankDetails> usersBankDetailsOpt = usersBankDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
+
+            UsersBankDetails userBankDetails = null;
+            if(!usersBankDetailsOpt.isEmpty())
+            {
+                userBankDetails = usersBankDetailsOpt.stream() .filter(bank -> bank.getBank_account_number().equals(dto.getAccountNumber())).findFirst() .orElse(null);
+            }
+
+            UsersBankDetails bankInfo = BankInfoMapper.dtoToUserBseNseDetails(dto, userBankDetails);
+
+            bankInfo.setUser_id(userDetails.getUser_id());
+            bankInfo.setOnline_flag("NSE");
+            bankInfo.setOnline_code(userDetails.getNse_iin_number());
+            bankInfo.setOnline_id(userDetails.getId());
+            bankInfo.setBroker_code(userDetails.getBroker_code());
+            bankInfo.setClient_name(userDetails.getClient_name());
+            bankInfo.setCreated_date(new Date());
+
+            usersBankDetailsRepository.save(bankInfo);
 
             onboarding.setBank_info(true);
             onboarding.setIs_all_steps_completed(true);
@@ -1469,93 +1460,56 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            // 3. Fetch user
             Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (!userOpt.isPresent())
             {
-                return UserUtils.errorResponse("User not found1", HttpStatus.NOT_FOUND);
+                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
-            System.out.println("userOpt = " + userOpt);
-            User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
 
+            UsersOnlineRegDetails userDetails = null;
 
-//            Optional<UserBseNseDetails> userDetailsOpt = userBseNseDetailsService.getUserBseNseDetailsByUserIdAndClientName(user.getId(), user.getClient_name());
-//
-//            if(userDetailsOpt.isEmpty())
-//            {
-//                return UserUtils.errorResponse("User not found2", HttpStatus.NOT_FOUND);
-//            }else
-//            {
-//                userDetails = userDetailsOpt.get();
-//            }
+            // 3. Fetch user
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.findByUseridAndClientName(userId, userOpt.get().getClient_name());
+            UsersOnlineRegDetails userDetail = userDetailsOpt.get(0);
+            List<UsersBankDetails> userBank = usersBankDetailsRepository.findByUseridAndClientName(userId, userOpt.get().getClient_name(), String.valueOf(userDetail.getId()));
+            Optional<UsersNomineeDetails> userNominee1 = usersNomineeDetailsRepository.findByUseridAndClientName(userId, userOpt.get().getClient_name(), String.valueOf(userDetail.getId()),"NSE");
+            UsersNomineeDetails userNominee = null;
 
-//            System.out.println("userDetailsOpt = " + userDetailsOpt);
+            if(userNominee1.isPresent())
+            {
+                userNominee = userNominee1.get();
+            }
+
+            if(userDetailsOpt == null)
+            {
+                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
+            }else
+            {
+                userDetails = userDetail;
+            }
+
             InvestorInfoDTO invest_info = null;
             PersonalInfoDTO personal_info = null;
             NriInfoDTO nri_info = null;
             ContactInfoDTO contact_info = null;
-            List<NomineeInfoDTO> nominee_info;
-            List<JointHolderInfoDTO> joint_holder_info;
-            BankInfoDTO bank_info = null;
+            List<NomineeInfoDTO> nominee_info = null;
+            List<JointHolderInfoDTO> joint_holder_info = null;
+            List<BankInfoDTO> bank_info = null;
 
-            // 4. Map and save
-            if(userDetails != null)
-            {
-                invest_info = InvestorInfoMapper.mapBseNseDetailsToDto(userDetails);
-            }else
-            {
-                invest_info = InvestorInfoMapper.mapUserToDto(user);
-            }
+            invest_info = InvestorInfoMapper.mapBseNseDetailsToDto(userDetails);
 
-            if(userDetails != null)
-            {
-                personal_info = PersonalInfoMapper.userBseNseDetailsToDto(userDetails);
-            }else
-            {
-                personal_info = PersonalInfoMapper.userToDto(user);
-            }
+            personal_info = PersonalInfoMapper.userBseNseDetailsToDto(userDetails);
 
-            if(userDetails != null)
-            {
-                nri_info = NriInfoMapper.userBseNseDetailsToDto(userDetails);
-            }else
-            {
-                nri_info = NriInfoMapper.userToDto(user);
-            }
+            nri_info = NriInfoMapper.userBseNseDetailsToDto(userDetails);
 
-            if(userDetails != null)
-            {
-                contact_info = ContactInfoMapper.userBseNseDetailsToDto(userDetails);
-            }else
-            {
-                contact_info = ContactInfoMapper.userToDto(user);
-            }
+            contact_info = ContactInfoMapper.userBseNseDetailsToDto(userDetails);
 
-            if(userDetails != null)
-            {
-                nominee_info = NomineeInfoMapper.userBseNseDetailsToDto(userDetails);
-            }else
-            {
-                nominee_info = NomineeInfoMapper.userToDto(user);
-            }
+            nominee_info = NomineeInfoMapper.userBseNseDetailsToDto(userNominee);
 
-            if(userDetails != null)
-            {
-                joint_holder_info = JoinHolderInfoMapper.userBseNseDetailsToDto(userDetails);
-            }else
-            {
-                joint_holder_info = JoinHolderInfoMapper.userToDto(user);
-            }
+            joint_holder_info = JoinHolderInfoMapper.userBseNseDetailsToDto(userDetails);
 
-            if(userDetails != null)
-            {
-                bank_info =  BankInfoMapper.userBseNseDetailsToDto(userDetails);
-            }else
-            {
-                bank_info = BankInfoMapper.userToDto(user);
-            }
+            bank_info = BankInfoMapper.userBseNseDetailsToDto(userBank);
             // 5. Succe
             return UserUtils.userSuccessResponse("Investor Information.", HttpStatus.OK, invest_info, personal_info, nri_info, nominee_info, joint_holder_info,contact_info,bank_info);
         }catch(Exception ex)
@@ -1585,7 +1539,7 @@ public class NseUserController
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
 
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (!userOpt.isPresent())
             {
@@ -1593,7 +1547,7 @@ public class NseUserController
             }
 
             User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1619,28 +1573,22 @@ public class NseUserController
             System.out.println("Onboarding OnlineId = " + onboarding.getUser_id());
             System.out.println("Onboarding clientName = " + onboarding.getClient_name());
             InvestorInfoDTO investor_info = null;
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
-            {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
 
-                if (!userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                } else {
-                    userDetails = new UserBseNseDetails();
-                    userDetails.setPan(user.getPan());
-                    userDetails.setBroker_code(user.getBroker_code());
-                }
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
 
-                System.out.println("user = " + user);
-                if (userDetails != null)
-                {
-                    investor_info = InvestorInfoMapper.mapBseNseDetailsToDto(userDetails);
-                }
-            }else
-            {
-                investor_info = InvestorInfoMapper.mapUserToDto(user);
+            if (!userDetailsOpt.isEmpty()) {
+                userDetails = userDetailsOpt.get(0);
+            } else {
+                userDetails = new UsersOnlineRegDetails();
+                userDetails.setPan(user.getPan());
+                userDetails.setBroker_code(user.getBroker_code());
             }
 
+            System.out.println("user = " + user);
+            if (userDetails != null)
+            {
+                investor_info = InvestorInfoMapper.mapBseNseDetailsToDto(userDetails);
+            }
             return ResponseEntity.ok(investor_info);
         }catch(Exception ex)
         {
@@ -1669,7 +1617,7 @@ public class NseUserController
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
 
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (!userOpt.isPresent())
             {
@@ -1677,7 +1625,7 @@ public class NseUserController
             }
 
             User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
             PersonalInfoDTO personal_info = null;
             Boolean isMultiReg = false;
 
@@ -1702,35 +1650,35 @@ public class NseUserController
                 return UserUtils.errorResponse("Onboarding details not found.", HttpStatus.INTERNAL_SERVER_ERROR);
             }
             System.out.println("onboarding = " + onboarding);
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
-            {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
 
-                if (!userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                    System.out.println("Fetched NSE user details: " + userDetails);
-                    personal_info = PersonalInfoMapper.userBseNseDetailsToDto(userDetails);
-                } else {
-                    System.out.println("No inactive NSE user details found, using base user data");
-                    personal_info = PersonalInfoMapper.userToDto(user);
-                }
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
 
-            }else
+            if(!userDetailsOpt.isEmpty())
             {
-                personal_info = PersonalInfoMapper.userToDto(user);
+                userDetails = userDetailsOpt.get(0);
             }
 
-//            String dob = personal_info.getDob();
+            personal_info = PersonalInfoMapper.userBseNseDetailsToDto(userDetails);
 
-//            if(StringHelper.isEmpty(dob))
-//            {
-//                dob = user.getDate_of_birth();
-//
-//                if(StringHelper.isNotEmpty(dob))
-//                {
-//                    personal_info.setDob(dob);
-//                }
-//            }
+            if(userDetails != null)
+            {
+                String dob = personal_info.getDob();
+
+                if(StringHelper.isEmpty(dob))
+                {
+                    dob = user.getDate_of_birth();
+
+                    if(dob.contains("/"))
+                    {
+                        dob = dob.replace("/", "-");
+                    }
+
+                    if(StringHelper.isNotEmpty(dob))
+                    {
+                        personal_info.setDob(dob);
+                    }
+                }
+            }
 
             return ResponseEntity.ok(personal_info);
         }catch(Exception ex)
@@ -1760,7 +1708,7 @@ public class NseUserController
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
 
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (!userOpt.isPresent())
             {
@@ -1768,7 +1716,7 @@ public class NseUserController
             }
 
             User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1792,21 +1740,15 @@ public class NseUserController
 
             NriInfoDTO nri_info = null;
 
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number())) {
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
+            if(!userDetailsOpt.isEmpty())
+            {
+                userDetails = userDetailsOpt.get(0);
+            }
 
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
-                if (!userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                }
-
-                if (userDetails != null)
-                {
-                    nri_info = NriInfoMapper.userBseNseDetailsToDto(userDetails);
-                }else{
-                    nri_info = NriInfoMapper.userToDto(user);
-                }
-            }else{
-                nri_info = NriInfoMapper.userToDto(user);
+            if(userDetails != null)
+            {
+                nri_info = NriInfoMapper.userBseNseDetailsToDto(userDetails);
             }
 
             return ResponseEntity.ok(nri_info);
@@ -1837,7 +1779,7 @@ public class NseUserController
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
 
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (userOpt.isEmpty())
             {
@@ -1845,7 +1787,7 @@ public class NseUserController
             }
 
             User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1868,23 +1810,16 @@ public class NseUserController
                 return UserUtils.errorResponse("Onboarding details not found.", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            ContactInfoDTO contact_info = null;
-
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
+            if(!userDetailsOpt.isEmpty())
             {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
-                if (!userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                }
-
-                if (userDetails != null)
-                {
-                    contact_info = ContactInfoMapper.userBseNseDetailsToDto(userDetails);
-                }else{
-                    contact_info = ContactInfoMapper.userToDto(user);
-                }
+                userDetails = userDetailsOpt.get(0);
             }
-            else{
+
+            ContactInfoDTO contact_info = (userDetails != null) ? ContactInfoMapper.userBseNseDetailsToDto(userDetails) : null;
+
+            if (contact_info == null || StringHelper.isEmpty(contact_info.getPincode()))
+            {
                 contact_info = ContactInfoMapper.userToDto(user);
             }
             return ResponseEntity.ok(contact_info);
@@ -1915,7 +1850,7 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (userOpt.isEmpty())
             {
@@ -1945,23 +1880,14 @@ public class NseUserController
             }
 
             List<NomineeInfoDTO> nominee_info = null;
-            UserBseNseDetails userDetails = null;
 
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
+            UsersNomineeDetails userDetailsOpt = usersNomineeDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
+
+            if(userDetailsOpt != null)
             {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
-                if (!userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                }
-
-                if (userDetails != null) {
-                    nominee_info = NomineeInfoMapper.userBseNseDetailsToDto(userDetails);
-                }else{
-                    nominee_info = NomineeInfoMapper.userToDto(user);
-                }
-            }else{
-                nominee_info = NomineeInfoMapper.userToDto(user);
+                nominee_info = NomineeInfoMapper.userBseNseDetailsToDto(userDetailsOpt);
             }
+
             return ResponseEntity.ok(nominee_info);
         }catch(Exception ex)
         {
@@ -1989,7 +1915,7 @@ public class NseUserController
             Integer userId = Integer.parseInt(userIdFromToken);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
 
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (userOpt.isEmpty())
             {
@@ -1997,7 +1923,7 @@ public class NseUserController
             }
 
             User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -2020,19 +1946,16 @@ public class NseUserController
             }
 
             List<JointHolderInfoDTO> joint_info = null;
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
+
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
+            if(!userDetailsOpt.isEmpty())
             {
-                List<UserBseNseDetails> userDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
-                if (!userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                }
-                if (userDetails != null) {
-                    joint_info = JoinHolderInfoMapper.userBseNseDetailsToDto(userDetails);
-                }else{
-                    joint_info = JoinHolderInfoMapper.userToDto(user);
-                }
-            }else{
-                joint_info = JoinHolderInfoMapper.userToDto(user);
+                userDetails = userDetailsOpt.get(0);
+            }
+
+            if(userDetails != null)
+            {
+                joint_info = JoinHolderInfoMapper.userBseNseDetailsToDto(userDetails);
             }
 
             return ResponseEntity.ok(joint_info);
@@ -2062,7 +1985,7 @@ public class NseUserController
         try
         {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            Optional<User> userOpt = userService.getUserById(Integer.parseInt(userid));
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(Integer.parseInt(userid));
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
 
             if (userOpt.isEmpty())
@@ -2071,7 +1994,7 @@ public class NseUserController
             }
 
             User user = userOpt.get();
-            UserBseNseDetails userDetails = null;
+            UsersOnlineRegDetails userDetails = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -2092,23 +2015,16 @@ public class NseUserController
             {
                 return UserUtils.errorResponse("Could not create onboarding record", HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            BankInfoDTO bank_info = null;
+            List<BankInfoDTO> bank_info = null;
             System.out.println("ONLINE ID = " + onboarding.getUser_id());
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
-            {
-                List<UserBseNseDetails> usersBankDetailsOpt = userBseNseDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
-                if (!usersBankDetailsOpt.isEmpty()) {
-                    userDetails = usersBankDetailsOpt.get(0);
-                }
 
-                if (userDetails != null) {
-                    bank_info = BankInfoMapper.userBseNseDetailsToDto(userDetails);
-                }else{
-                    bank_info = BankInfoMapper.userToDto(user);
-                }
-            }else{
-                bank_info = BankInfoMapper.userToDto(user);
+            List<UsersBankDetails> usersBankDetailsOpt = usersBankDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
+
+            if(usersBankDetailsOpt != null)
+            {
+                bank_info = BankInfoMapper.userBseNseDetailsToDto(usersBankDetailsOpt);
             }
+            
             return ResponseEntity.ok(bank_info);
         }catch(Exception ex)
         {
@@ -2453,7 +2369,7 @@ public class NseUserController
         MymfboxOnboarding onboarding = null;
         try
         {
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
 
             if (userOpt.isPresent())
             {
@@ -3253,6 +3169,7 @@ public class NseUserController
             @RequestParam(required = false) String nominee3_mobile,
             @RequestParam(required = false) String nominee3_guard_name,
             @RequestParam(required = false) String nominee3_guard_pan,
+            @RequestParam(required = false) String nominee_soa,
             @RequestParam(required = false) String nominee3_guard_relationship,
             @RequestParam(required = false) String networth_dob,
             @RequestParam(required = false) String networth_amount,
@@ -3275,15 +3192,14 @@ public class NseUserController
             @RequestParam(required = false) String mobile_isd_code,
             @RequestParam(required = false) String joint_holder_mobile1_isd_code,
             @RequestParam(required = false) String joint_holder_mobile2_isd_code,
-            @RequestParam(required = false) String arn_number
-
+            @RequestParam(required = false) String arn_number,
+            @RequestParam(required = false) String nominee_opt_flag
     )
     {
         String client_name = "";
         try
         {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            System.out.println("User ID from token: " + userid);
 
             iin_number = UserUtils.checkParem(iin_number);
             userid = UserUtils.checkParem(userid);
@@ -3459,30 +3375,89 @@ public class NseUserController
             joint_holder_mobile1_isd_code = UserUtils.checkParem(joint_holder_mobile1_isd_code);
             joint_holder_mobile2_isd_code = UserUtils.checkParem(joint_holder_mobile2_isd_code);
             arn_number = UserUtils.checkParem(arn_number);
+            nominee_soa = UserUtils.checkParem(nominee_soa);
+            nominee_opt_flag = UserUtils.checkParem(nominee_opt_flag);
 
-            // 3. Fetch user
-            Optional<User> userOpt = userService.getUserById(Integer.parseInt(userid));
-
-            if (!userOpt.isPresent())
+            if(!nominee_soa.isEmpty())
             {
-                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
+                nominee_soa = nominee_soa;
+            }else{
+                nominee_soa = "N";
             }
 
-            User user = userOpt.get();
-            client_name = user.getClient_name();
+            User userMain = userRepository.findById(Integer.parseInt(userid)).orElse(null);
+
+            if (userMain == null)
+            {
+                return UserUtils.errorResponse("User not found", HttpStatus.BAD_REQUEST);
+            }
+
+            if(StringHelper.isNotEmpty(iin_number))
+            {
+                UsersOnlineRegDetails userDetails = checkNseIinNumber.CheckNewIinNumber(userMain.getClient_name(),iin_number, arn_number);
+                if(userDetails == null) {
+
+                }else{
+                    if(userDetails.getNse_active() == 1)
+                    {
+                        return UserUtils.errorResponse("This client code is already exist. Please create a new client code", HttpStatus.BAD_REQUEST);
+                    }else{
+
+                    }
+                }
+            }
+
+            UsersOnlineRegDetails user = null;
+
+            if(StringHelper.isNotEmpty(iin_number))
+            {
+                user = userOnlineRegDetailsRespository.findByUserIdAndOnlineCodeAndIinNumber(Integer.valueOf(userid), "NSE", arn_number,iin_number);
+            }else
+            {
+                user = userOnlineRegDetailsRespository.findByUserIdAndOnlineCode(Integer.valueOf(userid), "NSE", arn_number);
+            }
+
+            if(user == null)
+            {
+                user= new UsersOnlineRegDetails();
+            }
+
+            user.setUser_id(Integer.parseInt(userid));
+            user.setName(userMain.getName());
+            user.setPan(userMain.getPan());
+            user.setMobile(userMain.getMobile());
+            user.setEmail(userMain.getEmail());
+            user.setAlter_email(userMain.getAlter_email());
+            user.setAlter_mobile(userMain.getAlter_mobile());
+            user.setStreet_1(userMain.getStreet_1());
+            user.setStreet_2(userMain.getStreet_2());
+            user.setStreet_3(userMain.getStreet_3());
+            user.setCity(userMain.getCity());
+            user.setPincode(userMain.getPincode());
+            user.setState(userMain.getState());
+            user.setCountry(userMain.getCountry());
+            user.setFather_name(userMain.getFather_name());
+            user.setGender(userMain.getGender());
+            user.setDate_of_birth(userMain.getDate_of_birth());
+            user.setPhone_office(userMain.getPhone_office());
+            user.setPhone_residence(userMain.getPhone_residence());
+            user.setBroker_code(userMain.getBroker_code());
+            user.setClient_name(userMain.getClient_name());
+
+            client_name = userMain.getClient_name();
+
 
             String euin = "";
             if(!arn_number.isEmpty())
             {
-                BseNseKey nsekey = bseNseKeyRepository.findByClientName(client_name);
+                BseNseKey list = bseNseKeyRepository.findByClientName(client_name);
 
-                String broker_code1 = nsekey.getBrokerCode();
+                String broker_code1 = list.getBrokerCode();
 
                 if(broker_code1 == null){broker_code1 = "";};
 
-                euin = nsekey.getEuin();
+                euin = list.getEuin();
                 euin = euin.split(",")[0];
-
             }
 
             String iin_number_new = checkNseIinNumber.CheckNseIinNumbers(user.getClient_name());
@@ -3495,7 +3470,14 @@ public class NseUserController
             {
                 if(StringHelper.isNotEmpty(pan))
                 {
-                    user.setNse_iin_number(pan.toUpperCase());
+                    boolean iin_number_flag = checkNseIinNumber.CheckNewIinNumbers(userMain.getClient_name(),pan.toUpperCase());
+                    if(!iin_number_flag)
+                    {
+                        user.setNse_iin_number(pan.toUpperCase());
+                    }else
+                    {
+                        user.setNse_iin_number(iin_number_new.toUpperCase());
+                    }
                 }
                 else
                 {
@@ -3507,20 +3489,19 @@ public class NseUserController
             user.setName(name.replaceAll("\\s+", " ").trim());
             user.setEmail(email);
             user.setMobile(mobile);
-//            user.setMobile_isd_code(mobile_isd_code);
+            user.setMobile_isd_code(mobile_isd_code);
             user.setMobile_relation(mobile_relation);
             user.setEmail_relation(email_relation);
-//            user.setAlter_email(alter_email);
-//            user.setAlter_mobile(alter_mobile);
+            user.setAlter_email(alter_email);
+            user.setAlter_mobile(alter_mobile);
             user.setDate_of_birth(dob);
-//            user.setDate_of_birth_greeting(dob);
             user.setFather_name(father_name);
             user.setPhone_office(office_phone);
             user.setPhone_residence(residence_phone);
             user.setPlace_of_birth(place_birth);
             user.setCountry_of_birth(country_birth);
             user.setCountry_birth_code(country_birth_code);
-//            user.setInv_category(inv_category);
+            user.setInv_category(inv_category);
             user.setOccupation(occupation);
             user.setOccupation_code(occupation_code);
             if(occupation_code.equalsIgnoreCase("99") && !occupation_other.isEmpty())
@@ -3548,6 +3529,7 @@ public class NseUserController
             {
                 user.setPolitical("Not Applicable");
             }
+            user.setOnline_flag("NSE");
             user.setPincode(pincode);
             user.setCity(city);
             user.setState(state);
@@ -3556,23 +3538,7 @@ public class NseUserController
             user.setStreet_2(address2);
             user.setStreet_3(address3);
             user.setState_code(state_code);
-            user.setBank_ifsc_code1(ifsc_code);
-            user.setBank_micr_code1(micr_code);
-            user.setBank_name1(bank_name);
-            user.setBank_code1(bank_code);
-            user.setBank_branch1(branch_name);
-            user.setBank_address1(bank_address);
-            user.setBank_account_number1(account_number);
-            user.setBank_account_holder_name1(account_holder_name);
-            user.setBank_account_type1(account_type);
-            user.setDefault_bank1("Y");
-//            user.setBank_proof1(bank_proof);
-            user.setNse_ach_flag1(0);
-            user.setNse_ach1("");
-            user.setNse_ach_amount1("");
-            user.setNse_ach_approved1(0);
-            user.setNse_ach_rej_reason1("");
-            user.setNse_ach_created_date1(null);
+
             user.setGuard_name(guard_name);
             user.setGuard_pan(guard_pan);
             user.setGuard_dob(guard_dob);
@@ -3580,7 +3546,7 @@ public class NseUserController
             user.setGuard_email(guard_email);
             user.setGuard_relationship(guard_relation);
             user.setGuard_account_relation(guard_account_relation);
-//            user.setGuard_relation_proof(gaurd_relation_proof);
+            user.setGuard_relation_proof(gaurd_relation_proof);
             user.setTax_status_code(tax_status);
             user.setTax_status(tax_status_des);
             user.setJoint_holder_name1(joint_holder_name);
@@ -3592,7 +3558,7 @@ public class NseUserController
             user.setJoint_holder_mobile1(joint_holder_mobile);
 //            user.setJoint_holder_mobile1_isd_code(joint_holder_mobile1_isd_code);
             user.setJoint_holder_mobile2(joint_holder_mobile1);
-//            user.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
+            user.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
             user.setJoint_holder_email_relation1(joint_holder_email_relation);
             user.setJoint_holder_email_relation2(joint_holder_email_relation1);
             user.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
@@ -3603,8 +3569,9 @@ public class NseUserController
             user.setHolding_nature_code(holding_nature);
             user.setHolding_nature(holding_nature_desc);
             user.setGender(gender);
-            user.setMarital_status("");
+//            user.setMarital_status("");
             user.setNse_customer(0);
+            user.setNse_active(0);
             user.setClient_name(client_name);
             user.setNri_address1(nri_address1);
             user.setNri_address2(nri_address2);
@@ -3647,82 +3614,199 @@ public class NseUserController
             user.setJoint_holder_political_code1(joint_holder_political);
             user.setJoint_holder_political_code2(joint_holder_political1);
 
-            user.setNominee1_type(nominee_type);
-            user.setNominee1_guard_name(nominee1_guard_name);
-            user.setNominee1_guard_pan(nominee1_guard_pan);
-            user.setNominee2_type(nominee2_type);
-            user.setNominee2_guard_name(nominee2_guard_name);
-            user.setNominee2_guard_pan(nominee2_guard_pan);
-            user.setNominee3_type(nominee3_type);
-            user.setNominee3_guard_name(nominee3_guard_name);
-            user.setNominee3_guard_pan(nominee3_guard_pan);
-            user.setNumber_of_nominee(number_of_nominee);
-
-            user.setNominee1_name(nominee1_name);
-            user.setNominee1_dob(nominee1_dob);
-            user.setNominee1_address1(nominee1_address1);
-            user.setNominee1_address2(nominee1_address2);
-            user.setNominee1_address3(nominee1_address3);
-            user.setNominee1_pincode(nominee1_pincode);
-            user.setNominee1_city(nominee1_city);
-            user.setNominee1_state(nominee1_state);
-            user.setNominee1_state_code(nominee1_state_code);
-            user.setNominee1_country(nominee1_country);
-            user.setNominee1_email(nominee1_email);
-            user.setNominee1_mobile(nominee1_mobile);
-            user.setNominee1_id_no(nominee1_id_no);
-            user.setNominee1_id_type(nominee1_id_type);
-            user.setNominee1_relation(nominee1_relation);
-            user.setNominee1_percentage(nominee1_percentage);
-
-            user.setNominee2_name(nominee2_name);
-            user.setNominee2_dob(nominee2_dob);
-            user.setNominee2_percentage(nominee2_percentage);
-            user.setNominee2_relation(nominee2_relation);
-            user.setNominee2_address1(nominee2_address1);
-            //user.setNominee2_address2(nominee2_address2);
-            //user.setNominee2_address3(nominee2_address3);
-            user.setNominee2_pincode(nominee2_pincode);
-            user.setNominee2_city(nominee2_city);
-            user.setNominee2_state(nominee2_state);
-            user.setNominee2_state_code(nominee2_state_code);
-            user.setNominee2_country(nominee2_country);
-            user.setNominee2_email(nominee2_email);
-            user.setNominee2_mobile(nominee2_mobile);
-            user.setNominee2_id_no(nominee2_id_no);
-            user.setNominee2_id_type(nominee2_id_type);
-            user.setNominee3_name(nominee3_name);
-            user.setNominee3_dob(nominee3_dob);
-            user.setNominee3_percentage(nominee3_percentage);
-            user.setNominee3_relation(nominee3_relation);
-            user.setNominee3_address1(nominee3_address1);
-            //user.setNominee3_address2(nominee3_address2);
-            //user.setNominee3_address3(nominee3_address3);
-            user.setNominee3_pincode(nominee3_pincode);
-            user.setNominee3_city(nominee3_city);
-            user.setNominee3_state(nominee3_state);
-            user.setNominee3_state_code(nominee3_state_code);
-            user.setNominee3_country(nominee3_country);
-            user.setNominee3_email(nominee3_email);
-            user.setNominee3_mobile(nominee3_mobile);
-            user.setNominee3_id_no(nominee3_id_no);
-            user.setNominee3_id_type(nominee3_id_type);
-
             user.setNetworth_amount(networth_amount);
             user.setNetworth_dob(networth_dob);
-
-            user.setNominee1_guard_dob(nominee1_guard_dob);
-            user.setNominee2_guard_dob(nominee2_guard_dob);
-            user.setNominee3_guard_dob(nominee3_guard_dob);
-
             user.setBroker_code(arn_number);
             user.setEuin(euin);
+            user.setCreated_date(new Date());
 
-            user.setNominee1_guard_relationship(nominee1_guard_relationship);
-            user.setNominee2_guard_relationship(nominee2_guard_relationship);
-            user.setNominee3_guard_relationship(nominee3_guard_relationship);
+            user = userOnlineRegDetailsRespository.save(user);
 
-            userService.saveOrUpdateUser(user);
+            UsersBankDetails bank = usersBankDetailsRepository.getUsersBankDetailsByOnlineId(user.getId(), client_name);
+            if(bank == null){
+                bank = new UsersBankDetails();
+            }
+            bank.setUser_id(Integer.parseInt(userid));
+            bank.setOnline_id(user.getId());
+            bank.setOnline_flag("NSE");
+            bank.setOnline_code(user.getNse_iin_number());
+            bank.setBroker_code(arn_number);
+            bank.setClient_name(client_name);
+            bank.setBank_ifsc_code(ifsc_code);
+            bank.setBank_micr_code(micr_code);
+            bank.setBank_name(bank_name);
+            bank.setBank_branch(branch_name);
+            bank.setBank_address(bank_address);
+            bank.setBank_account_number(account_number);
+            bank.setBank_account_holder_name(account_holder_name);
+            bank.setBank_account_type(account_type);
+            bank.setBank_proof(bank_proof);
+            bank.setCreated_date(new Date());
+            usersBankDetailsRepository.save(bank);
+
+            /*
+            userBankDetailsRepository.save(bankDetails);
+            UsersBankDetails bankDetails = new UsersBankDetails();
+
+            bankDetails.setBank_ifsc_code(ifsc_code);
+            bankDetails.setBank_micr_code(micr_code);
+            bankDetails.setBank_name(bank_name);
+            bankDetails.setBank_code(bank_code);
+            bankDetails.setBank_branch(branch_name);
+            bankDetails.setBank_address(bank_address);
+            bankDetails.setBank_account_number(account_number);
+            bankDetails.setBank_account_holder_name(account_holder_name);
+            bankDetails.setBank_account_type(account_type);
+            bankDetails.setDefault_bank("Y");
+            bankDetails.setBank_proof(bank_proof);*/
+
+            UsersNomineeDetails nominee = usersNomineeDetailsRepository.getUsersNomineeDetailsByOnlineId(user.getId(), client_name);
+            if(nominee == null){
+                nominee = new UsersNomineeDetails();
+            }
+            nominee.setUser_id(Integer.parseInt(userid));
+            nominee.setOnline_id(user.getId());
+            nominee.setOnline_flag("NSE");
+            nominee.setOnline_code(user.getNse_iin_number());
+            nominee.setBroker_code(arn_number);
+            nominee.setClient_name(client_name);
+            nominee.setNominee1_type(nominee_type);
+            nominee.setNominee1_guard_name(nominee1_guard_name);
+            nominee.setNominee1_guard_pan(nominee1_guard_pan);
+            nominee.setNominee2_type(nominee2_type);
+            nominee.setNominee2_guard_name(nominee2_guard_name);
+            nominee.setNominee2_guard_pan(nominee2_guard_pan);
+            nominee.setNominee3_type(nominee3_type);
+            nominee.setNominee3_guard_name(nominee3_guard_name);
+            nominee.setNominee3_guard_pan(nominee3_guard_pan);
+            nominee.setNumber_of_nominee(number_of_nominee);
+            nominee.setNominee_soa(nominee_soa);
+
+            nominee.setNominee_opt(nominee_opt_flag);
+
+            nominee.setNominee1_name(nominee1_name);
+            nominee.setNominee1_dob(nominee1_dob);
+            nominee.setNominee1_address1(nominee1_address1);
+            nominee.setNominee1_address2(nominee1_address2);
+            nominee.setNominee1_address3(nominee1_address3);
+            nominee.setNominee1_pincode(nominee1_pincode);
+            nominee.setNominee1_city(nominee1_city);
+            nominee.setNominee1_state(nominee1_state);
+            nominee.setNominee1_state_code(nominee1_state_code);
+            nominee.setNominee1_country(nominee1_country);
+            nominee.setNominee1_email(nominee1_email);
+            nominee.setNominee1_mobile(nominee1_mobile);
+            nominee.setNominee1_id_no(nominee1_id_no);
+            nominee.setNominee1_id_type(nominee1_id_type);
+            nominee.setNominee1_relation(nominee1_relation);
+            nominee.setNominee1_percentage(nominee1_percentage);
+
+            nominee.setNominee2_name(nominee2_name);
+            nominee.setNominee2_dob(nominee2_dob);
+            nominee.setNominee2_percentage(nominee2_percentage);
+            nominee.setNominee2_relation(nominee2_relation);
+            nominee.setNominee2_address1(nominee2_address1);
+            nominee.setNominee2_address2(nominee2_address2);
+            nominee.setNominee2_address3(nominee2_address3);
+            nominee.setNominee2_pincode(nominee2_pincode);
+            nominee.setNominee2_city(nominee2_city);
+            nominee.setNominee2_state(nominee2_state);
+            nominee.setNominee2_state_code(nominee2_state_code);
+            nominee.setNominee2_country(nominee2_country);
+            nominee.setNominee2_email(nominee2_email);
+            nominee.setNominee2_mobile(nominee2_mobile);
+            nominee.setNominee2_id_no(nominee2_id_no);
+            nominee.setNominee2_id_type(nominee2_id_type);
+            nominee.setNominee3_name(nominee3_name);
+            nominee.setNominee3_dob(nominee3_dob);
+            nominee.setNominee3_percentage(nominee3_percentage);
+            nominee.setNominee3_relation(nominee3_relation);
+            nominee.setNominee3_address1(nominee3_address1);
+            nominee.setNominee3_address2(nominee3_address2);
+            nominee.setNominee3_address3(nominee3_address3);
+            nominee.setNominee3_pincode(nominee3_pincode);
+            nominee.setNominee3_city(nominee3_city);
+            nominee.setNominee3_state(nominee3_state);
+            nominee.setNominee3_state_code(nominee3_state_code);
+            nominee.setNominee3_country(nominee3_country);
+            nominee.setNominee3_email(nominee3_email);
+            nominee.setNominee3_mobile(nominee3_mobile);
+            nominee.setNominee3_id_no(nominee3_id_no);
+            nominee.setNominee3_id_type(nominee3_id_type);
+            nominee.setNominee1_guard_relationship(nominee1_guard_relationship);
+            nominee.setNominee2_guard_relationship(nominee2_guard_relationship);
+            nominee.setNominee3_guard_relationship(nominee3_guard_relationship);
+            nominee.setCreated_date(new Date());
+            usersNomineeDetailsRepository.save(nominee);
+
+/*
+            nomineeDetails.setNominee1_type(nominee_type);
+            nomineeDetails.setNominee1_guard_name(nominee1_guard_name);
+            nomineeDetails.setNominee1_guard_pan(nominee1_guard_pan);
+            nomineeDetails.setNominee2_type(nominee2_type);
+            nomineeDetails.setNominee2_guard_name(nominee2_guard_name);
+            nomineeDetails.setNominee2_guard_pan(nominee2_guard_pan);
+            nomineeDetails.setNominee3_type(nominee3_type);
+            nomineeDetails.setNominee3_guard_name(nominee3_guard_name);
+            nomineeDetails.setNominee3_guard_pan(nominee3_guard_pan);
+            nomineeDetails.setNumber_of_nominee(number_of_nominee);
+
+            nomineeDetails.setNominee1_name(nominee1_name);
+            nomineeDetails.setNominee1_dob(nominee1_dob);
+            nomineeDetails.setNominee1_address1(nominee1_address1);
+            nomineeDetails.setNominee1_address2(nominee1_address2);
+            nomineeDetails.setNominee1_address3(nominee1_address3);
+            nomineeDetails.setNominee1_pincode(nominee1_pincode);
+            nomineeDetails.setNominee1_city(nominee1_city);
+            nomineeDetails.setNominee1_state(nominee1_state);
+            nomineeDetails.setNominee1_state_code(nominee1_state_code);
+            nomineeDetails.setNominee1_country(nominee1_country);
+            nomineeDetails.setNominee1_email(nominee1_email);
+            nomineeDetails.setNominee1_mobile(nominee1_mobile);
+            nomineeDetails.setNominee1_id_no(nominee1_id_no);
+            nomineeDetails.setNominee1_id_type(nominee1_id_type);
+            nomineeDetails.setNominee1_relation(nominee1_relation);
+            nomineeDetails.setNominee1_percentage(nominee1_percentage);
+
+            nomineeDetails.setNominee2_name(nominee2_name);
+            nomineeDetails.setNominee2_dob(nominee2_dob);
+            nomineeDetails.setNominee2_percentage(nominee2_percentage);
+            nomineeDetails.setNominee2_relation(nominee2_relation);
+            nomineeDetails.setNominee2_address1(nominee2_address1);
+            //user.setNominee2_address2(nominee2_address2);
+            //user.setNominee2_address3(nominee2_address3);
+            nomineeDetails.setNominee2_pincode(nominee2_pincode);
+            nomineeDetails.setNominee2_city(nominee2_city);
+            nomineeDetails.setNominee2_state(nominee2_state);
+            nomineeDetails.setNominee2_state_code(nominee2_state_code);
+            nomineeDetails.setNominee2_country(nominee2_country);
+            nomineeDetails.setNominee2_email(nominee2_email);
+            nomineeDetails.setNominee2_mobile(nominee2_mobile);
+            nomineeDetails.setNominee2_id_no(nominee2_id_no);
+            nomineeDetails.setNominee2_id_type(nominee2_id_type);
+            nomineeDetails.setNominee3_name(nominee3_name);
+            nomineeDetails.setNominee3_dob(nominee3_dob);
+            nomineeDetails.setNominee3_percentage(nominee3_percentage);
+            nomineeDetails.setNominee3_relation(nominee3_relation);
+            nomineeDetails.setNominee3_address1(nominee3_address1);
+            //user.setNominee3_address2(nominee3_address2);
+            //user.setNominee3_address3(nominee3_address3);
+            nomineeDetails.setNominee3_pincode(nominee3_pincode);
+            nomineeDetails.setNominee3_city(nominee3_city);
+            nomineeDetails.setNominee3_state(nominee3_state);
+            nomineeDetails.setNominee3_state_code(nominee3_state_code);
+            nomineeDetails.setNominee3_country(nominee3_country);
+            nomineeDetails.setNominee3_email(nominee3_email);
+            nomineeDetails.setNominee3_mobile(nominee3_mobile);
+            nomineeDetails.setNominee3_id_no(nominee3_id_no);
+            nomineeDetails.setNominee3_id_type(nominee3_id_type);
+
+            nomineeDetails.setNominee1_guard_dob(nominee1_guard_dob);
+            nomineeDetails.setNominee2_guard_dob(nominee2_guard_dob);
+            nomineeDetails.setNominee3_guard_dob(nominee3_guard_dob);
+            nomineeDetails.setNominee1_guard_relationship(nominee1_guard_relationship);
+            nomineeDetails.setNominee2_guard_relationship(nominee2_guard_relationship);
+            nomineeDetails.setNominee3_guard_relationship(nominee3_guard_relationship);*/
 
             String ipAddr = UserUtils.getIpAddr(request);
             if(ipAddr == null){ipAddr="";}
@@ -3742,7 +3826,7 @@ public class NseUserController
 
             logService.saveLog(client_name, Integer.parseInt(userid), name, mobile, "NSE Create Customer", "NSE Create Customer", logmsg , ipAddr);
 
-            return UserUtils.successResponse("Updated successfully.", HttpStatus.OK);
+            return UserUtils.successResponse(String.valueOf(user.getId()), HttpStatus.OK);
 
         }catch (Throwable ex)
         {
@@ -3895,6 +3979,7 @@ public class NseUserController
             @RequestParam(required = false) String number_of_nominee_desc,
             @RequestParam(required = false) String nominee_type,
             @RequestParam(required = false) String nominee_type_desc,
+            @RequestParam(required = false) String nominee_soa,
             @RequestParam(required = false) String nominee1_name,
             @RequestParam(required = false) String nominee1_dob,
             @RequestParam(required = false) String nominee1_address1,
@@ -3978,7 +4063,8 @@ public class NseUserController
             @RequestParam(required = false) String mobile_isd_code,
             @RequestParam(required = false) String joint_holder_mobile1_isd_code,
             @RequestParam(required = false) String joint_holder_mobile2_isd_code,
-            @RequestParam(required = false) String arn_number
+            @RequestParam(required = false) String arn_number,
+            @RequestParam(required = false) String nominee_opt_flag
 
     )
     {
@@ -3986,7 +4072,6 @@ public class NseUserController
         try
         {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            System.out.println("User ID from token: " + userid);
 
             iin_number = UserUtils.checkParem(iin_number);
             userid = UserUtils.checkParem(userid);
@@ -4162,271 +4247,309 @@ public class NseUserController
             joint_holder_mobile1_isd_code = UserUtils.checkParem(joint_holder_mobile1_isd_code);
             joint_holder_mobile2_isd_code = UserUtils.checkParem(joint_holder_mobile2_isd_code);
             arn_number = UserUtils.checkParem(arn_number);
+            nominee_soa = UserUtils.checkParem(nominee_soa);
+            nominee_opt_flag = UserUtils.checkParem(nominee_opt_flag);
 
-            // 3. Fetch user
-            Optional<User> userOpt = userService.getUserById(Integer.parseInt(userid));
+            if(!nominee_soa.isEmpty())
+            {
+                nominee_soa = nominee_soa;
+            }else{
+                nominee_soa = "N";
+            }
 
-            if (!userOpt.isPresent())
+            User userMain = userRepository.findById(Integer.parseInt(userid)).orElse(null);
+
+            if (userMain == null)
             {
                 return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
 
-            User user2 = userOpt.get();
-            client_name = user2.getClient_name();
+//            UsersOnlineRegDetails user2 = usersOnlineRegDetailsRepository.findByUserId(Integer.valueOf(userid)).orElse(null);
+//
+//            if (user2 == null)
+//            {
+//                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
+//            }
+            client_name = userMain.getClient_name();
 
             String euin = "";
             if(!arn_number.isEmpty())
             {
-                BseNseKey nsekey = bseNseKeyRepository.findByClientName(client_name);
+                BseNseKey list = bseNseKeyRepository.findByClientName(client_name);
 
-                String broker_code1 = nsekey.getBrokerCode();
-
+                String broker_code1 = list.getBrokerCode();
                 if(broker_code1 == null){broker_code1 = "";};
 
-                arn_number = nsekey.getBrokerCode();
-                euin = nsekey.getEuin();
+                euin = list.getEuin();
                 euin = euin.split(",")[0];
-
             }
 
-            UserBseNseDetails user = null;
-            Integer userId = user2.getId();
-            String clientName = user2.getClient_name();
-            String taxStatusCode = user2.getTax_status_code();
-            String holdingNatureCode = user2.getHolding_nature_code();
-            String jointHolderPan1 = user2.getJoint_holder_pan1();
-            String jointHolderPan2 = user2.getJoint_holder_pan2();
+//          Integer userId = user2.getUser_id();
+//          String clientName = user2.getClient_name();
+//          String taxStatusCode = user2.getTax_status_code();
+//          String holdingNatureCode = user2.getHolding_nature_code();
 
-            Optional<UserBseNseDetails> userBseNseDetailsOpt = userBseNseDetailsService.getUserBseNseDetailsByAllFields(userId, clientName, taxStatusCode, holdingNatureCode, jointHolderPan1, jointHolderPan2);
-
-            if(userBseNseDetailsOpt.isPresent())
-            {
-                user = userBseNseDetailsOpt.get();
-            }else {
-                user = new UserBseNseDetails();
-            }
+            UsersOnlineRegDetails user = userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsFOrNse(Integer.valueOf(userid), client_name, tax_status, holding_nature, arn_number, "NSE").orElse(new UsersOnlineRegDetails());
 
             String iin_number_new = checkNseIinNumber.checkNseMultipleRegistrationIinNumbers(user.getClient_name(), arn_number);
+            try{
+                user.setOnline_flag("NSE");
 
-            user.setNse_iin_number(iin_number_new);
-            user.setUser_id(Integer.parseInt(userid));
-            user.setPan(pan);
-            user.setName(name);
-            user.setEmail(email);
-            user.setMobile(mobile);
-//            user.setMobile_isd_code(mobile_isd_code);
-//            user.setAlter_email(alter_email);
-//            user.setAlter_mobile(alter_mobile);
-            user.setMobile_relation(mobile_relation);
-            user.setEmail_relation(email_relation);
-            user.setDate_of_birth(dob);
-            user.setFather_name(father_name);
-//            user.setPhone_office(office_phone);
-//            user.setPhone_residence(residence_phone);
-//            user.setInv_category(inv_category);
-            user.setPlace_of_birth(place_birth);
-            user.setCountry_of_birth(country_birth);
-            user.setCountry_birth_code(country_birth_code);
-            user.setOccupation(occupation);
-            user.setOccupation_code(occupation_code);
-            if(occupation_code.equalsIgnoreCase("99") && !occupation_other.isEmpty())
+                if(StringHelper.isNotEmpty(iin_number))
+                {
+                    user.setNse_iin_number(iin_number);
+                }else{
+                    user.setNse_iin_number(iin_number_new);
+                }
+
+                user.setUser_id(Integer.parseInt(userid));
+                user.setPan(pan);
+                user.setName(name);
+                user.setEmail(email);
+                user.setMobile(mobile);
+                user.setAlter_email(alter_email);
+                user.setAlter_mobile(alter_mobile);
+                user.setMobile_relation(mobile_relation);
+                user.setEmail_relation(email_relation);
+                user.setDate_of_birth(dob);
+                user.setFather_name(father_name);
+                user.setPhone_office(office_phone);
+                user.setPhone_residence(residence_phone);
+                user.setInv_category(inv_category);
+                user.setPlace_of_birth(place_birth);
+                user.setCountry_of_birth(country_birth);
+                user.setCountry_birth_code(country_birth_code);
+                user.setOccupation(occupation);
+                user.setOccupation_code(occupation_code);
+                if(occupation_code.equalsIgnoreCase("99") && !occupation_other.isEmpty())
+                {
+                    user.setOccupation(occupation_other);
+                }
+                user.setAnnual_income(income);
+                user.setAnnual_income_code(income_code);
+                user.setSource_of_wealth(source_wealth);
+                user.setSource_of_wealth_code(source_wealth_code);
+                if(source_wealth_code.equalsIgnoreCase("08") && !source_wealth_other.isEmpty())
+                {
+                    user.setSource_of_wealth(source_wealth_other);
+                }
+                user.setPolitical_code(political_status);
+                if(political_status.equalsIgnoreCase("Y") || political_status.equalsIgnoreCase("PEP"))
+                {
+                    user.setPolitical("I am Politically exposed person");
+                }
+                if(political_status.equalsIgnoreCase("R") || political_status.equalsIgnoreCase("RPEP"))
+                {
+                    user.setPolitical("I am related to Politically exposed person");
+                }
+                if(political_status.equalsIgnoreCase("N") || political_status.equalsIgnoreCase("NA"))
+                {
+                    user.setPolitical("Not Applicable");
+                }
+
+                user.setPincode(pincode);
+                user.setCity(city);
+                user.setState(state);
+                user.setCountry(country);
+                user.setStreet_1(address1);
+                user.setStreet_2(address2);
+                user.setStreet_3(address3);
+                user.setState_code(state_code);
+
+
+                user.setGuard_name(guard_name);
+                user.setGuard_pan(guard_pan);
+                user.setGuard_dob(guard_dob);
+                user.setGuard_relationship(gaurd_relation);
+                user.setGuard_relation_proof(gaurd_relation_proof);
+                user.setTax_status_code(tax_status);
+                user.setTax_status(tax_status_des);
+                user.setJoint_holder_name1(joint_holder_name);
+                user.setJoint_holder_name2(joint_holder_name1);
+                user.setJoint_holder_dob1(joint_holder_dob);
+                user.setJoint_holder_dob2(joint_holder_dob1);
+                user.setJoint_holder_email1(joint_holder_email);
+                user.setJoint_holder_email2(joint_holder_email1);
+                user.setJoint_holder_email_relation1(joint_holder_email_relation);
+                user.setJoint_holder_email_relation2(joint_holder_email_relation1);
+                user.setJoint_holder_mobile1(joint_holder_mobile);
+                user.setJoint_holder_mobile2(joint_holder_mobile1);
+                user.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
+                user.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
+                user.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
+                user.setJoint_holder_pan1(joint_holder_pan);
+                user.setJoint_holder_pan2(joint_holder_pan1);
+                user.setHolding_nature_code(holding_nature);
+                user.setHolding_nature(holding_nature_desc);
+                user.setGender(gender);
+                user.setNri_address1(nri_address1);
+                user.setNri_address2(nri_address2);
+                user.setNri_address3(nri_address3);
+                user.setNri_city(nri_city);
+                user.setNri_state(nri_state);
+                user.setNri_pincode(nri_pincode);
+                user.setNri_country(nri_country);
+                user.setAddress_type_code(address_type);
+                user.setAddress_type(address_type_desc);
+
+                user.setJoint_holder_place_of_birth1(joint_holder_place_birth);
+                user.setJoint_holder_place_of_birth2(joint_holder_place_birth1);
+                user.setJoint_holder_country_birth_code1(joint_holder_country_birth);
+                user.setJoint_holder_country_birth_code2(joint_holder_country_birth1);
+                user.setJoint_holder_occupation_code1(joint_holder_occupation);
+
+                user.setJoint_holder_occupation_code2(joint_holder_occupation1);
+                user.setJoint_holder_source_of_wealth_code1(joint_holder_source_wealth);
+                user.setJoint_holder_source_of_wealth_code2(joint_holder_source_wealth1);
+                user.setJoint_holder_annual_income_code1(joint_holder_income);
+                user.setJoint_holder_annual_income_code2(joint_holder_income1);
+                user.setJoint_holder_address_type_code1(joint_holder_address_type);
+                user.setJoint_holder_address_type_code2(joint_holder_address_type1);
+                user.setJoint_holder_political_code1(joint_holder_political);
+                user.setJoint_holder_political_code2(joint_holder_political1);
+
+                user.setJoint_holder_email_relation1(joint_holder_email_relation);
+                user.setJoint_holder_email_relation2(joint_holder_email_relation1);
+                user.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
+                user.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
+
+                user.setBroker_code(arn_number);
+                user.setEuin(euin);
+
+                user.setNetworth_amount(networth_amount);
+                user.setNetworth_dob(networth_dob);
+                user.setNse_customer(0);
+                user.setNse_active(0);
+                user.setRegister_source("Website");
+                user.setClient_name(client_name);
+                user.setCreated_date(new Date());
+
+                user = userOnlineRegDetailsRespository.save(user);
+            }catch (DataIntegrityViolationException e)
             {
-                user.setOccupation(occupation_other);
-            }
-            user.setAnnual_income(income);
-            user.setAnnual_income_code(income_code);
-            user.setSource_of_wealth(source_wealth);
-            user.setSource_of_wealth_code(source_wealth_code);
-            if(source_wealth_code.equalsIgnoreCase("08") && !source_wealth_other.isEmpty())
-            {
-                user.setSource_of_wealth(source_wealth_other);
-            }
-            user.setPolitical_code(political_status);
-            if(political_status.equalsIgnoreCase("Y") || political_status.equalsIgnoreCase("PEP"))
-            {
-                user.setPolitical("I am Politically exposed person");
-            }
-            if(political_status.equalsIgnoreCase("R") || political_status.equalsIgnoreCase("RPEP"))
-            {
-                user.setPolitical("I am related to Politically exposed person");
-            }
-            if(political_status.equalsIgnoreCase("N") || political_status.equalsIgnoreCase("NA"))
-            {
-                user.setPolitical("Not Applicable");
+                String message = "Duplicate entry found";
+
+                Throwable rootCause = e.getRootCause();
+
+                if (rootCause != null && rootCause.getMessage() != null)
+                {
+                    String errorMessage = rootCause.getMessage();
+
+                    if (errorMessage.contains("Duplicate entry"))
+                    {
+                        int endIndex = errorMessage.indexOf("for key");
+
+                        if (endIndex > 0)
+                        {
+                            message = errorMessage.substring(0, endIndex).trim();
+                        }
+                        else
+                        {
+                            message = errorMessage;
+                        }
+                    }
+                }
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(message);
             }
 
-            user.setPincode(pincode);
-            user.setCity(city);
-            user.setState(state);
-            user.setCountry(country);
-            user.setStreet_1(address1);
-            user.setStreet_2(address2);
-            user.setStreet_3(address3);
-            user.setState_code(state_code);
-            user.setBank_ifsc_code1(ifsc_code);
-            user.setBank_micr_code1(micr_code);
-            user.setBank_name1(bank_name);
-            user.setBank_code1(bank_code);
-            user.setBank_branch1(branch_name);
-            user.setBank_address1(bank_address);
-            user.setBank_account_number1(account_number);
-            user.setBank_account_holder_name1(account_holder_name);
-            user.setBank_account_type1(account_type);
-            user.setDefault_bank1("Y");
-//            user.setBank_proof1(bank_proof);
-            user.setNse_ach_flag1(0);
-            user.setNse_ach1("");
-            user.setNse_ach_amount1("");
-            user.setNse_ach_approved1(0);
-            user.setNse_ach_rej_reason1("");
-            user.setNse_ach_created_date1(null);
-            user.setGuard_name(guard_name);
-            user.setGuard_pan(guard_pan);
-            user.setGuard_dob(guard_dob);
-            user.setGuard_relationship(gaurd_relation);
-//            user.setGuard_relation_proof(gaurd_relation_proof);
-            user.setTax_status_code(tax_status);
-            user.setTax_status(tax_status_des);
-            user.setJoint_holder_name1(joint_holder_name);
-            user.setJoint_holder_name2(joint_holder_name1);
-            user.setJoint_holder_dob1(joint_holder_dob);
-            user.setJoint_holder_dob2(joint_holder_dob1);
-            user.setJoint_holder_email1(joint_holder_email);
-            user.setJoint_holder_email2(joint_holder_email1);
-            user.setJoint_holder_email_relation1(joint_holder_email_relation);
-            user.setJoint_holder_email_relation2(joint_holder_email_relation1);
-            user.setJoint_holder_mobile1(joint_holder_mobile);
-            user.setJoint_holder_mobile2(joint_holder_mobile1);
-//            user.setJoint_holder_mobile1_isd_code(joint_holder_mobile1_isd_code);
-//            user.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
-            user.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
-            user.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
-            user.setJoint_holder_pan1(joint_holder_pan);
-            user.setJoint_holder_pan2(joint_holder_pan1);
-            user.setHolding_nature_code(holding_nature);
-            user.setHolding_nature(holding_nature_desc);
-            user.setGender(gender);
-            user.setNri_address1(nri_address1);
-            user.setNri_address2(nri_address2);
-            user.setNri_address3(nri_address3);
-            user.setNri_city(nri_city);
-            user.setNri_state(nri_state);
-            user.setNri_pincode(nri_pincode);
-            user.setNri_country(nri_country);
-            user.setAddress_type_code(address_type);
-            user.setAddress_type(address_type_desc);
-
-            user.setJoint_holder_place_of_birth1(joint_holder_place_birth);
-            user.setJoint_holder_place_of_birth2(joint_holder_place_birth1);
-            user.setJoint_holder_country_birth_code1(joint_holder_country_birth);
-            user.setJoint_holder_country_birth_code2(joint_holder_country_birth1);
-            user.setJoint_holder_occupation_code1(joint_holder_occupation);
-            if(joint_holder_occupation.equalsIgnoreCase("99") && !joint_holder_occupation_other.isEmpty())
-            {
-                //user.setJoint_holder_occupation_other1(joint_holder_occupation_other);
+            UsersNomineeDetails nomineeDetails = usersNomineeDetailsRepository.getUsersNomineeDetailsByOnlineId(user.getId(), client_name);
+            if(nomineeDetails == null){
+                nomineeDetails = new UsersNomineeDetails();
             }
-            user.setJoint_holder_occupation_code2(joint_holder_occupation1);
-            if(joint_holder_occupation1.equalsIgnoreCase("99") && !joint_holder_occupation_other1.isEmpty())
-            {
-                //user.setJoint_holder_occupation_other2(joint_holder_occupation_other1);
+            nomineeDetails.setNominee_opt(nominee_opt_flag);
+            nomineeDetails.setNominee_soa(nominee_soa);
+            nomineeDetails.setNominee1_type(nominee_type);
+            nomineeDetails.setNominee1_guard_name(nominee1_guard_name);
+            nomineeDetails.setNominee1_guard_pan(nominee1_guard_pan);
+            nomineeDetails.setNominee2_type(nominee2_type);
+            nomineeDetails.setNominee2_guard_name(nominee2_guard_name);
+            nomineeDetails.setNominee2_guard_pan(nominee2_guard_pan);
+            nomineeDetails.setNominee3_type(nominee3_type);
+            nomineeDetails.setNominee3_guard_name(nominee3_guard_name);
+            nomineeDetails.setNominee3_guard_pan(nominee3_guard_pan);
+            nomineeDetails.setNumber_of_nominee(number_of_nominee);
+            nomineeDetails.setNominee1_name(nominee1_name);
+            nomineeDetails.setNominee1_dob(nominee1_dob);
+            nomineeDetails.setNominee1_address1(nominee1_address1);
+            nomineeDetails.setNominee1_address2(nominee1_address2);
+            nomineeDetails.setNominee1_address3(nominee1_address3);
+            nomineeDetails.setNominee1_pincode(nominee1_pincode);
+            nomineeDetails.setNominee1_city(nominee1_city);
+            nomineeDetails.setNominee1_state(nominee1_state);
+            nomineeDetails.setNominee1_state_code(nominee1_state_code);
+            nomineeDetails.setNominee1_country(nominee1_country);
+            nomineeDetails.setNominee1_email(nominee1_email);
+            nomineeDetails.setNominee1_mobile(nominee1_mobile);
+            nomineeDetails.setNominee1_id_no(nominee1_id_no);
+            nomineeDetails.setNominee1_id_type(nominee1_id_type);
+            nomineeDetails.setNominee1_relation(nominee1_relation);
+            nomineeDetails.setNominee1_percentage(nominee1_percentage);
+            nomineeDetails.setNominee2_name(nominee2_name);
+            nomineeDetails.setNominee2_dob(nominee2_dob);
+            nomineeDetails.setNominee2_percentage(nominee2_percentage);
+            nomineeDetails.setNominee2_relation(nominee2_relation);
+            nomineeDetails.setNominee2_address1(nominee2_address1);
+            nomineeDetails.setNominee2_address2(nominee2_address2);
+            nomineeDetails.setNominee2_address3(nominee2_address3);
+            nomineeDetails.setNominee2_pincode(nominee2_pincode);
+            nomineeDetails.setNominee2_city(nominee2_city);
+            nomineeDetails.setNominee2_state(nominee2_state);
+            nomineeDetails.setNominee2_state_code(nominee2_state_code);
+            nomineeDetails.setNominee2_country(nominee2_country);
+            nomineeDetails.setNominee2_email(nominee2_email);
+            nomineeDetails.setNominee2_mobile(nominee2_mobile);
+            nomineeDetails.setNominee2_id_no(nominee2_id_no);
+            nomineeDetails.setNominee2_id_type(nominee2_id_type);
+            nomineeDetails.setNominee3_name(nominee3_name);
+            nomineeDetails.setNominee3_dob(nominee3_dob);
+            nomineeDetails.setNominee3_percentage(nominee3_percentage);
+            nomineeDetails.setNominee3_relation(nominee3_relation);
+            nomineeDetails.setNominee3_address1(nominee3_address1);
+            nomineeDetails.setNominee3_address2(nominee3_address2);
+            nomineeDetails.setNominee3_address3(nominee3_address3);
+            nomineeDetails.setNominee3_pincode(nominee3_pincode);
+            nomineeDetails.setNominee3_city(nominee3_city);
+            nomineeDetails.setNominee3_state(nominee3_state);
+            nomineeDetails.setNominee3_state_code(nominee3_state_code);
+            nomineeDetails.setNominee3_country(nominee3_country);
+            nomineeDetails.setNominee3_email(nominee3_email);
+            nomineeDetails.setNominee3_mobile(nominee3_mobile);
+            nomineeDetails.setNominee3_id_no(nominee3_id_no);
+            nomineeDetails.setNominee3_id_type(nominee3_id_type);
+            nomineeDetails.setNominee1_guard_dob(nominee1_guard_dob);
+            nomineeDetails.setNominee2_guard_dob(nominee2_guard_dob);
+            nomineeDetails.setNominee3_guard_dob(nominee3_guard_dob);
+            nomineeDetails.setUser_id(Integer.parseInt(userid));
+            nomineeDetails.setOnline_id(user.getId());
+            nomineeDetails.setOnline_flag("NSE");
+            nomineeDetails.setOnline_code(user.getNse_iin_number());
+            nomineeDetails.setBroker_code(arn_number);
+            nomineeDetails.setClient_name(client_name);
+            nomineeDetails.setCreated_date(new Date());
+            usersNomineeDetailsRepository.save(nomineeDetails);
+
+            UsersBankDetails bankDetails = usersBankDetailsRepository.getUsersBankDetailsByOnlineId(user.getId(), client_name);
+            if(bankDetails == null){
+                bankDetails = new UsersBankDetails();
             }
-            user.setJoint_holder_source_of_wealth_code1(joint_holder_source_wealth);
-            if(joint_holder_source_wealth.equalsIgnoreCase("08") && !joint_source_wealth_other.isEmpty())
-            {
-                //user.setJoint_holder_source_of_wealth_other1(joint_source_wealth_other);
-            }
-            user.setJoint_holder_source_of_wealth_code2(joint_holder_source_wealth1);
-            if(joint_holder_source_wealth1.equalsIgnoreCase("08") && !joint_source_wealth_other1.isEmpty())
-            {
-                //user.setJoint_holder_source_of_wealth_other2(joint_source_wealth_other1);
-            }
-            user.setJoint_holder_annual_income_code1(joint_holder_income);
-            user.setJoint_holder_annual_income_code2(joint_holder_income1);
-            user.setJoint_holder_address_type_code1(joint_holder_address_type);
-            user.setJoint_holder_address_type_code2(joint_holder_address_type1);
-            user.setJoint_holder_political_code1(joint_holder_political);
-            user.setJoint_holder_political_code2(joint_holder_political1);
-
-            user.setJoint_holder_email_relation1(joint_holder_email_relation);
-            user.setJoint_holder_email_relation2(joint_holder_email_relation1);
-            user.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
-            user.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
-
-            user.setNominee1_type(nominee_type);
-            user.setNominee1_guard_name(nominee1_guard_name);
-            user.setNominee1_guard_pan(nominee1_guard_pan);
-            user.setNominee2_type(nominee2_type);
-            user.setNominee2_guard_name(nominee2_guard_name);
-            user.setNominee2_guard_pan(nominee2_guard_pan);
-            user.setNominee3_type(nominee3_type);
-            user.setNominee3_guard_name(nominee3_guard_name);
-            user.setNominee3_guard_pan(nominee3_guard_pan);
-            user.setNumber_of_nominee(number_of_nominee);
-
-            user.setNominee1_name(nominee1_name);
-            user.setNominee1_dob(nominee1_dob);
-            user.setNominee1_address1(nominee1_address1);
-            user.setNominee1_address2(nominee1_address2);
-            user.setNominee1_address3(nominee1_address3);
-            user.setNominee1_pincode(nominee1_pincode);
-            user.setNominee1_city(nominee1_city);
-            user.setNominee1_state(nominee1_state);
-            user.setNominee1_state_code(nominee1_state_code);
-            user.setNominee1_country(nominee1_country);
-            user.setNominee1_email(nominee1_email);
-            user.setNominee1_mobile(nominee1_mobile);
-            user.setNominee1_id_no(nominee1_id_no);
-            user.setNominee1_id_type(nominee1_id_type);
-            user.setNominee1_relation(nominee1_relation);
-            user.setNominee1_percentage(nominee1_percentage);
-
-            user.setNominee2_name(nominee2_name);
-            user.setNominee2_dob(nominee2_dob);
-            user.setNominee2_percentage(nominee2_percentage);
-            user.setNominee2_relation(nominee2_relation);
-            user.setNominee2_address1(nominee2_address1);
-            user.setNominee2_address2(nominee2_address2);
-            user.setNominee2_address3(nominee2_address3);
-            user.setNominee2_pincode(nominee2_pincode);
-            user.setNominee2_city(nominee2_city);
-            user.setNominee2_state(nominee2_state);
-            user.setNominee2_state_code(nominee2_state_code);
-            user.setNominee2_country(nominee2_country);
-            user.setNominee2_email(nominee2_email);
-            user.setNominee2_mobile(nominee2_mobile);
-            user.setNominee2_id_no(nominee2_id_no);
-            user.setNominee2_id_type(nominee2_id_type);
-
-            user.setNominee3_name(nominee3_name);
-            user.setNominee3_dob(nominee3_dob);
-            user.setNominee3_percentage(nominee3_percentage);
-            user.setNominee3_relation(nominee3_relation);
-            user.setNominee3_address1(nominee3_address1);
-            user.setNominee3_address2(nominee3_address2);
-            user.setNominee3_address3(nominee3_address3);
-            user.setNominee3_pincode(nominee3_pincode);
-            user.setNominee3_city(nominee3_city);
-            user.setNominee3_state(nominee3_state);
-            user.setNominee3_state_code(nominee3_state_code);
-            user.setNominee3_country(nominee3_country);
-            user.setNominee3_email(nominee3_email);
-            user.setNominee3_mobile(nominee3_mobile);
-            user.setNominee3_id_no(nominee3_id_no);
-            user.setNominee3_id_type(nominee3_id_type);
-            user.setNetworth_amount(networth_amount);
-            user.setNetworth_dob(networth_dob);
-            user.setNse_customer(0);
-            user.setNse_active(0);
-            user.setRegister_source("Website");
-            user.setClient_name(client_name);
-            user.setCreated_date((Timestamp) new Date());
-            user.setNominee1_guard_dob(nominee1_guard_dob);
-            user.setNominee2_guard_dob(nominee2_guard_dob);
-            user.setNominee3_guard_dob(nominee3_guard_dob);
-            user.setBroker_code(arn_number);
-            user.setEuin(euin);
-
-            userBseNseDetailsService.saveOrUpdateUserBseNseDetails(user);
+            bankDetails.setBank_ifsc_code(ifsc_code);
+            bankDetails.setBank_micr_code(micr_code);
+            bankDetails.setBank_name(bank_name);
+            bankDetails.setBank_branch(branch_name);
+            bankDetails.setBank_address(bank_address);
+            bankDetails.setBank_account_number(account_number);
+            bankDetails.setBank_account_holder_name(account_holder_name);
+            bankDetails.setBank_account_type(account_type);
+            bankDetails.setBank_proof(bank_proof);
+            bankDetails.setUser_id(Integer.parseInt(userid));
+            bankDetails.setOnline_id(user.getId());
+            bankDetails.setOnline_flag("NSE");
+            bankDetails.setOnline_code(user.getNse_iin_number());
+            bankDetails.setBroker_code(arn_number);
+            bankDetails.setClient_name(client_name);
+            bankDetails.setCreated_date(new Date());
+            usersBankDetailsRepository.save(bankDetails);
 
             String ipAddr = UserUtils.getIpAddr(request);
             if(ipAddr == null){ipAddr="";}
@@ -4442,16 +4565,16 @@ public class NseUserController
             logmsg += "bank_name: "+bank_name+",";
             logmsg += "account_number: "+account_number+",";
             logmsg += "nominee1_name: "+nominee1_name+",";
-            logmsg += "nominee1_relation: "+nominee1_relation+"";
+            logmsg += "nominee1_relation: "+nominee1_relation;
 
             logService.saveLog(client_name, Integer.parseInt(userid), name, mobile, "NSE Create Multiple Customer", "NSE Create Customer", logmsg , ipAddr);
 
-            return UserUtils.successResponse("Updated successfully.", HttpStatus.OK);
+            return UserUtils.successResponse(String.valueOf(user.getId()), HttpStatus.OK);
 
         }catch (Throwable ex)
         {
             ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error: " + ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
         }
     }
 
@@ -4575,7 +4698,7 @@ public class NseUserController
         try
         {
             System.out.println("userId = " + userId);
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
             System.out.println("userOpt = " + userOpt);
 
             if (userOpt.isPresent())
@@ -4594,21 +4717,12 @@ public class NseUserController
                     System.out.println("brokercode = " + brokercode);
                     System.out.println("iin_number = " + iin_number);
 
-                    User userModel = userRepository.findBybrokercodeAndNseIinNumberAndId(brokercode,iin_number,user.getClient_name(), Integer.valueOf(online_reg_id));
-                    if(userModel != null) {
-                        UserDto dto = new UserDto();
-                        BeanUtils.copyProperties(userModel, dto);
-                        userDetail = dto;
-                    }
-
-                    if(userDetail == null)
+                    UsersOnlineRegDetails userDetails = userOnlineRegDetailsRespository.findNseByIinNumberAndBrokercodeAndId(iin_number,brokercode,user.getClient_name(),online_reg_id);
+                    if(userDetails != null)
                     {
-                        UserBseNseDetails userDetails = userBseNseDetailsRespository.findNseByIinNumberAndBrokercodeAndId(iin_number,brokercode,user.getClient_name(),online_reg_id);
-                        if(userDetails != null) {
-                            UserDto dtos = new UserDto();
-                            BeanUtils.copyProperties(userDetails, dtos);
-                            userDetail = dtos;
-                        }
+                        UserDto dtos = new UserDto();
+                        BeanUtils.copyProperties(userDetails, dtos);
+                        userDetail = dtos;
                     }
 
                     System.out.println("userDetail = " + userDetail);
@@ -4827,7 +4941,7 @@ public class NseUserController
         try
         {
             System.out.println("userId = " + userId);
-            Optional<User> userOpt = userService.getUserById(userId);
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
             System.out.println("userOpt = " + userOpt);
 
             if (userOpt.isPresent())
@@ -5279,10 +5393,27 @@ public class NseUserController
 
             String clientName = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
 
+            Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
+
+            if (userOpt.isEmpty())
+            {
+                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
+            }
+
+            User user = userOpt.get();
+            UsersOnlineRegDetails userDetails = null;
+
+//            MymfboxOnboarding onboarding = onboardingService.getOrCreateOnboardingbyid(Integer.valueOf(online_reg_id), user.getClient_name());
+//
+//            if (onboarding == null)
+//            {
+//                return UserUtils.errorResponse("Onboarding details not found.", HttpStatus.INTERNAL_SERVER_ERROR);
+//            }
+
             InvestorInfoDTO investorInfo = null;
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersOnlineRegDetails> userDetailsOpt =
+                    userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
                             userId,
                             clientName,
                             tax_status,
@@ -5291,31 +5422,17 @@ public class NseUserController
                             investor_code
                     );
 
-            if (userOpt.isPresent())
+            if(userDetailsOpt.isPresent())
             {
-
-                User user = userOpt.get();
-                investorInfo = InvestorInfoMapper.mapUserToDto(user);
-
-            } else
+                userDetails = userDetailsOpt.get();
+            }else
             {
-                UserBseNseDetails bseNse =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                clientName,
-                                tax_status,
-                                holding_nature,
-                                broker_code,
-                                investor_code
-                        );
-
-                if (bseNse == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-                investorInfo = InvestorInfoMapper.mapBseNseDetailsToDto(bseNse);
+                userDetails = new UsersOnlineRegDetails();
+                userDetails.setPan(user.getPan());
+                userDetails.setBroker_code(user.getBroker_code());
             }
 
+            investorInfo = InvestorInfoMapper.mapBseNseDetailsToDto(userDetails);
 
             return ResponseEntity.ok(investorInfo);
         }catch(Exception ex)
@@ -5379,8 +5496,8 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersOnlineRegDetails> userOpt =
+                    userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
                             userId,
                             client_name,
                             dto.getTaxStatusCode(),
@@ -5388,38 +5505,19 @@ public class NseUserController
                             dto.getBrokerCode(),
                             dto.getInvestorCode()
                     );
-
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
-
-            if (userOpt.isPresent())
+            UsersOnlineRegDetails userDetails = null;
+            if(userOpt != null && userOpt.isPresent())
             {
-                userEntity = userOpt.get();
-
-                InvestorInfoMapper.mapDtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
-
-            } else
+                userDetails = userOpt.get();
+            }else
             {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                dto.getTaxStatusCode(),
-                                dto.getHoldingNatureCode(),
-                                dto.getBrokerCode(),
-                                dto.getInvestorCode()
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                InvestorInfoMapper.mapDtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
+                return UserUtils.errorResponse("Ucc Details not found.", HttpStatus.NOT_FOUND);
             }
 
+            userDetails.setOnline_flag("NSE");
+            userDetails = InvestorInfoMapper.mapDtoToUserBseNseDetails(dto, userDetails);
+
+            usersOnlineRegDetailsService.saveOrUpdateUserOnlineReg(userDetails);
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
 
         }catch(Throwable ex)
@@ -5452,8 +5550,8 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersOnlineRegDetails> userOpt =
+                    userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
                             userId,
                             client_name,
                             dto.getTaxStatusCode(),
@@ -5462,35 +5560,14 @@ public class NseUserController
                             dto.getInvestorCode()
                     );
 
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
+            UsersOnlineRegDetails userEntity;
 
             if (userOpt.isPresent())
             {
                 userEntity = userOpt.get();
 
                 PersonalInfoMapper.dtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
-
-            } else
-            {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                dto.getTaxStatusCode(),
-                                dto.getHoldingNatureCode(),
-                                dto.getBrokerCode(),
-                                dto.getInvestorCode()
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                PersonalInfoMapper.dtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
+                userOnlineRegDetailsRespository.save(userEntity);
             }
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
@@ -5525,8 +5602,8 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersOnlineRegDetails> userOpt =
+                    userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
                             userId,
                             client_name,
                             tax_status_code,
@@ -5535,35 +5612,14 @@ public class NseUserController
                             investor_code
                     );
 
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
+            UsersOnlineRegDetails userEntity;
 
             if (userOpt.isPresent())
             {
                 userEntity = userOpt.get();
 
                 NriInfoMapper.dtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
-
-            } else
-            {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                tax_status_code,
-                                holding_nature_code,
-                                broker_code,
-                                investor_code
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                NriInfoMapper.dtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
+                userOnlineRegDetailsRespository.save(userEntity);
             }
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
@@ -5598,8 +5654,8 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersOnlineRegDetails> userOpt =
+                    userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
                             userId,
                             client_name,
                             tax_status_code,
@@ -5608,35 +5664,15 @@ public class NseUserController
                             investor_code
                     );
 
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
+            UsersOnlineRegDetails userEntity;
 
             if (userOpt.isPresent())
             {
                 userEntity = userOpt.get();
 
                 ContactInfoMapper.dtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
+                userOnlineRegDetailsRespository.save(userEntity);
 
-            } else
-            {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                tax_status_code,
-                                holding_nature_code,
-                                broker_code,
-                                investor_code
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                ContactInfoMapper.dtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
             }
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
@@ -5671,45 +5707,22 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersNomineeDetails> userOpt =
+                    usersNomineeDetailsRepository.findByUseridAndClientNameAndClientCode(
                             userId,
                             client_name,
-                            tax_status_code,
-                            holding_nature_code,
-                            broker_code,
-                            investor_code
+                            investor_code,
+                            broker_code
                     );
 
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
+            UsersNomineeDetails userEntity;
 
             if (userOpt.isPresent())
             {
                 userEntity = userOpt.get();
 
                 NomineeInfoMapper.dtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
-
-            } else
-            {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                tax_status_code,
-                                holding_nature_code,
-                                broker_code,
-                                investor_code
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                NomineeInfoMapper.dtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
+                usersNomineeDetailsRepository.save(userEntity);
             }
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
@@ -5734,7 +5747,6 @@ public class NseUserController
             }
 
             String error = UserValidate.validateJointHolderInfo(dto);
-
             if (error != null)
             {
                 return UserUtils.errorResponse(error, HttpStatus.BAD_REQUEST);
@@ -5744,8 +5756,8 @@ public class NseUserController
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
+            Optional<UsersOnlineRegDetails> userOpt =
+                    userOnlineRegDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
                             userId,
                             client_name,
                             tax_status_code,
@@ -5754,35 +5766,15 @@ public class NseUserController
                             investor_code
                     );
 
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
+            UsersOnlineRegDetails userEntity;
 
             if (userOpt.isPresent())
             {
                 userEntity = userOpt.get();
 
                 JoinHolderInfoMapper.dtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
+                userOnlineRegDetailsRespository.save(userEntity);
 
-            } else
-            {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                tax_status_code,
-                                holding_nature_code,
-                                broker_code,
-                                investor_code
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                JoinHolderInfoMapper.dtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
             }
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
@@ -5795,7 +5787,7 @@ public class NseUserController
     }
 
     @PostMapping("/saveBankInfoForModifyUcc")
-    public ResponseEntity<?> saveJointHolderInfoForModifyUcc(@RequestBody BankInfoDTO dto,@RequestParam String tax_status_code,@RequestParam String holding_nature_code,@RequestParam String broker_code,@RequestParam String investor_code, @RequestHeader("Authorization") String token)
+    public ResponseEntity<?> saveBankInfoForModifyUcc(@RequestBody BankInfoDTO dto,@RequestParam String tax_status_code,@RequestParam String holding_nature_code,@RequestParam String broker_code,@RequestParam String investor_code, @RequestHeader("Authorization") String token)
     {
         try
         {
@@ -5816,47 +5808,35 @@ public class NseUserController
 
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
+            UsersOnlineRegDetails userDetails = null;
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.findByUseridAndClientName(userId, client_name);
 
-            Optional<User> userOpt =
-                    userRepository.getUserBseNseDetailsByAllFieldsForNse(
-                            userId,
-                            client_name,
-                            tax_status_code,
-                            holding_nature_code,
-                            broker_code,
-                            investor_code
-                    );
-
-            User userEntity;
-            UserBseNseDetails bseNseEntity;
-
-            if (userOpt.isPresent())
+            if(userDetailsOpt.isEmpty())
             {
-                userEntity = userOpt.get();
-
-                BankInfoMapper.dtoToUser(dto, userEntity);
-                userRepository.save(userEntity);
-
-            } else
-            {
-                bseNseEntity =
-                        userBseNseDetailsRespository.getUserBseNseDetailsByAllFieldsForNse(
-                                userId,
-                                client_name,
-                                tax_status_code,
-                                holding_nature_code,
-                                broker_code,
-                                investor_code
-                        );
-
-                if (bseNseEntity == null) {
-                    return UserUtils.errorResponse(
-                            "UCC Details not found.", HttpStatus.NOT_FOUND);
-                }
-
-                BankInfoMapper.dtoToUserBseNseDetails(dto, bseNseEntity);
-                userBseNseDetailsRespository.save(bseNseEntity);
+                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
+
+            userDetails = userDetailsOpt.get(0);
+
+            List<UsersBankDetails> usersBankDetailsOpt = usersBankDetailsRepository.findByUserIdAndClientName(userId, client_name);
+
+            UsersBankDetails userBankDetails = null;
+            if(!usersBankDetailsOpt.isEmpty())
+            {
+                userBankDetails = usersBankDetailsOpt.stream() .filter(bank -> bank.getBank_account_number().equals(dto.getAccountNumber())).findFirst() .orElse(null);
+            }
+
+            UsersBankDetails bankInfo = BankInfoMapper.dtoToUserBseNseDetails(dto, userBankDetails);
+
+            bankInfo.setUser_id(userDetails.getUser_id());
+            bankInfo.setOnline_flag("NSE");
+            bankInfo.setOnline_code(userDetails.getNse_iin_number());
+            bankInfo.setOnline_id(userDetails.getId());
+            bankInfo.setBroker_code(userDetails.getBroker_code());
+            bankInfo.setClient_name(userDetails.getClient_name());
+            bankInfo.setCreated_date(new Date());
+
+            usersBankDetailsRepository.save(bankInfo);
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
 

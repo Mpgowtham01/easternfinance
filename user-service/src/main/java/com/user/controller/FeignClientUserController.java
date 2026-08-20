@@ -62,8 +62,6 @@ public class FeignClientUserController
 	@Autowired
 	private BseNseOnlineAccessRepository bseNseOnlineAccessRepository;
 
-	private final UserBseNseDetailsRespository userBseNseDetailsRepository;
-
 	@Autowired
 	UsersPortfolioSchemewiseRepository usersPortfolioSchemewiseRepository;
 
@@ -87,10 +85,6 @@ public class FeignClientUserController
 
     @Autowired
     BasketDetailsRepository basketDetailsRepository;
-
-	public FeignClientUserController(UserBseNseDetailsRespository userBseNseDetailsRepository) {
-		this.userBseNseDetailsRepository = userBseNseDetailsRepository;
-	}
 
 	@Autowired
 	private NseTransactionService nseTransactionService;
@@ -2079,16 +2073,8 @@ public class FeignClientUserController
         System.out.println("client_name = " + client_name);
         System.out.println("user_id = " + user_id);
 
-        try {
-            // First check in User table
-            Optional<User> userDetails =
-                    userRepository.findBybrokercodeAndNseIinNumber(broker_code, iin_number,client_name,user_id);
-            System.out.println(userDetails);
-            if (userDetails.isPresent()) {
-                return ResponseEntity.ok(userDetails.get());
-            }
-
-            // If not found, check in UserBseNseDetails table
+        try
+		{
             Optional<UsersOnlineRegDetails> detailsOptional =
 					userOnlineRegDetailsRespository.findNseByIinNumberAndBrokercode(iin_number, broker_code,client_name,user_id);
 
@@ -2096,7 +2082,6 @@ public class FeignClientUserController
                 return ResponseEntity.ok(detailsOptional.get());
             }
 
-            // If neither found
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("No user details found for the given broker code and IIN number.");
 

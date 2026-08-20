@@ -20,7 +20,7 @@ public class ContactInfoMapper
         return user;
     }
 
-    public static ContactInfoDTO userToDto(UsersOnlineRegDetails user)
+    public static ContactInfoDTO userToDto(User user)
     {
         if (user == null) return null;
 
@@ -30,7 +30,6 @@ public class ContactInfoMapper
         dto.setAddress3(user.getStreet_3());
         dto.setCity(user.getCity());
         dto.setState(user.getState());
-        dto.setStateCode(user.getState_code());
         dto.setPincode(user.getPincode());
         dto.setCountry(user.getCountry());
         return dto;

@@ -62,7 +62,7 @@ public class UserUtils
         return ResponseEntity.status(statusCode).body(response);
     }
 
-    public static ResponseEntity<UserResponse> userSuccessResponse(String returnMsg, HttpStatus statusCode, InvestorInfoDTO invest_info, PersonalInfoDTO personal_info, NriInfoDTO nri_info, List<NomineeInfoDTO> nominee_info, List<JointHolderInfoDTO> joint_holder_info, ContactInfoDTO contact_info, BankInfoDTO bank_info) {
+    public static ResponseEntity<UserResponse> userSuccessResponse(String returnMsg, HttpStatus statusCode, InvestorInfoDTO invest_info, PersonalInfoDTO personal_info, NriInfoDTO nri_info, List<NomineeInfoDTO> nominee_info, List<JointHolderInfoDTO> joint_holder_info, ContactInfoDTO contact_info, List<BankInfoDTO> bank_info) {
         UserResponse response = new UserResponse(statusCode.value(), statusCode.getReasonPhrase(), returnMsg,invest_info,personal_info,nri_info, contact_info, nominee_info, joint_holder_info, bank_info);
         return ResponseEntity.ok(response);
     }

@@ -1,8 +1,11 @@
 package com.user.service;
 
+import com.user.model.UsersOnlineRegDetails;
+import com.user.repository.UserOnlineRegDetailsRespository;
 import com.user.repository.UserRepository;
 import com.user.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -12,6 +15,9 @@ import java.security.SecureRandom;
 public class CheckNseIinNumber {
 
     private final UserRepository userRepository;
+
+    @Autowired
+    UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
 
     public class UniqueIDProvider {
 
@@ -40,7 +46,7 @@ public class CheckNseIinNumber {
                     nseIinNumberNew = clientName + uniqueID;
                 }
 
-                boolean exists = userRepository.findByClientNameAndNseIinNumber(clientName, nseIinNumberNew).isPresent();
+                boolean exists = userOnlineRegDetailsRespository.findByClientNameAndNseIinNumber(clientName, nseIinNumberNew).isPresent();
 
                 if (!exists) {
                     break;
@@ -62,7 +68,7 @@ public class CheckNseIinNumber {
             {
                 nseIinNumberNew = UserUtils.generateNseIinNumber(arnCode);
 
-                boolean exists = userRepository.findByClientNameAndNseIinNumber(clientName, nseIinNumberNew).isPresent();
+                boolean exists = userOnlineRegDetailsRespository.findByClientNameAndNseIinNumber(clientName, nseIinNumberNew).isPresent();
 
                 if (!exists) {
                     break;
@@ -72,5 +78,32 @@ public class CheckNseIinNumber {
             ex.printStackTrace();
         }
         return nseIinNumberNew;
+    }
+
+    public UsersOnlineRegDetails CheckNewIinNumber(String clientName, String iin_number, String arn_number) {
+        UsersOnlineRegDetails exists = null;
+        try {
+            exists = userOnlineRegDetailsRespository
+                    .findByClientNameAndNseIinNumberAndActive(clientName, iin_number, arn_number);
+
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return exists;
+    }
+
+    public boolean CheckNewIinNumbers(String clientName,String iin_number) {
+        boolean exists = false;
+        try {
+            exists = userOnlineRegDetailsRespository
+                    .findByClientNameAndNseIinNumber(clientName, iin_number)
+                    .isPresent();
+
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return exists;
     }
 }

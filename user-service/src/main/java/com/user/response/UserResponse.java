@@ -29,5 +29,5 @@ public class UserResponse
     private ContactInfoDTO contact_info;
     private List<NomineeInfoDTO> nominee_info;
     private List<JointHolderInfoDTO> joint_holder_info;
-    private BankInfoDTO bank_info;
+    private List<BankInfoDTO>  bank_info;
 }

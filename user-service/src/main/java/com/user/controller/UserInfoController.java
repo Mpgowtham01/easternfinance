@@ -37,12 +37,8 @@ import java.util.stream.Collectors;
         name = "User Info Controller",
         description = "APIs related to User Information"
 )
-public class UserInfoController {
-
-
-    @Autowired
-    UserBseNseDetailsRespository userBseNseDetailsRepository;
-
+public class UserInfoController
+{
     @Autowired
     UserRepository userRepository;
 

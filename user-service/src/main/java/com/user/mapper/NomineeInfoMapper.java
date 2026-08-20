@@ -260,15 +260,18 @@ public class NomineeInfoMapper
         return value == null ? "" : value;
     }
 
-    public static List<NomineeInfoDTO> userBseNseDetailsToDto(UsersNomineeDetails user) {
+    public static List<NomineeInfoDTO> userBseNseDetailsToDto(UsersNomineeDetails user)
+    {
         if (user == null) return Collections.emptyList();
-        System.out.println("user = " + user.getNominee1_id_no());
+        System.out.println("user = " + user);
         List<NomineeInfoDTO> dtoList = new ArrayList<>();
-
         // Nominee 1
         NomineeInfoDTO nominee1 = new NomineeInfoDTO();
         nominee1.setId(1);
         nominee1.setName(safe(user.getNominee1_name()));
+        nominee1.setMiddle_name(safe(user.getNominee1_middle_name()));
+        nominee1.setLast_name(safe(user.getNominee1_last_name()));
+        nominee1.setNumber_of_nominee(user.getNumber_of_nominee());
         nominee1.setDob(safe(user.getNominee1_dob()));
         nominee1.setType(safe(user.getNominee1_type()));
         nominee1.setTypeDesc(safe(user.getNominee1_type_desc()));
@@ -287,14 +290,20 @@ public class NomineeInfoMapper
         nominee1.setIdType(safe(user.getNominee1_id_type()));
         nominee1.setIdNo(safe(user.getNominee1_id_no()));
         nominee1.setGuardName(safe(user.getNominee1_guard_name()));
+        nominee1.setGuard_middle_name(safe(user.getNominee1_guard_middle_name()));
+        nominee1.setGuard_last_name(safe(user.getNominee1_guard_last_name()));
         nominee1.setGuardPan(safe(user.getNominee1_guard_pan()));
         nominee1.setGuardRelation(safe(user.getNominee1_guard_relationship()));
+        nominee1.setGuardDob(safe(user.getNominee1_guard_dob()));
+        nominee1.setNominee_soa(safe(user.getNominee_soa()));
         dtoList.add(nominee1);
 
         // Nominee 2
         NomineeInfoDTO nominee2 = new NomineeInfoDTO();
         nominee2.setId(2);
         nominee2.setName(safe(user.getNominee2_name()));
+        nominee2.setMiddle_name(safe(user.getNominee2_middle_name()));
+        nominee2.setLast_name(safe(user.getNominee2_last_name()));
         nominee2.setDob(safe(user.getNominee2_dob()));
         nominee2.setType(safe(user.getNominee2_type()));
         nominee2.setTypeDesc(safe(user.getNominee2_type_desc()));
@@ -313,7 +322,10 @@ public class NomineeInfoMapper
         nominee2.setIdType(safe(user.getNominee2_id_type()));
         nominee2.setIdNo(safe(user.getNominee2_id_no()));
         nominee2.setGuardName(safe(user.getNominee2_guard_name()));
+        nominee2.setGuard_middle_name(safe(user.getNominee2_guard_middle_name()));
+        nominee2.setGuard_last_name(safe(user.getNominee2_guard_last_name()));
         nominee2.setGuardPan(safe(user.getNominee2_guard_pan()));
+        nominee2.setGuardDob(safe(user.getNominee2_guard_dob()));
         nominee2.setGuardRelation(safe(user.getNominee2_guard_relationship()));
         dtoList.add(nominee2);
 
@@ -321,6 +333,8 @@ public class NomineeInfoMapper
         NomineeInfoDTO nominee3 = new NomineeInfoDTO();
         nominee3.setId(3);
         nominee3.setName(safe(user.getNominee3_name()));
+        nominee3.setMiddle_name(safe(user.getNominee3_middle_name()));
+        nominee3.setLast_name(safe(user.getNominee3_last_name()));
         nominee3.setDob(safe(user.getNominee3_dob()));
         nominee3.setType(safe(user.getNominee3_type()));
         nominee3.setTypeDesc(safe(user.getNominee3_type_desc()));
@@ -339,7 +353,10 @@ public class NomineeInfoMapper
         nominee3.setIdType(safe(user.getNominee3_id_type()));
         nominee3.setIdNo(safe(user.getNominee3_id_no()));
         nominee3.setGuardName(safe(user.getNominee3_guard_name()));
+        nominee3.setGuard_middle_name(safe(user.getNominee3_guard_middle_name()));
+        nominee3.setGuard_last_name(safe(user.getNominee3_guard_last_name()));
         nominee3.setGuardPan(safe(user.getNominee3_guard_pan()));
+        nominee3.setGuardDob(safe(user.getNominee3_guard_dob()));
         nominee3.setGuardRelation(safe(user.getNominee3_guard_relationship()));
         dtoList.add(nominee3);
 

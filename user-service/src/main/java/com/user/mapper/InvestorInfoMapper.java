@@ -20,7 +20,7 @@ public class InvestorInfoMapper
         return user;
     }
 
-    public static InvestorInfoDTO mapUserToDto(User user)
+    public static InvestorInfoDTO mapUserToDto(UsersOnlineRegDetails user)
     {
         if (user == null) return null;
         InvestorInfoDTO dto = new InvestorInfoDTO();
@@ -49,7 +49,7 @@ public class InvestorInfoMapper
         return user;
     }
 
-    public static InvestorInfoDTO mapBseNseDetailsToDto(UserBseNseDetails user)
+    public static InvestorInfoDTO mapBseNseDetailsToDto(UsersOnlineRegDetails user)
     {
         if (user == null) return null;
         InvestorInfoDTO dto = new InvestorInfoDTO();
