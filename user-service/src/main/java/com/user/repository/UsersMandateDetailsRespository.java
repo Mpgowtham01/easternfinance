@@ -1,5 +1,6 @@
 package com.user.repository;
 
+import com.user.model.UserMandateDetails;
 import com.user.model.UsersMandateDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -61,5 +62,8 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
             @Param("online_code") String online_code,
             @Param("online_flag") String online_flag
     );
+
+    @Query(value = "SELECT * FROM users_mandate_details WHERE user_id = :userId AND client_name = :clientName AND online_id = :online_id AND online_flag='NSE'", nativeQuery = true)
+    List<UserMandateDetails> findByUseridAndClientName(@Param("userId") Integer userid, @Param("clientName") String clientName, @Param("online_id") String online_id);
 
 }

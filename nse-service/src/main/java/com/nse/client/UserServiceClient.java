@@ -35,6 +35,17 @@ public interface UserServiceClient {
             @RequestHeader("Authorization") String token
     );
 
+    @GetMapping("/getCartDetailsByIds")
+    List<CartDto> getCartDetailsByIds(@RequestParam List<Integer> ids, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getUserBseNseDetailsByNseIINNumberBrokerCode")
+    UserDto getUserBseNseDetailsByNseIINNumberBrokerCode(
+            @RequestParam("client_name") String clientName,
+            @RequestParam("iin_number") String iin_number,
+            @RequestParam("broker_code") String broker_code,
+            @RequestHeader("Authorization") String token
+    );
+
     @GetMapping("/getUserByIdAndClientName")
     UserDto getUserDetailsByID(@RequestParam("clientName") String clientName,@RequestParam("userid") Integer userid, @RequestHeader("Authorization") String token);
 

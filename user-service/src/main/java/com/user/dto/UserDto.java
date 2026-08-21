@@ -7,6 +7,7 @@ import java.util.Date;
 @Data
 public class UserDto {
     private Integer id;
+    private Integer user_id;
     private String name = "";
     private String pan = "";
     private String mobile = "";
@@ -63,10 +64,13 @@ public class UserDto {
     private String address_type_code = "";
 
     private String guard_name = "";
+    private String guard_middle_name = "";
+    private String guard_last_name = "";
     private String guard_pan = "";
     private String guard_dob = "";
     private String guard_mobile = "";
     private String guard_email = "";
+    private String guard_gender = "";
     private String guard_relationship = "";
     private String guard_relation_proof = "";
     private String guard_account_relation = "";
@@ -118,7 +122,9 @@ public class UserDto {
     private String nri_country = "";
 
     private String number_of_nominee = "";
+    private String nominee_soa = "";
     private String nominee1_type = "";
+    private String nominee1_type_desc = "";
     private String nominee1_name = "";
     private String nominee1_dob = "";
     private String nominee1_address1 = "";
@@ -144,6 +150,7 @@ public class UserDto {
     private String nominee3_pan = "";
 
     private String nominee2_type = "";
+    private String nominee2_type_desc = "";
     private String nominee2_name = "";
     private String nominee2_dob = "";
     private String nominee2_relation = "";
@@ -165,6 +172,7 @@ public class UserDto {
     private String nominee2_guard_relationship = "";
 
     private String nominee3_type = "";
+    private String nominee3_type_desc = "";
     private String nominee3_name = "";
     private String nominee3_dob = "";
     private String nominee3_relation = "";
@@ -223,6 +231,32 @@ public class UserDto {
     private String bank_micr_code3 = "";
     private String default_bank3 = "N";
     private String bank_proof3 = "";
+
+    private String bank_name4 = "";
+    private String bank_code4 = "";
+    private String bank_mode4 = "";
+    private String bank_branch4 = "";
+    private String bank_address4 = "";
+    private String bank_account_number4 = "";
+    private String bank_account_holder_name4 = "";
+    private String bank_account_type4 = "";
+    private String bank_ifsc_code4 = "";
+    private String bank_micr_code4 = "";
+    private String default_bank4 = "N";
+    private String bank_proof4 = "";
+
+    private String bank_name5 = "";
+    private String bank_code5 = "";
+    private String bank_mode5 = "";
+    private String bank_branch5 = "";
+    private String bank_address5 = "";
+    private String bank_account_number5 = "";
+    private String bank_account_holder_name5 = "";
+    private String bank_account_type5 = "";
+    private String bank_ifsc_code5 = "";
+    private String bank_micr_code5 = "";
+    private String default_bank5 = "N";
+    private String bank_proof5 = "";
 
     private Integer xsip_otm_flag1 = 0;
     private String xsip_otm1 = "";

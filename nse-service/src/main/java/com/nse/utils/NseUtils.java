@@ -7,6 +7,8 @@ import com.nse.dto.mf.InvestorTransactionKarvyDto;
 import com.nse.dto.mf.UserDto;
 import com.nse.pojo.CommonPojo;
 import com.nse.response.CommonResponse;
+import com.nse.response.PurchaseTransactionResponse;
+import com.nse.response.TransactionMobileResponse;
 import com.nse.response.TransactionResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.hibernate.internal.util.StringHelper;
@@ -42,6 +44,16 @@ public class NseUtils
     public static CommonPojo createCommonData(String code, String status)
     {
         return new CommonPojo(status, code);
+    }
+
+    public static ResponseEntity<?> transactionMobileResponse(HttpStatus status, String returnMsg, Map<String, String> transaction_status)
+    {
+        return ResponseEntity.status(status).body(new TransactionMobileResponse(status.value(), status.getReasonPhrase(), returnMsg, transaction_status));
+    }
+
+    public static ResponseEntity<?> purchaseTransactionResponse(HttpStatus status, String returnMsg, Map<String, String> transaction_status, Set<String> orderIdList)
+    {
+        return ResponseEntity.status(status).body(new PurchaseTransactionResponse(status.value(), status.getReasonPhrase(), returnMsg, transaction_status,orderIdList));
     }
 
     public static ResponseEntity<Object> commonResponse(String message, HttpStatus status) {

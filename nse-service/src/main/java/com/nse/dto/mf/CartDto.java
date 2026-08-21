@@ -70,6 +70,13 @@ public class CartDto
     private String end_month = "";
     private String end_year = "";
     private String tenure = "";
+
+    private Boolean is_step_up = false;
+    private String step_up_frequency = "";
+    private String step_up_start_date = "";
+    private String step_up_end_date = "";
+    private String step_up_amount = "";
+    private String register_source = "";
     private Boolean first_order_flag = false;
 
     @Transient

@@ -152,6 +152,9 @@ public class CartService
         }
     }
 
-
+    public List<Cart> getAllCartsBasedOnIds(List<Integer> Ids)
+    {
+        return cartRepository.findAllCartsBasedOnIds(Ids);
+    }
 
 }

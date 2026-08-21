@@ -173,4 +173,12 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("nse_iin_number") String in_number
     );
 
+    @Query("SELECT u FROM UsersOnlineRegDetails u WHERE u.nse_iin_number = :iinNumber AND u.client_name = :clientName AND u.broker_code = :broker_code AND u.user_id = :userid")
+    List<UsersOnlineRegDetails> findNseByIinNumberAndClientNameBrokerCode(
+            @Param("iinNumber") String iinNumber,
+            @Param("clientName") String clientName,
+            @Param("broker_code") String broker_code,
+            @Param("userid") String userid
+    );
+
 }

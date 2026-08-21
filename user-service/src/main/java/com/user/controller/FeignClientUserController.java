@@ -4,6 +4,7 @@ import com.user.config.TokenInterceptor;
 import com.user.dao.UserDAO;
 import com.user.dto.UserDto;
 import com.user.dto.UsersNseRegReportDto;
+import com.user.mapper.UserMapper;
 import com.user.model.*;
 import com.user.repository.*;
 import com.user.service.*;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.hibernate.internal.util.StringHelper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -106,6 +108,13 @@ public class FeignClientUserController
 
 	@Autowired
 	UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
+    @Autowired
+    private UsersBankDetailsRepository usersBankDetailsRepository;
+    @Autowired
+    private UsersNomineeDetailsRepository usersNomineeDetailsRepository;
+
+	@Autowired
+	UsersMandateDetailsRespository usersMandateDetailsRespository;
 
 	@Operation(
 			summary = "Get inactive NSE UserBseNseDetails by userId",
@@ -2092,5 +2101,34 @@ public class FeignClientUserController
         }
     }
 
+	@Hidden
+	@GetMapping("/getUserBseNseDetailsByNseIINNumberBrokerCode")
+	public ResponseEntity<?> getUserBseNseDetailsByNseIINNumberBrokerCode(@RequestParam String client_name, @RequestParam String iin_number, @RequestParam String broker_code, @RequestHeader("Authorization") String token) {
+		try {
+
+			String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+
+			if (StringHelper.isEmpty(iin_number) || StringHelper.isEmpty(client_name) || StringHelper.isEmpty(broker_code)) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "Broker code or Client name or UCC code is Empty...! Please check user master...!"));
+			}
+
+			List<UsersOnlineRegDetails> detailsOptional = userOnlineRegDetailsRespository.findNseByIinNumberAndClientNameBrokerCode(iin_number, client_name, broker_code, userid);
+			if (!detailsOptional.isEmpty() && detailsOptional.size() > 0) {
+				UsersOnlineRegDetails userDetail = detailsOptional.get(0);
+				List<UsersBankDetails> bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				Optional<UsersNomineeDetails> nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE");
+				List<UserMandateDetails> mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+
+				UserDto userDto = UserMapper.mapToUserDtoMappers(userDetail, bankDetails, mandateDetails, nomineeDetails.isPresent() ? nomineeDetails.get() : null);
+
+				return ResponseEntity.ok(userDto);
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "No record found for the given IIN Number and Client Name."));
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
+		}
+	}
 
 }

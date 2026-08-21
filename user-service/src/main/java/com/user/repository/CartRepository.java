@@ -83,6 +83,7 @@ public interface CartRepository extends JpaRepository<Cart, Integer>
             @Param("purchaseType") String purchaseType,
             @Param("vendor") String vendor
     );
-
+    @Query("SELECT c FROM Cart c WHERE c.id IN :ids AND c.active = true")
+    List<Cart> findAllCartsBasedOnIds(@Param("ids") List<Integer> ids);
 
 }

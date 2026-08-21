@@ -13,10 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 @RestController
@@ -255,6 +252,28 @@ public class CartController
         }
     }
 
+    @Hidden
+    @GetMapping("/getCartDetailsByIds")
+    public ResponseEntity<?> getCartDetailsByIds(@RequestParam List<Integer> ids)
+    {
+        try
+        {
+            List<Cart> cartList = cartService.getAllCartsBasedOnIds(ids);
+
+            if(!cartList.isEmpty())
+            {
+                return ResponseEntity.ok(cartList);
+            }else
+            {
+                return ResponseEntity.ok(new ArrayList<>());
+            }
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching user details"));
+        }
+    }
 
 
 
