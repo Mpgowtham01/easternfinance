@@ -2117,7 +2117,7 @@ public class FeignClientUserController
 				UsersOnlineRegDetails userDetail = detailsOptional.get(0);
 				List<UsersBankDetails> bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
 				Optional<UsersNomineeDetails> nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE");
-				List<UserMandateDetails> mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				List<UsersMandateDetails> mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
 
 				UserDto userDto = UserMapper.mapToUserDtoMappers(userDetail, bankDetails, mandateDetails, nomineeDetails.isPresent() ? nomineeDetails.get() : null);
 

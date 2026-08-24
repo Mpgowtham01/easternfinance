@@ -3427,8 +3427,8 @@ public class NseUserController
             user.setPan(userMain.getPan());
             user.setMobile(userMain.getMobile());
             user.setEmail(userMain.getEmail());
-            user.setAlter_email(userMain.getAlter_email());
-            user.setAlter_mobile(userMain.getAlter_mobile());
+//            user.setAlter_email(userMain.getAlter_email());
+//            user.setAlter_mobile(userMain.getAlter_mobile());
             user.setStreet_1(userMain.getStreet_1());
             user.setStreet_2(userMain.getStreet_2());
             user.setStreet_3(userMain.getStreet_3());

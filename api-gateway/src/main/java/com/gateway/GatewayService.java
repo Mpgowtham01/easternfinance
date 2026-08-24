@@ -31,7 +31,7 @@ public class GatewayService {
 	public class FallbackController {
 		@RequestMapping("/")
 		public String home() {
-			return "Welcome to Easternfin - Microservice API Gateway!";
+			return "Welcome to Dev Easternfin - Microservice API Gateway!";
 		}
 	}
 

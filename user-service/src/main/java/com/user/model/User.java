@@ -20,15 +20,14 @@ public class User {
     private String pan = "";
     private String mobile = "";
     private String email = "";
-    private String alter_email = "";
-    private String alter_mobile = "";
+//    private String alter_email = "";
+//    private String alter_mobile = "";
     private Integer type_id = 1;
     private String branch = "";
     private String rm_name = "";
     private String subbroker_name = "";
     private String super_subbroker_name = "";
     private String payout = "";
-    private Boolean login_status = true;
     private Integer active = 1;
     private Integer email_active = 1;
     @Column(name = "user_password")
@@ -61,7 +60,6 @@ public class User {
     private String referral_partner_code = "";
     private String register_source = "";
     private String aadhaar = "";
-    private String passport = "";
 
     private String emp_code = "";
     private String user_risk = "";
@@ -83,9 +81,7 @@ public class User {
     private String acquired_by = "";
     private String freshchat_restoreid = "";
 
-    private String gst_no = "";
     private String portfolio_sent_date = "";
-    private String login_sent_date = "";
     private String birthday_sent_date = "";
     private Double mf_aum = 0.0;
     private String maker_approver = "";
@@ -110,7 +106,7 @@ public class User {
     private String debt_allocation;
     @Transient
     private String ekyc_createdate;
-    private Date first_investment_date;
+//    private Date first_investment_date;
     private String note;
 
     private Date mobile_last_login;
@@ -120,9 +116,7 @@ public class User {
     private String one_signal_mobile_brand;
     private String one_signal_mobile_os;
 
-    private Integer online_kyc_flag;
-
-    private String date_of_birth_greeting = "";
+//    private String date_of_birth_greeting = "";
 
     private String guard_pan;
     private String guard_name;

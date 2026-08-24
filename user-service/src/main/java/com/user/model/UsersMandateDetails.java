@@ -20,6 +20,20 @@ public class UsersMandateDetails
     private String broker_code;
     private String bank_account_number;
 
+    private Integer xsip_otm_flag;
+    private String xsip_otm;
+    private String xsip_otm_amount;
+    private Integer xsip_otm_approved;
+    private String xsip_otm_rej_reason;
+    private Date xsip_otm_created_date;
+
+    private Integer emandate_otm_flag;
+    private String emandate_otm;
+    private String emandate_otm_amount;
+    private Integer emandate_otm_approved;
+    private String emandate_otm_rej_reason;
+    private Date emandate_otm_created_date;
+
     private Integer nse_ach_flag;
     private String nse_ach;
     private String nse_umrn_no;

@@ -76,6 +76,8 @@ public class UserDto {
     private String guard_account_relation = "";
 
     private String joint_holder_name1 = "";
+    private String joint_holder_middle_name1 = "";
+    private String joint_holder_last_name1 = "";
     private String joint_holder_pan1 = "";
     private String joint_holder_dob1 = "";
     private String joint_holder_email1 = "";
@@ -95,6 +97,8 @@ public class UserDto {
     private String joint_holder_address_type_code1 = "";
 
     private String joint_holder_name2 = "";
+    private String joint_holder_middle_name2 = "";
+    private String joint_holder_last_name2 = "";
     private String joint_holder_pan2 = "";
     private String joint_holder_dob2 = "";
     private String joint_holder_email2 = "";
@@ -122,10 +126,13 @@ public class UserDto {
     private String nri_country = "";
 
     private String number_of_nominee = "";
+    private String nominee_opt = "";
     private String nominee_soa = "";
     private String nominee1_type = "";
     private String nominee1_type_desc = "";
     private String nominee1_name = "";
+    private String nominee1_middle_name = "";
+    private String nominee1_last_name = "";
     private String nominee1_dob = "";
     private String nominee1_address1 = "";
     private String nominee1_address2 = "";
@@ -152,6 +159,8 @@ public class UserDto {
     private String nominee2_type = "";
     private String nominee2_type_desc = "";
     private String nominee2_name = "";
+    private String nominee2_middle_name = "";
+    private String nominee2_last_name = "";
     private String nominee2_dob = "";
     private String nominee2_relation = "";
     private String nominee2_percentage = "";
@@ -174,6 +183,8 @@ public class UserDto {
     private String nominee3_type = "";
     private String nominee3_type_desc = "";
     private String nominee3_name = "";
+    private String nominee3_middle_name = "";
+    private String nominee3_last_name = "";
     private String nominee3_dob = "";
     private String nominee3_relation = "";
     private String nominee3_percentage = "";

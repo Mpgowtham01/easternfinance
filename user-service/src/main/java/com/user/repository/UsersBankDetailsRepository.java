@@ -34,4 +34,8 @@ public interface UsersBankDetailsRepository extends JpaRepository<UsersBankDetai
     @Query(value = "SELECT * FROM users_bank_details WHERE user_id = :userId AND client_name = :clientName AND online_code = :online_code AND broker_code=:broker_code", nativeQuery = true)
     List<UsersBankDetails> findByUseridAndClientNameAndClientCode(@Param("userId") Integer userid, @Param("clientName") String clientName,@Param("online_code") String online_code,@Param("broker_code") String broker_code);
 
+    @Query(value = "SELECT * FROM users_bank_details WHERE user_id = :userId AND client_name = :clientName AND online_id = :online_id AND online_flag=:online_flag", nativeQuery = true)
+    List<UsersBankDetails> findByUseridAndClientNameAndOnlineFlag(@Param("userId") Integer userid, @Param("clientName") String clientName,@Param("online_id") String online_id,@Param("online_flag")  String online_flag);
+
+
 }

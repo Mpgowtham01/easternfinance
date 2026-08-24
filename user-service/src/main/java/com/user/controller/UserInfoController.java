@@ -3,6 +3,8 @@ package com.user.controller;
 
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.user.config.TokenInterceptor;
+import com.user.dto.UserDto;
+import com.user.mapper.UserMapper;
 import com.user.model.*;
 import com.user.pojo.InvestorClientCodePojo;
 import com.user.pojo.MandateDetailsPojo;
@@ -49,7 +51,7 @@ public class UserInfoController
     BseNseKeyRepository bseNseKeyRepository;
 
     @Autowired
-    UsersMandateDetailsRespository  UsersMandateDetailsRepository;
+    UsersMandateDetailsRespository  usersMandateDetailsRepository;
 
     @Autowired
     UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
@@ -63,6 +65,8 @@ public class UserInfoController
 
     @Value("${vendor.logo.url}")
     private String vendorLogoPath;
+    @Autowired
+    private UsersNomineeDetailsRepository usersNomineeDetailsRepository;
 
     @Operation(
             summary = "Get User by ID",
@@ -347,7 +351,7 @@ public class UserInfoController
             Integer online_id = reg.getId();
 
             List<UsersBankDetails> bank_list = usersBankDetailsRepository.findByOnlineId(online_id);
-            List<UsersMandateDetails> registered_mandate_list = UsersMandateDetailsRepository.findByOnlineId(online_id);
+            List<UsersMandateDetails> registered_mandate_list = usersMandateDetailsRepository.findByOnlineId(online_id);
 
             if (bank_list == null)
             {
@@ -650,6 +654,71 @@ public class UserInfoController
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching key"));
+        }
+    }
+
+    @GetMapping("/getUserBseNseDetailsByUserID")
+    public ResponseEntity<?> getUserBseNseDetailsByUserID(@RequestParam Integer userid, @RequestParam String clientName,@RequestParam(required = false) String online_flag) {
+        try {
+
+            online_flag = UserUtils.checkParem(online_flag);
+            if(StringHelper.isEmpty(online_flag)) {online_flag = "NSE";}
+
+            Optional<User> users = userRepository.findById(userid);
+
+            List<UsersOnlineRegDetails> userDetailsList = null;
+            if(online_flag.equalsIgnoreCase("BSE"))
+            {
+                userDetailsList = userOnlineRegDetailsRespository.getUserBseNseDetailsByUserIDAndOnlineFlagBse(userid, clientName,online_flag);
+            }else
+            {
+                userDetailsList = userOnlineRegDetailsRespository.getUserBseNseDetailsByUserIDAndOnlineFlag(userid, clientName,online_flag);
+            }
+
+            if (userDetailsList.isEmpty())
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("status", 404, "status_msg", "User not found"));
+            }
+
+            List<UserDto> userDtos = new ArrayList<>();
+
+            for (UsersOnlineRegDetails userDetails : userDetailsList) {
+                List<UsersBankDetails> bankDetails =
+                        usersBankDetailsRepository.findByUseridAndClientNameAndOnlineFlag(
+                                userDetails.getUser_id(), clientName, String.valueOf(userDetails.getId()),online_flag);
+
+                Optional<UsersNomineeDetails> nomineeDetails =
+                        usersNomineeDetailsRepository.findByUseridAndClientName(
+                                userDetails.getUser_id(), clientName, String.valueOf(userDetails.getId()), online_flag);
+
+                List<UsersMandateDetails> mandateDetails =
+                        usersMandateDetailsRepository.findByUseridAndClientNameAndOnlineFlag(
+                                userDetails.getUser_id(), userDetails.getClient_name(), String.valueOf(userDetails.getId()),online_flag);
+
+                UserDto userDto = UserMapper.mapToUserDtoMapper(
+                        userDetails,
+                        bankDetails,
+                        mandateDetails,
+                        nomineeDetails.orElse(new UsersNomineeDetails())
+                );
+
+                if (users.isPresent()) {
+                    User user = users.get();
+
+                    userDto.setSubbroker_name(user.getSubbroker_name());
+                    userDto.setRm_name(user.getRm_name());
+                    userDto.setSuper_subbroker_name(user.getSuper_subbroker_name());
+                    userDto.setBranch(user.getBranch());
+                }
+                userDtos.add(userDto);
+            }
+
+            return ResponseEntity.ok(userDtos);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "status_msg", "Error occurred while fetching key"));
         }
     }
 

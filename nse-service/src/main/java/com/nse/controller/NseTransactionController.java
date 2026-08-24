@@ -4462,629 +4462,714 @@ public class NseTransactionController {
         }
     }
 
-//    @Operation(
-//            summary = "Initiate SWP Transaction",
-//            description = "Triggers a Systematic Withdrawal Plan (SWP) transaction for an investor through NSE. Parameters vary depending on whether the source is web or mobile.",
-//            parameters = {
-//                    // Common
-//                    @Parameter(name = "source", description = "Transaction source (web/mobile)", required = false),
-//                    @Parameter(
-//                            name = "Authorization",
-//                            description = "Bearer token for authentication",
-//                            required = true,
-//                            in = ParameterIn.HEADER
-//                    ),
-//
-//                    // ✅ Website Parameters
-//                    @Parameter(name = "iin_number", description = "Investor Identification Number (Web)", required = false),
-//                    @Parameter(name = "multiple_count", description = "Number of SWP instructions to process (Web)", required = false),
-//                    @Parameter(name = "amc_code", description = "AMC code (Web)", required = false),
-//                    @Parameter(name = "folio", description = "Folio number (Web)", required = false),
-//                    @Parameter(name = "amount", description = "Withdrawal amount per installment (Web)", required = false),
-//                    @Parameter(name = "start_date", description = "SWP start date (yyyy-MM-dd) (Web)", required = false),
-//                    @Parameter(name = "end_date", description = "SWP end date (yyyy-MM-dd) (Web)", required = false),
-//                    @Parameter(name = "frequency", description = "SWP frequency (e.g., Monthly, Quarterly) (Web)", required = false),
-//                    @Parameter(name = "from_scheme_code", description = "Scheme code to withdraw from (Web)", required = false),
-//                    @Parameter(name = "from_scheme_name", description = "Scheme name to withdraw from (Web)", required = false),
-//                    @Parameter(name = "redem_type", description = "SWP redemption type (Amount/Units) (Web)", required = false),
-//                    @Parameter(name = "split_start_date", description = "Split start date for SWP if applicable (Web)", required = false),
-//                    @Parameter(name = "swp_day", description = "Day of the month for SWP (e.g., 10, 15) (Web)", required = false),
-//                    @Parameter(name = "broker_code", description = "Broker code (Web)", required = false),
-//                    @Parameter(name = "euin_code", description = "EUIN code (Web)", required = false),
-//
-//                    // ✅ Mobile App Parameters
-//                    @Parameter(name = "iin_number", description = "Investor Identification Number (Mobile)", required = false),
-//                    @Parameter(name = "broker_code", description = "Broker code (Mobile)", required = false),
-//                    @Parameter(name = "euin_code", description = "EUIN code (Mobile)", required = false)
-//            },
-//            responses = {
-//                    @ApiResponse(
-//                            responseCode = "200",
-//                            description = "SWP transaction successfully processed",
-//                            content = @Content(
-//                                    mediaType = "application/json",
-//                                    schema = @Schema(implementation = TransactionResponse.class),
-//                                    examples = @ExampleObject(
-//                                            name = "SuccessResponseExample",
-//                                            summary = "SWP Success",
-//                                            value = """
-//                        {
-//                          "status": 200,
-//                          "status_msg": "SUCCESS",
-//                          "msg": "SWP transaction successfully processed",
-//                          "return_msg": "OrderID: SWP20250724",
-//                          "transaction_status": {
-//                            "HDFC Corporate Bond Fund - Growth": "SWP successfully triggered"
-//                          }
-//                        }
-//                    """
-//                                    )
-//                            )
-//                    ),
-//                    @ApiResponse(
-//                            responseCode = "400",
-//                            description = "Bad request or missing data",
-//                            content = @Content(
-//                                    mediaType = "application/json",
-//                                    examples = @ExampleObject(
-//                                            name = "BadRequestExample",
-//                                            summary = "Invalid STP request",
-//                                            value = "{ \"status\": 400, \"error\": \"Bad Request\", \"message\": \"Invalid or missing parameters\" }"
-//                                    )
-//                            )
-//                    ),
-//                    @ApiResponse(
-//                            responseCode = "500",
-//                            description = "Internal Server Error",
-//                            content = @Content(
-//                                    mediaType = "application/json",
-//                                    examples = @ExampleObject(
-//                                            name = "ServerErrorExample",
-//                                            summary = "Unexpected server error",
-//                                            value = "{ \"status\": 500, \"error\": \"Internal Server Error\", \"message\": \"Something went wrong on the server\" }"
-//                                    )
-//                            )
-//                    )
-//            }
-//    )
-//    @PostMapping("/saveSwp")
-//    public ResponseEntity<?> saveSwp(
-//            HttpServletRequest request,
-//            @RequestParam(required = false) String amc,
-//            @RequestParam(required = false) String scheme,
-//            @RequestParam(required = false) String scheme_code,
-//            @RequestParam(required = false) String reinvest_tag,
-//            @RequestParam(required = false) String amount,
-//            @RequestParam(required = false) String folio,
-//            @RequestParam(required = false) String redem_type,
-//            @RequestParam(required = false) String start_date,
-//            @RequestParam(required = false) String end_date,
-//            @RequestParam(required = false) String frequency,
-//            @RequestParam(required = false) String split_start_date,
-//            @RequestParam(required = false) String iin_number,
-//            @RequestParam(required = false) String broker_code,
-//            @RequestParam(required = false) String euin_code,
-//            @RequestParam(required = false) String withdrawals,
-//            @RequestParam(required = false) String first_order_today,
-//            @RequestParam(required = false) String source,
-//            @RequestParam(required = false) String cartid,
-//            @RequestParam(required = false) String subbroker_arn,
-//            @RequestParam(required = false) String subbroker_code,
-//            @RequestParam(required = false) String subbroker_name,
-//            @RequestParam(required = false) String ip_address,
-//            @RequestParam(required = false) String origin_user_id,
-//            @RequestParam(required = false) String origin_first_name,
-//            @RequestHeader("Authorization") String token)
-//    {
-//
-//        String ipAddr = "";
-//        List<CartDto> cartList = null;
-//        long currentTimeMillis = System.currentTimeMillis();
-//        try
-//        {
-//            String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-//            System.out.println("User ID from token: " + userid);
-//
-//            amc = NseUtils.checkParem(amc);
-//            scheme = NseUtils.checkParem(scheme);
-//            scheme_code = NseUtils.checkParem(scheme_code);
-//            reinvest_tag = NseUtils.checkParem(reinvest_tag);
-//            amount = NseUtils.checkParem(amount);
-//            folio = NseUtils.checkParem(folio);
-//            redem_type = NseUtils.checkParem(redem_type);
-//            start_date = NseUtils.checkParem(start_date);
-//            end_date = NseUtils.checkParem(end_date);
-//            frequency = NseUtils.checkParem(frequency);
-//            split_start_date = NseUtils.checkParem(split_start_date);
-//            iin_number = NseUtils.checkParem(iin_number);
-//            broker_code = NseUtils.checkParem(broker_code);
-//            euin_code = NseUtils.checkParem(euin_code);
-//            source = NseUtils.checkParem(source);
-//            first_order_today = NseUtils.checkParem(first_order_today);
-//            cartid = NseUtils.checkParem(cartid);
-//            subbroker_code = NseUtils.checkParem(subbroker_code);
-//            subbroker_name = NseUtils.checkParem(subbroker_name);
-//            subbroker_arn = NseUtils.checkParem(subbroker_arn);
-//            ip_address = NseUtils.checkParem(ip_address);
-//            origin_user_id = NseUtils.checkParem(origin_user_id);
-//            origin_first_name = NseUtils.checkParem(origin_first_name);
-//
-//            if(first_order_today.isEmpty())
-//            {
-//                first_order_today = "N";
-//            }
-//
-//
-//            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
-//
-//            if (user == null)
-//            {
-//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
-//            }
-//
-//            List<String> scheme_name_array;
-//            List<String> scheme_code_array;
-//            List<String> amount_array;
-//            List<String> folio_array;
-//            List<String> cart_id_array;
-//            List<String> start_date_array;
-//            List<String> frequency_array;
-//            List<String> install_count_array;
-//            List<Boolean> first_order_flag_array;
-//
-//            if(source.equalsIgnoreCase("Mobile"))
-//            {
-//                scheme_name_array = new ArrayList<String>();
-//                scheme_code_array = new ArrayList<String>();
-//                amount_array = new ArrayList<String>();
-//                folio_array = new ArrayList<String>();
-//                cart_id_array = new ArrayList<String>();
-//                start_date_array = new ArrayList<>();
-//                frequency_array = new ArrayList<>();
-//                install_count_array = new ArrayList<>();
-//                first_order_flag_array = new ArrayList<>();
-//
-//                cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "SWP Purchase",token);
-//
-//                if (cartList.isEmpty())
-//                {
-//                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
-//                }
-//
-//                for (CartDto cart : cartList) {
-//                    scheme_name_array.add(cart.getScheme_name());
-//                    scheme_code_array.add(cart.getScheme_product_code());
-//                    amount_array.add(cart.getAmount());
-//                    folio_array.add(cart.getFolio_no());
-//                    start_date_array.add(cart.getStart_date());
-//                    frequency_array.add(cart.getFrequency());
-//                    install_count_array.add(cart.getInstallment());
-//                    first_order_flag_array.add(cart.getFirst_order_flag());
-//                    cart_id_array.add(String.valueOf(cart.getId()));
-//                }
-//            }else
-//            {
-//                if(!cartid.isEmpty())
-//                {
-//                    scheme_name_array = new ArrayList<String>();
-//                    scheme_code_array = new ArrayList<String>();
-//                    amount_array = new ArrayList<String>();
-//                    folio_array = new ArrayList<String>();
-//                    cart_id_array = new ArrayList<String>();
-//                    start_date_array = new ArrayList<>();
-//                    frequency_array = new ArrayList<>();
-//                    install_count_array = new ArrayList<>();
-//                    first_order_flag_array = new ArrayList<>();
-//
-//                    List<Integer> ids = Arrays.stream(cartid.split(","))
-//                            .map(String::trim)
-//                            .filter(s -> !s.isEmpty())
-//                            .map(Integer::parseInt)
-//                            .collect(Collectors.toList());
-//                    System.out.println("ids = " + ids);
-//
-//                    cartList = userServiceClient.getCartDetailsByIds(ids,token);
-//
-//                    if (cartList.isEmpty())
-//                    {
-//                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
-//                    }
-//                    for (CartDto cart : cartList)
-//                    {
-//                        scheme_name_array.add(cart.getScheme_name());
-//                        scheme_code_array.add(cart.getScheme_product_code());
-//                        amount_array.add(cart.getAmount());
-//                        folio_array.add(cart.getFolio_no());
-//                        start_date_array.add(cart.getStart_date());
-//                        frequency_array.add(cart.getFrequency());
-//                        install_count_array.add(cart.getInstallment());
-//                        first_order_flag_array.add(cart.getFirst_order_flag());
-//                        cart_id_array.add(String.valueOf(cart.getId()));
-//                    }
-//                }else{
-//                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Cart ID missing."));
-//                }
-//            }
-//
-//            String  folio_no [] = null;
-//            String folio_no1 = "";
-//
-//            if(folio.contains("/"))
-//            {
-//                folio_no = folio.split("/");
-//                folio_no1 = folio_no[0];
-//                folio_no1 = folio_no1.trim();
-//            }else
-//            {
-//                folio_no1 = folio.trim();
-//            }
-//
-//            String nse_iin = user.getNse_iin_number().trim();
-//            String pan = "";
-//            String name = "";
-//            String selected_name = "";
-//            String mobile = "";
-//            String email = "";
-//            String client_name = user.getClient_name();
-//            String login_name = user.getName();
-//
-//            if(!nse_iin.equalsIgnoreCase(iin_number))
-//            {
-//                UserBseNseDto nse = null;
-//
-//                try {
-//                    nse = userServiceClient.getUserBseNseDetailsByIinNumber(client_name, iin_number,token);
-//                } catch (FeignException e) {
-//                    if (e.status() == 400) {
-//                        System.out.println("Bad Request: " + e.getMessage());
-//                    } else if (e.status() == 404) {
-//                        System.out.println("User not found: " + e.getMessage());
-//                    } else {
-//                        System.out.println("Feign error: " + e.status() + " - " + e.getMessage());
-//                    }
-//                }
-//
-//                if(nse == null)
-//                {
-//                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
-//                }
-//
-//                pan = nse.getPan();
-//                name = nse.getName();
-//                selected_name = name + " (" + userid + ")";
-//
-//                mobile = nse.getMobile();
-//                email = nse.getEmail();
-//
-//            }else
-//            {
-//                pan = user.getPan();
-//                name = user.getName();
-//                selected_name = name + " (" + userid + ")";
-//
-//                mobile = user.getMobile();
-//                email = user.getEmail();
-//            }
-//
-//            String appln_id = "";
-//            String password = "";
-//            String euin = "";
-//            String host = "";
-//
-//            BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
-//            host = nsekey.getDomain_url();
-//            String broker_code1 = nsekey.getBrokerCode();
-//
-//            if(broker_code1 == null){broker_code1 = "";};
-//
-//            broker_code = broker_code1;
-//            appln_id = nsekey.getNse_appln_id();
-//            password = nsekey.getNse_password();
-//            if(!euin_code.isEmpty())
-//            {
-//                euin = euin_code;
-//            }else{
-//                euin = nsekey.getEuin();
-//            }
-//
-//            euin = euin.split(",")[0];
-//
-//            if(broker_code.isEmpty())
-//            {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
-//            }
-//
-//            SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy");
-//            SimpleDateFormat df1 = new SimpleDateFormat("dd-MMM-yyyy");
-//            String start_date_str = start_date;
-//
-//            if(start_date_str != null)
-//            {
-//                start_date_str = start_date_str.replace("-", "/");
-//            }
-//
-//
-//            //TODO need to get the account No. here
-//            JSONArray regDetailsArray = new JSONArray();
-//            JSONObject regObject = new JSONObject();
-//
-//            String ref_number = "ADVSWP" + UniqueIDProvider.generateUniquePin(4);
-//
-//            String memberUniqueId = "SWP" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + UniqueIDProvider.generateUniquePin(3);
-//
-//            regObject.put("client_code", iin_number);
-//            regObject.put("scheme_code", scheme_code);
-//            regObject.put("trans_mode", "P");
-//            regObject.put("folio_no", folio_no1);
-//            regObject.put("internal_ref_no", ref_number);
-//            regObject.put("start_date", start_date_str);
-//            regObject.put("no_of_withdrawals", withdrawals);
-//            regObject.put("frequency_type", frequency);
-//            regObject.put("installment_amount", amount);
-//            regObject.put("installment_units", "");
-//            regObject.put("first_order_today", first_order_today);
-//            regObject.put("sub_broker_code", "");
-//            regObject.put("euin_declaration", "Y");
-//            regObject.put("euin_number", euin);
-//            regObject.put("remarks", "");
-//            regObject.put("sub_broker_arn", "");
-//            regObject.put("mobile", mobile);
-//            regObject.put("email", email);
-//            regObject.put("account_no", "");
-//            regObject.put("member_unique_id", memberUniqueId);
-//
-//            regDetailsArray.put(regObject);
-//
-//            JSONObject requestBody = new JSONObject();
-//            requestBody.put("reg_data", regDetailsArray);
-//
-//            BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
-//
-//            if (online_access == null)
-//            {
-//                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
-//            }
-//
-//            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
-//            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
-//            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
-//            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
-//
-//            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
-//
-//            HttpHeaders headers = new HttpHeaders();
-//            headers.setContentType(MediaType.APPLICATION_JSON);
-//            headers.set("memberId", nse_memberid);
-//            headers.set("Authorization", "Basic "+base64Encoded);
-//            headers.set("User-Agent", "PostmanRuntime/7.43.3");
-//            headers.set("Accept-Language", "en-US");
-//            headers.set("Connection", "keep-alive");
-//            headers.set("Referer", "");
-//            headers.set("Accept-Encoding", "gzip");
-//
-//            HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
-//
-//
-//            String swpRegistrationService_url= NseApiUrls.swpRegistrationService_url;
-//
-//            System.out.println("requestBody: " + requestBody.toString());
-//
-//            String reg_id = "";
-//            String reg_status = "";
-//            String reg_remark = "";
-//            Map<String, String> resMap = new HashMap<>();
-//            List<String> schemeCodeList = new ArrayList<>();
-//            schemeCodeList.add(scheme_code);
-//            List<NseOnlineSchemeMaster> schemeOnlineMasterList = nseOnlineSchemeMasterRepository.getSchemeBySchemeCode(schemeCodeList);
-//            try
-//            {
-//                ResponseEntity<String> result = RestTemplateFactory.createRestTemplate().postForEntity(swpRegistrationService_url, entity, String.class);
-//                String status_code = result.getStatusCode().toString();
-//                String responseBody = result.getBody().toString();
-//
-//                JSONObject jsonObject = new JSONObject(responseBody);
-//                System.out.println("jsonObject: " + jsonObject);
-//                JSONArray jsonRegArray = jsonObject.getJSONArray("reg_data");
-//
-//                System.out.println("swpRegistrationService::responseBody: " + responseBody);
-//                for (int i = 0; i < jsonRegArray.length(); i++)
-//                {
-//                    JSONObject regDetail = jsonRegArray.getJSONObject(i);
-//
-//                    reg_id = regDetail.optString("reg_id");
-//                    reg_status = regDetail.optString("reg_status");
-//                    reg_remark = regDetail.optString("reg_remark");
-//
-//                    System.out.println("reg_id: " + reg_id);
-//                    System.out.println("reg_status" + reg_status);
-//                    System.out.println("reg_remark: " + reg_remark);
-//
-//                    // Extracting SWP Registration details
-//                    String res_client_code        = NseUtils.checkParem(regDetail.optString("client_code"));
-//                    String res_scheme_code        = NseUtils.checkParem(regDetail.optString("scheme_code"));
-//                    String res_trans_mode         = NseUtils.checkParem(regDetail.optString("trans_mode"));
-//                    String res_folio_no           = NseUtils.checkParem(regDetail.optString("folio_no"));
-//                    String res_internal_ref_no    = NseUtils.checkParem(regDetail.optString("internal_ref_no"));
-//                    String res_start_date         = NseUtils.checkParem(regDetail.optString("start_date"));
-//                    String res_no_of_withdrawals  = NseUtils.checkParem(regDetail.optString("no_of_withdrawals"));
-//                    String res_frequency_type     = NseUtils.checkParem(regDetail.optString("frequency_type"));
-//                    String res_installmenamount   = NseUtils.checkParem(regDetail.optString("installment_amount"));
-//                    String res_installment_units  = NseUtils.checkParem(regDetail.optString("installment_units"));
-//                    String res_first_order_today  = NseUtils.checkParem(regDetail.optString("first_order_today"));
-//                    String res_sub_broker_code    = NseUtils.checkParem(regDetail.optString("sub_broker_code"));
-//                    String res_euin_declaration   = NseUtils.checkParem(regDetail.optString("euin_declaration"));
-//                    String res_euin_number        = NseUtils.checkParem(regDetail.optString("euin_number"));
-//                    String res_remarks            = NseUtils.checkParem(regDetail.optString("remarks"));
-//                    String res_sub_broker_arn     = NseUtils.checkParem(regDetail.optString("sub_broker_arn"));
-//                    String res_mobile             = NseUtils.checkParem(regDetail.optString("mobile"));
-//                    String res_email              = NseUtils.checkParem(regDetail.optString("email"));
-//                    String res_account_no         = NseUtils.checkParem(regDetail.optString("account_no"));
-//                    String res_reg_id             = NseUtils.checkParem(regDetail.optString("reg_id"));
-//                    String res_reg_status         = NseUtils.checkParem(regDetail.optString("reg_status"));
-//                    String res_reg_remark         = NseUtils.checkParem(regDetail.optString("reg_remark"));
-//                    String res_member_unique_id   = NseUtils.checkParem(regDetail.optString("member_unique_id"));
-//
-//                    // Printing all details
-//                    System.out.println("SWP Registration Details:");
-//                    System.out.println("res_client_code       : " + res_client_code);
-//                    System.out.println("res_scheme_code       : " + res_scheme_code);
-//                    System.out.println("res_trans_mode        : " + res_trans_mode);
-//                    System.out.println("res_folio_no          : " + res_folio_no);
-//                    System.out.println("res_internal_ref_no   : " + res_internal_ref_no);
-//                    System.out.println("res_start_date        : " + res_start_date);
-//                    System.out.println("res_no_of_withdrawals : " + res_no_of_withdrawals);
-//                    System.out.println("res_frequency_type    : " + res_frequency_type);
-//                    System.out.println("res_installmenamount  : " + res_installmenamount);
-//                    System.out.println("res_installment_units : " + res_installment_units);
-//                    System.out.println("res_first_order_today : " + res_first_order_today);
-//                    System.out.println("res_sub_broker_code   : " + res_sub_broker_code);
-//                    System.out.println("res_euin_declaration  : " + res_euin_declaration);
-//                    System.out.println("res_euin_number       : " + res_euin_number);
-//                    System.out.println("res_remarks           : " + res_remarks);
-//                    System.out.println("res_sub_broker_arn    : " + res_sub_broker_arn);
-//                    System.out.println("res_mobile            : " + res_mobile);
-//                    System.out.println("res_email             : " + res_email);
-//                    System.out.println("res_account_no        : " + res_account_no);
-//                    System.out.println("res_reg_id            : " + res_reg_id);
-//                    System.out.println("res_reg_status        : " + res_reg_status);
-//                    System.out.println("res_reg_remark        : " + res_reg_remark);
-//                    System.out.println("res_member_unique_id  : " + res_member_unique_id);
-//
-//                    NseOnlineSchemeMaster schemeMaster = schemeOnlineMasterList.stream().filter(obj -> obj.getSchemeCode().equalsIgnoreCase(res_scheme_code)).findFirst().orElse(null);
-//
-//                    if(res_reg_status.equalsIgnoreCase("REG_SUCCESS"))
-//                    {
-//                        resMap.put(schemeMaster.getSchemeName(), "REG_SUCCESS");
-//                    }else
-//                    {
-//                        resMap.put(schemeMaster.getSchemeName(), res_reg_remark);
-//                    }
-//
-//                    SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
-//                    Date res_start_dateDt = inputFormat.parse(res_start_date);
-//
-//                    NseTransactions nsetrans = new NseTransactions();
-//                    nsetrans.setUrl(swpRegistrationService_url);
-//                    nsetrans.setNse_request(requestBody.toString());
-//                    nsetrans.setNse_response(responseBody.toString());
-//                    nsetrans.setReg_id(res_reg_id);
-//                    nsetrans.setPayment_link("");
-//                    nsetrans.setPan(pan);
-//                    nsetrans.setName(name);
-//                    nsetrans.setBranch(user.getBranch());
-//                    nsetrans.setRm_name(user.getRm_name());
-//                    nsetrans.setSubbroker_name(user.getSubbroker_name());
-//                    nsetrans.setClient_name(client_name);
-//                    nsetrans.setIin_number(iin_number);
-//                    nsetrans.setScheme_name(schemeMaster.getSchemeName());
-//                    nsetrans.setScheme_code(schemeMaster.getSchemeCode());
-//                    nsetrans.setFolio_no(res_folio_no);
-//                    if(StringHelper.isNotEmpty(res_installmenamount))
-//                    {
-//                        nsetrans.setAmount_units(res_installmenamount);
-//                    }else if(StringHelper.isNotEmpty(res_installment_units))
-//                    {
-//                        nsetrans.setAmount_units(res_installment_units);
-//                    }else{
-//                        nsetrans.setAmount_units("0");
-//                    }
-//                    if(first_order_today.equalsIgnoreCase("Y"))
-//                    {
-//                        nsetrans.setFirst_order_today(1);
-//                    }else
-//                    {
-//                        nsetrans.setFirst_order_today(0);
-//                    }
-//                    nsetrans.setFrequency(res_frequency_type);
-//                    nsetrans.setPeriod_day("");
-//                    nsetrans.setUmrn_no("");
-//                    nsetrans.setPurchase_type("FRESH");
-//                    nsetrans.setPayment_ref_no("");
-//                    nsetrans.setUnique_number(res_member_unique_id);
-//                    nsetrans.setStart_date(res_start_dateDt);
-//                    nsetrans.setAuto_trxn_no("");
-//                    nsetrans.setSip_reg_no(res_reg_id);
-//                    nsetrans.setPayment_mode("");
-//                    nsetrans.setTopup_amount(0.0);
-//                    nsetrans.setBank_acc_no("");
-//                    nsetrans.setTransaction_number(res_reg_id);
-//                    nsetrans.setApplication_number("");
-//                    nsetrans.setTo_scheme_code("");
-//                    nsetrans.setTo_scheme_name("");
-//                    nsetrans.setTransaction_type("SWP Transaction");
-//                    nsetrans.setPayment_status("PENDING");
-//                    nsetrans.setActive_ceased_status("");
-//                    nsetrans.setRemarks(res_reg_remark);
-//                    nsetrans.setMandate_id("");
-//                    nsetrans.setMandate_status("");
-//                    nsetrans.setEmandate_auth_flag("");
-//                    nsetrans.setApp_received_flag("");
-//                    nsetrans.setTransaction_date(new Date());
-//                    nsetrans.setTransaction_status(reg_status);
-//                    nsetrans.setReturn_msg(res_reg_status);
-//                    nsetrans.setUser_id(Integer.parseInt(userid));
-//                    if(source.equalsIgnoreCase("Mobile"))
-//                    {
-//                        nsetrans.setRegister_source("Mobile App");
-//                    }else
-//                    {
-//                        nsetrans.setRegister_source("Website");
-//                    }
-//                    nsetrans.setBroker_code(broker_code);
-//                    nsetrans.setEuin_number(res_euin_number);
-//                    nsetrans.setCc_received("");
-//                    nsetrans.setFund_trans_to_amc("");
-//                    nsetrans.setRefund_status("");
-//                    nsetrans.setRefund_amount("");
-//                    nseTransactionService.save(nsetrans);
-//
-//                    if(source.equalsIgnoreCase("Mobile"))
-//                    {
-//                        for (CartDto cart : cartList)
-//                        {
-//                            cart.setPayment_type("");
-//                            cart.setPayment_mode("");
-//                            cart.setBank_name("");
-//                            cart.setBank_account_number("");
-//                            cart.setBank_ifsc("");
-//                            cart.setBroker_code(broker_code);
-//                            cart.setEuin_code(euin);
-//
-//                            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
-//                            {
-//                                cart.setStatus("SUCCESS");
-//                                cart.setActive(false);
-//                                cart.setPayment_id(String.valueOf(currentTimeMillis));
-//                            }
-//                        }
-//
-//                        userServiceClient.updateCartByCartId(cartList, token);
-//                    }
-//                }
-//            }
-//            catch (HttpClientErrorException | HttpServerErrorException ex)
-//            {
-//                System.out.println("stpRegistrationService::Status Code: " + ex.getStatusCode());
-//                System.out.println("stpRegistrationService::Response Body: " + ex.getResponseBodyAsString());
-//            } catch (Exception ex)
-//            {
-//                ex.printStackTrace();
-//            }
-//
-//            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
-//            {
-//                return NseUtils.transactionResponse(HttpStatus.OK, reg_remark + " Your Order is successfully triggered...! orderID: " + reg_id, new HashMap<>());
-//            }else{
-//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), reg_remark));
-//            }
-//
-//        }
-//        catch (Exception e)
-//        {
-//            e.printStackTrace();
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
-//        }
-//    }
+    @Operation(
+            summary = "Initiate SWP Transaction",
+            description = "Triggers a Systematic Withdrawal Plan (SWP) transaction for an investor through NSE. Parameters vary depending on whether the source is web or mobile.",
+            parameters = {
+                    // Common
+                    @Parameter(name = "source", description = "Transaction source (web/mobile)", required = false),
+                    @Parameter(
+                            name = "Authorization",
+                            description = "Bearer token for authentication",
+                            required = true,
+                            in = ParameterIn.HEADER
+                    ),
+
+                    // ✅ Website Parameters
+                    @Parameter(name = "iin_number", description = "Investor Identification Number (Web)", required = false),
+                    @Parameter(name = "multiple_count", description = "Number of SWP instructions to process (Web)", required = false),
+                    @Parameter(name = "amc_code", description = "AMC code (Web)", required = false),
+                    @Parameter(name = "folio", description = "Folio number (Web)", required = false),
+                    @Parameter(name = "amount", description = "Withdrawal amount per installment (Web)", required = false),
+                    @Parameter(name = "start_date", description = "SWP start date (yyyy-MM-dd) (Web)", required = false),
+                    @Parameter(name = "end_date", description = "SWP end date (yyyy-MM-dd) (Web)", required = false),
+                    @Parameter(name = "frequency", description = "SWP frequency (e.g., Monthly, Quarterly) (Web)", required = false),
+                    @Parameter(name = "from_scheme_code", description = "Scheme code to withdraw from (Web)", required = false),
+                    @Parameter(name = "from_scheme_name", description = "Scheme name to withdraw from (Web)", required = false),
+                    @Parameter(name = "redem_type", description = "SWP redemption type (Amount/Units) (Web)", required = false),
+                    @Parameter(name = "split_start_date", description = "Split start date for SWP if applicable (Web)", required = false),
+                    @Parameter(name = "swp_day", description = "Day of the month for SWP (e.g., 10, 15) (Web)", required = false),
+                    @Parameter(name = "broker_code", description = "Broker code (Web)", required = false),
+                    @Parameter(name = "euin_code", description = "EUIN code (Web)", required = false),
+
+                    // ✅ Mobile App Parameters
+                    @Parameter(name = "iin_number", description = "Investor Identification Number (Mobile)", required = false),
+                    @Parameter(name = "broker_code", description = "Broker code (Mobile)", required = false),
+                    @Parameter(name = "euin_code", description = "EUIN code (Mobile)", required = false)
+            },
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "SWP transaction successfully processed",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = TransactionResponse.class),
+                                    examples = @ExampleObject(
+                                            name = "SuccessResponseExample",
+                                            summary = "SWP Success",
+                                            value = """
+                        {
+                          "status": 200,
+                          "status_msg": "SUCCESS",
+                          "msg": "SWP transaction successfully processed",
+                          "return_msg": "OrderID: SWP20250724",
+                          "transaction_status": {
+                            "HDFC Corporate Bond Fund - Growth": "SWP successfully triggered"
+                          }
+                        }
+                    """
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Bad request or missing data",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    examples = @ExampleObject(
+                                            name = "BadRequestExample",
+                                            summary = "Invalid STP request",
+                                            value = "{ \"status\": 400, \"error\": \"Bad Request\", \"message\": \"Invalid or missing parameters\" }"
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Internal Server Error",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    examples = @ExampleObject(
+                                            name = "ServerErrorExample",
+                                            summary = "Unexpected server error",
+                                            value = "{ \"status\": 500, \"error\": \"Internal Server Error\", \"message\": \"Something went wrong on the server\" }"
+                                    )
+                            )
+                    )
+            }
+    )
+    @PostMapping("/saveSwp")
+    public ResponseEntity<?> saveSwp(
+            HttpServletRequest request,
+            @RequestParam(required = false) String amc,
+            @RequestParam(required = false) String scheme,
+            @RequestParam(required = false) String reinvest_tag,
+            @RequestParam(required = false) String redem_type,
+            @RequestParam(required = false) String end_date,
+            @RequestParam(required = false) String split_start_date,
+            @RequestParam(required = false) String iin_number,
+            @RequestParam(required = false) String broker_code,
+            @RequestParam(required = false) String euin_code,
+            @RequestParam(required = false) String withdrawals,
+            @RequestParam(required = false) String first_order_today,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String cartid,
+            @RequestParam(required = false) String subbroker_arn,
+            @RequestParam(required = false) String subbroker_code,
+            @RequestParam(required = false) String subbroker_name,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
+            @RequestHeader("Authorization") String token)
+    {
+
+        String ipAddr = "";
+        List<CartDto> cartList = null;
+        long currentTimeMillis = System.currentTimeMillis();
+        try
+        {
+            String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            System.out.println("User ID from token: " + userid);
+
+            amc = NseUtils.checkParem(amc);
+            scheme = NseUtils.checkParem(scheme);
+            reinvest_tag = NseUtils.checkParem(reinvest_tag);
+            redem_type = NseUtils.checkParem(redem_type);
+            end_date = NseUtils.checkParem(end_date);
+            split_start_date = NseUtils.checkParem(split_start_date);
+            iin_number = NseUtils.checkParem(iin_number);
+            broker_code = NseUtils.checkParem(broker_code);
+            euin_code = NseUtils.checkParem(euin_code);
+            source = NseUtils.checkParem(source);
+            first_order_today = NseUtils.checkParem(first_order_today);
+            cartid = NseUtils.checkParem(cartid);
+            subbroker_code = NseUtils.checkParem(subbroker_code);
+            subbroker_name = NseUtils.checkParem(subbroker_name);
+            subbroker_arn = NseUtils.checkParem(subbroker_arn);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
+
+            if(first_order_today.isEmpty())
+            {
+                first_order_today = "N";
+            }
+
+
+            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+
+            if (user == null)
+            {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+            }
+
+            List<String> scheme_name_array;
+            List<String> scheme_code_array;
+            List<String> amount_array;
+            List<String> folio_array;
+            List<String> cart_id_array;
+            List<String> start_date_array;
+            List<String> frequency_array;
+            List<String> install_count_array;
+            List<Boolean> first_order_flag_array;
+
+            if(source.equalsIgnoreCase("Mobile"))
+            {
+                scheme_name_array = new ArrayList<String>();
+                scheme_code_array = new ArrayList<String>();
+                amount_array = new ArrayList<String>();
+                folio_array = new ArrayList<String>();
+                cart_id_array = new ArrayList<String>();
+                start_date_array = new ArrayList<>();
+                frequency_array = new ArrayList<>();
+                install_count_array = new ArrayList<>();
+                first_order_flag_array = new ArrayList<>();
+
+                cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "SWP Purchase",token);
+
+                if (cartList.isEmpty())
+                {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                }
+
+                for (CartDto cart : cartList) {
+                    scheme_name_array.add(cart.getScheme_name());
+                    scheme_code_array.add(cart.getScheme_product_code());
+                    amount_array.add(cart.getAmount());
+                    folio_array.add(cart.getFolio_no());
+                    start_date_array.add(cart.getStart_date());
+                    frequency_array.add(cart.getFrequency());
+                    install_count_array.add(cart.getInstallment());
+                    first_order_flag_array.add(cart.getFirst_order_flag());
+                    cart_id_array.add(String.valueOf(cart.getId()));
+                }
+            }else
+            {
+                if(!cartid.isEmpty())
+                {
+                    scheme_name_array = new ArrayList<String>();
+                    scheme_code_array = new ArrayList<String>();
+                    amount_array = new ArrayList<String>();
+                    folio_array = new ArrayList<String>();
+                    cart_id_array = new ArrayList<String>();
+                    start_date_array = new ArrayList<>();
+                    frequency_array = new ArrayList<>();
+                    install_count_array = new ArrayList<>();
+                    first_order_flag_array = new ArrayList<>();
+
+                    List<Integer> ids = Arrays.stream(cartid.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .map(Integer::parseInt)
+                            .collect(Collectors.toList());
+                    System.out.println("ids = " + ids);
+
+                    cartList = userServiceClient.getCartDetailsByIds(ids,token);
+
+                    if (cartList.isEmpty())
+                    {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    }
+                    for (CartDto cart : cartList)
+                    {
+                        scheme_name_array.add(cart.getScheme_name());
+                        scheme_code_array.add(cart.getScheme_product_code());
+                        amount_array.add(cart.getAmount());
+                        folio_array.add(cart.getFolio_no());
+                        start_date_array.add(cart.getStart_date());
+                        frequency_array.add(cart.getFrequency());
+                        install_count_array.add(cart.getInstallment());
+                        first_order_flag_array.add(cart.getFirst_order_flag());
+                        cart_id_array.add(String.valueOf(cart.getId()));
+                    }
+                }else{
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Cart ID missing."));
+                }
+            }
+
+            String nse_iin = user.getNse_iin_number().trim();
+            String pan = "";
+            String name = "";
+            String selected_name = "";
+            String mobile = "";
+            String email = "";
+            String client_name = user.getClient_name();
+            String login_name = user.getName();
+
+            if(!nse_iin.equalsIgnoreCase(iin_number))
+            {
+                UserBseNseDto nse = null;
+
+                try {
+                    nse = userServiceClient.getUserBseNseDetailsByIinNumber(client_name, iin_number,token);
+                } catch (FeignException e) {
+                    if (e.status() == 400) {
+                        System.out.println("Bad Request: " + e.getMessage());
+                    } else if (e.status() == 404) {
+                        System.out.println("User not found: " + e.getMessage());
+                    } else {
+                        System.out.println("Feign error: " + e.status() + " - " + e.getMessage());
+                    }
+                }
+
+                if(nse == null)
+                {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                }
+
+                pan = nse.getPan();
+                name = nse.getName();
+                selected_name = name + " (" + userid + ")";
+
+                mobile = nse.getMobile();
+                email = nse.getEmail();
+
+            }else
+            {
+                pan = user.getPan();
+                name = user.getName();
+                selected_name = name + " (" + userid + ")";
+
+                mobile = user.getMobile();
+                email = user.getEmail();
+            }
+
+            String appln_id = "";
+            String password = "";
+            String euin = "";
+            String host = "";
+
+            BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
+            host = nsekey.getDomain_url();
+            String broker_code1 = nsekey.getBrokerCode();
+
+            if(broker_code1 == null){broker_code1 = "";};
+
+            broker_code = broker_code1;
+            appln_id = nsekey.getNse_appln_id();
+            password = nsekey.getNse_password();
+            if(!euin_code.isEmpty())
+            {
+                euin = euin_code;
+            }else{
+                euin = nsekey.getEuin();
+            }
+
+            euin = euin.split(",")[0];
+
+            if(broker_code.isEmpty())
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
+            }
+
+            String first_order_flag = "";
+            Map<String, String> resMap = new HashMap<>();
+
+            int successCount = 0;
+            int failureCount = 0;
+            List<String> failedSchemes = new ArrayList<>();
+            String lastSuccessRegId = "";
+
+            String reg_id = "";
+            String reg_status = "";
+            String reg_remark = "";
+
+            Map<String, String> schemeMap = new HashMap<>();
+
+            String schemeName = "";
+
+            if(!scheme_code_array.isEmpty())
+            {
+                for (int i = 0; i < scheme_code_array.size(); i++)
+                {
+                    String scheme_code = scheme_code_array.get(i);
+                    String scheme_name = scheme_name_array.get(i);
+                    String start_date = start_date_array.get(i);
+                    String install_count = install_count_array.get(i);
+                    String frequency = frequency_array.get(i);
+                    String amount = amount_array.get(i);
+                    String folio = folio_array.get(i);
+                    Boolean firstOrderFlag = first_order_flag_array.get(i);
+
+                    schemeMap.put(scheme_code, scheme_name);
+
+                    if(firstOrderFlag)
+                    {
+                        first_order_flag = "Y";
+                    }else{
+                        first_order_flag = "N";
+                    }
+
+                    String  folio_no [] = null;
+                    String folio_no1 = "";
+
+                    if(folio.contains("/"))
+                    {
+                        folio_no = folio.split("/");
+                        folio_no1 = folio_no[0];
+                        folio_no1 = folio_no1.trim();
+                    }else
+                    {
+                        folio_no1 = folio.trim();
+                    }
+
+                    JSONArray regDetailsArray = new JSONArray();
+                    JSONObject regObject = new JSONObject();
+
+                    String start_date_str = start_date;
+
+                    if(start_date_str != null)
+                    {
+                        start_date_str = start_date_str.replace("-", "/");
+                    }
+
+                    String ref_number = "ADVSWP" + UniqueIDProvider.generateUniquePin(4);
+
+                    String memberUniqueId = "SWP" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + UniqueIDProvider.generateUniquePin(3);
+
+                    regObject.put("client_code", iin_number);
+                    regObject.put("scheme_code", scheme_code);
+                    regObject.put("trans_mode", "P");
+                    regObject.put("folio_no", folio_no1);
+                    regObject.put("internal_ref_no", ref_number);
+                    regObject.put("start_date", start_date_str);
+                    regObject.put("no_of_withdrawals", install_count);
+                    regObject.put("frequency_type", frequency);
+                    regObject.put("installment_amount", amount);
+                    regObject.put("installment_units", "");
+
+                    if(first_order_flag.equalsIgnoreCase("Y"))
+                    {
+                        regObject.put("first_order_today", "Y");
+                    }else{
+                        regObject.put("first_order_today", "N");
+                    }
+
+
+                    if(!subbroker_code.isEmpty())
+                    {
+                        regObject.put("sub_broker_code", subbroker_code);
+                    }else{
+                        regObject.put("sub_broker_code", "");
+                    }
+                    regObject.put("euin_declaration", "Y");
+                    regObject.put("euin_number", euin);
+                    regObject.put("remarks", "");
+                    regObject.put("sub_broker_arn", subbroker_arn);
+                    regObject.put("mobile", mobile);
+                    regObject.put("email", email);
+                    regObject.put("account_no", "");
+                    regObject.put("member_unique_id", memberUniqueId);
+
+                    regDetailsArray.put(regObject);
+
+                    JSONObject requestBody = new JSONObject();
+                    requestBody.put("reg_data", regDetailsArray);
+
+                    BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
+                    if (online_access == null)
+                    {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
+                    }
+
+                    String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+                    String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+                    String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+                    String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+//
+
+                    String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    headers.set("memberId", nse_memberid);
+                    headers.set("Authorization", "Basic "+base64Encoded);
+                    headers.set("User-Agent", "PostmanRuntime/7.43.3");
+                    headers.set("Accept-Language", "en-US");
+                    headers.set("Connection", "keep-alive");
+                    headers.set("Referer", "");
+                    headers.set("Accept-Encoding", "gzip");
+
+                    HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
+
+                    String swpRegistrationService_url= NseApiUrls.swpRegistrationService_url;
+
+                    System.out.println("requestBody: " + requestBody.toString());
+
+                    String responseBody = "";
+                    try
+                    {
+                        ResponseEntity<String> result = RestTemplateFactory.createRestTemplate().postForEntity(swpRegistrationService_url, entity, String.class);
+                        ////String status_code = result.getStatusCode().toString();
+                        responseBody = result.getBody();
+
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        System.out.println("jsonObject: " + jsonObject);
+                        JSONArray jsonRegArray = jsonObject.getJSONArray("reg_data");
+
+                        System.out.println("swpRegistrationService::responseBody: " + responseBody);
+                        for (int j = 0; j < jsonRegArray.length(); j++)
+                        {
+                            JSONObject regDetail = jsonRegArray.getJSONObject(j);
+
+                            reg_id = regDetail.optString("reg_id");
+                            reg_status = regDetail.optString("reg_status");
+                            reg_remark = regDetail.optString("reg_remark");
+
+                            System.out.println("reg_id: " + reg_id);
+                            System.out.println("reg_status" + reg_status);
+                            System.out.println("reg_remark: " + reg_remark);
+
+                            // Extracting SWP Registration details
+                            String res_client_code        = NseUtils.checkParem(regDetail.optString("client_code"));
+                            String res_scheme_code        = NseUtils.checkParem(regDetail.optString("scheme_code"));
+                            String res_trans_mode         = NseUtils.checkParem(regDetail.optString("trans_mode"));
+                            String res_folio_no           = NseUtils.checkParem(regDetail.optString("folio_no"));
+                            String res_internal_ref_no    = NseUtils.checkParem(regDetail.optString("internal_ref_no"));
+                            String res_start_date         = NseUtils.checkParem(regDetail.optString("start_date"));
+                            String res_no_of_withdrawals  = NseUtils.checkParem(regDetail.optString("no_of_withdrawals"));
+                            String res_frequency_type     = NseUtils.checkParem(regDetail.optString("frequency_type"));
+                            String res_installmenamount   = NseUtils.checkParem(regDetail.optString("installment_amount"));
+                            String res_installment_units  = NseUtils.checkParem(regDetail.optString("installment_units"));
+                            String res_first_order_today  = NseUtils.checkParem(regDetail.optString("first_order_today"));
+                            String res_sub_broker_code    = NseUtils.checkParem(regDetail.optString("sub_broker_code"));
+                            String res_euin_declaration   = NseUtils.checkParem(regDetail.optString("euin_declaration"));
+                            String res_euin_number        = NseUtils.checkParem(regDetail.optString("euin_number"));
+                            String res_remarks            = NseUtils.checkParem(regDetail.optString("remarks"));
+                            String res_sub_broker_arn     = NseUtils.checkParem(regDetail.optString("sub_broker_arn"));
+                            String res_mobile             = NseUtils.checkParem(regDetail.optString("mobile"));
+                            String res_email              = NseUtils.checkParem(regDetail.optString("email"));
+                            String res_account_no         = NseUtils.checkParem(regDetail.optString("account_no"));
+                            String res_reg_id             = NseUtils.checkParem(regDetail.optString("reg_id"));
+                            String res_reg_status         = NseUtils.checkParem(regDetail.optString("reg_status"));
+                            String res_reg_remark         = NseUtils.checkParem(regDetail.optString("reg_remark"));
+                            String res_member_unique_id   = NseUtils.checkParem(regDetail.optString("member_unique_id"));
+
+                            // Printing all details
+                            System.out.println("SWP Registration Details:");
+                            System.out.println("res_client_code       : " + res_client_code);
+                            System.out.println("res_scheme_code       : " + res_scheme_code);
+                            System.out.println("res_trans_mode        : " + res_trans_mode);
+                            System.out.println("res_folio_no          : " + res_folio_no);
+                            System.out.println("res_internal_ref_no   : " + res_internal_ref_no);
+                            System.out.println("res_start_date        : " + res_start_date);
+                            System.out.println("res_no_of_withdrawals : " + res_no_of_withdrawals);
+                            System.out.println("res_frequency_type    : " + res_frequency_type);
+                            System.out.println("res_installmenamount  : " + res_installmenamount);
+                            System.out.println("res_installment_units : " + res_installment_units);
+                            System.out.println("res_first_order_today : " + res_first_order_today);
+                            System.out.println("res_sub_broker_code   : " + res_sub_broker_code);
+                            System.out.println("res_euin_declaration  : " + res_euin_declaration);
+                            System.out.println("res_euin_number       : " + res_euin_number);
+                            System.out.println("res_remarks           : " + res_remarks);
+                            System.out.println("res_sub_broker_arn    : " + res_sub_broker_arn);
+                            System.out.println("res_mobile            : " + res_mobile);
+                            System.out.println("res_email             : " + res_email);
+                            System.out.println("res_account_no        : " + res_account_no);
+                            System.out.println("res_reg_id            : " + res_reg_id);
+                            System.out.println("res_reg_status        : " + res_reg_status);
+                            System.out.println("res_reg_remark        : " + res_reg_remark);
+                            System.out.println("res_member_unique_id  : " + res_member_unique_id);
+
+                            schemeName =  schemeMap.get(res_scheme_code);
+
+                            SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
+                            Date res_start_dateDt = inputFormat.parse(res_start_date);
+
+                            NseTransactions nsetrans = new NseTransactions();
+                            nsetrans.setUrl(swpRegistrationService_url);
+                            nsetrans.setNse_request(requestBody.toString());
+                            nsetrans.setNse_response(responseBody);
+                            nsetrans.setReg_id(res_reg_id);
+                            nsetrans.setPayment_link("");
+                            nsetrans.setPan(pan);
+                            nsetrans.setName(name);
+                            nsetrans.setBranch(user.getBranch());
+                            nsetrans.setRm_name(user.getRm_name());
+                            if(source.equalsIgnoreCase("Website"))
+                            {
+                                nsetrans.setSubbroker_name(subbroker_name);
+                            }else{
+                                nsetrans.setSubbroker_name(user.getSubbroker_name());
+                            }
+                            if(!subbroker_code.isEmpty())
+                            {
+                                nsetrans.setSubbroker_code(subbroker_code);
+                            }
+                            if(!subbroker_arn.isEmpty())
+                            {
+                                nsetrans.setSubbroker_arn(subbroker_arn);
+                            }
+                            nsetrans.setClient_name(client_name);
+                            nsetrans.setIin_number(iin_number);
+                            nsetrans.setScheme_name(schemeName);
+                            nsetrans.setScheme_code(res_scheme_code);
+                            nsetrans.setFolio_no(res_folio_no);
+                            if(StringHelper.isNotEmpty(res_installmenamount))
+                            {
+                                nsetrans.setAmount_units(res_installmenamount);
+                            }else if(StringHelper.isNotEmpty(res_installment_units))
+                            {
+                                nsetrans.setAmount_units(res_installment_units);
+                            }else{
+                                nsetrans.setAmount_units("0");
+                            }
+                            if(first_order_flag.equalsIgnoreCase("Y") || first_order_flag.equalsIgnoreCase("true"))
+                            {
+                                nsetrans.setFirst_order_today(1);
+                            }else
+                            {
+                                nsetrans.setFirst_order_today(0);
+                            }
+                            nsetrans.setFrequency(res_frequency_type);
+                            nsetrans.setPeriod_day("");
+                            nsetrans.setUmrn_no("");
+                            nsetrans.setPurchase_type("FRESH");
+                            nsetrans.setPayment_ref_no("");
+                            nsetrans.setUnique_number(res_member_unique_id);
+                            nsetrans.setStart_date(res_start_dateDt);
+                            nsetrans.setAuto_trxn_no("");
+                            nsetrans.setSip_reg_no(res_reg_id);
+                            nsetrans.setPayment_mode("");
+                            nsetrans.setTopup_amount(0.0);
+                            nsetrans.setBank_acc_no("");
+                            nsetrans.setTransaction_number(res_reg_id);
+                            nsetrans.setApplication_number("");
+                            nsetrans.setTo_scheme_code("");
+                            nsetrans.setTo_scheme_name("");
+                            nsetrans.setTransaction_type("SWP Transaction");
+                            nsetrans.setPayment_status("PENDING");
+                            nsetrans.setActive_ceased_status("");
+                            nsetrans.setRemarks(res_reg_remark);
+                            nsetrans.setMandate_id("");
+                            nsetrans.setMandate_status("");
+                            nsetrans.setEmandate_auth_flag("");
+                            nsetrans.setApp_received_flag("");
+                            nsetrans.setTransaction_date(new Date());
+                            nsetrans.setTransaction_status(reg_status);
+                            nsetrans.setReturn_msg(res_reg_status);
+                            nsetrans.setUser_id(Integer.parseInt(userid));
+                            if(source.equalsIgnoreCase("Mobile"))
+                            {
+                                nsetrans.setRegister_source("Mobile App");
+                            }else
+                            {
+                                nsetrans.setRegister_source("Website");
+                            }
+                            nsetrans.setBroker_code(broker_code);
+                            nsetrans.setEuin_number(res_euin_number);
+                            nsetrans.setCc_received("");
+                            nsetrans.setFund_trans_to_amc("");
+                            nsetrans.setRefund_status("");
+                            nsetrans.setRefund_amount("");
+                            nsetrans.setIp_address(ip_address);
+                            nsetrans.setOrigin_user_id(origin_user_id);
+                            nsetrans.setOrigin_first_name(origin_first_name);
+                            if(cartid.isEmpty())
+                            {
+                                cartid = "0";
+                            }
+                            nsetrans.setCart_id(cart_id_array.get(i));
+                            nseTransactionService.save(nsetrans);
+
+                            for (CartDto cart : cartList)
+                            {
+                                cart.setPayment_type("");
+                                cart.setPayment_mode("");
+                                cart.setBank_name("");
+                                cart.setBank_account_number("");
+                                cart.setBank_ifsc("");
+                                cart.setBroker_code(broker_code);
+                                cart.setEuin_code(euin);
+
+                                if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                                {
+                                    cart.setStatus("SUCCESS");
+                                    cart.setActive(false);
+                                    cart.setPayment_id(String.valueOf(currentTimeMillis));
+                                }
+                            }
+
+                            userServiceClient.updateCartByCartId(cartList, token);
+
+                            if(res_reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                            {
+                                successCount++;
+                                lastSuccessRegId = res_reg_id;
+                                resMap.put(schemeName, "REG_SUCCESS");
+                            }
+                            else
+                            {
+                                failureCount++;
+                                failedSchemes.add(schemeName + ": " + res_reg_remark);
+                                resMap.put(schemeName, res_reg_remark);
+                            }
+                        }
+                    }
+                    catch (HttpClientErrorException | HttpServerErrorException ex)
+                    {
+                        failureCount++;
+                        failedSchemes.add(schemeName + ": " + ex.getStatusCode());
+                        resMap.put(schemeName, "SWP registration failed. Please try again.");
+                        System.out.println("swpRegistrationService::Status Code: " + ex.getStatusCode());
+                        System.out.println("swpRegistrationService::Response Body: " + ex.getResponseBodyAsString());
+                    } catch (Exception ex)
+                    {
+                        failureCount++;
+                        failedSchemes.add(schemeName + ": " + ex.getMessage());
+                        resMap.put(schemeName, "SWP registration failed. Please try again.");
+                        ex.printStackTrace();
+                    }
+                }
+            }
+            System.out.println("successCount: " + successCount);
+            System.out.println("failureCount: " + failureCount);
+            if (successCount > 0 && failureCount > 0)
+            {
+                String message = String.format("%d out of %d SWP transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
+                message += "Failed transactions: " + String.join(", ", failedSchemes);
+
+                if(source.equalsIgnoreCase("Mobile"))
+                {
+                    return NseUtils.transactionMobileResponse(HttpStatus.BAD_REQUEST, message, resMap);
+                }else{
+                    return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
+                }
+            }
+            else if (successCount > 0)
+            {
+                if(source.equalsIgnoreCase("Mobile"))
+                {
+                    return NseUtils.transactionMobileResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                }else{
+                    return NseUtils.transactionResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                }
+            }
+            else
+            {
+                String failureMessage = !failedSchemes.isEmpty() ? String.join(", ", failedSchemes)
+                        : (StringHelper.isNotEmpty(reg_remark) ? reg_remark
+                        : "SWP registration failed. Please try again.");
+                return NseUtils.commonResponse(failureMessage, HttpStatus.BAD_REQUEST);
+            }
+
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
+        }
+    }
 
 
     @Operation(

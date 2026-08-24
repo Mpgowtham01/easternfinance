@@ -112,7 +112,7 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("clientName") String clientName
     );
 
-    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId", nativeQuery = true)
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId LIMIT 1", nativeQuery = true)
     Optional<UsersOnlineRegDetails> findUSerByIdAndActive(@Param("userId") Integer userId);
 
     @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND nse_active = 0", nativeQuery = true)
@@ -179,6 +179,20 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("clientName") String clientName,
             @Param("broker_code") String broker_code,
             @Param("userid") String userid
+    );
+
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND online_flag = :online_flag AND bse_active = 1", nativeQuery = true)
+    List<UsersOnlineRegDetails> getUserBseNseDetailsByUserIDAndOnlineFlagBse(
+            @Param("userId") Integer userid,
+            @Param("clientName") String clientName,
+            @Param("online_flag") String online_flag
+    );
+
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND online_flag = :online_flag", nativeQuery = true)
+    List<UsersOnlineRegDetails> getUserBseNseDetailsByUserIDAndOnlineFlag(
+            @Param("userId") Integer userid,
+            @Param("clientName") String clientName,
+            @Param("online_flag") String online_flag
     );
 
 }
