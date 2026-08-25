@@ -7315,7 +7315,7 @@ public class NseSchemeController {
                     }
                 }
 
-                System.out.println("user1111111111 = " + user);
+                System.out.println("user = " + user);
 
                 List<String> schemeCodeList = new ArrayList<>();
 

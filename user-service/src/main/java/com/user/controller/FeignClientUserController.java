@@ -2303,6 +2303,22 @@ public class FeignClientUserController
 		}
 	}
 
+	@GetMapping("/getRegisterByAmcCode")
+	public ResponseEntity<?> getRegisterByAmcCode(@RequestParam String amc_code) {
+		try
+		{
+			String userList = usersPortfolioSchemewiseRepository.findRegisterByAmcCode(amc_code);
 
+			if (userList != null && !userList.isEmpty())
+			{
+				return ResponseEntity.ok(userList);
+			} else {
+				return ResponseEntity.ok(new User());
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
+		}
+	}
 
 }
