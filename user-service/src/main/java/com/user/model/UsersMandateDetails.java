@@ -52,4 +52,10 @@ public class UsersMandateDetails
     private Date created_date;
     private Date updated_date;
 
+    @Transient
+    public String bank_name = "";
+
+    @Transient
+    public String bank_account_type = "";
+
 }

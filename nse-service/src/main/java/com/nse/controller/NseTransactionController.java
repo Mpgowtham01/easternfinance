@@ -70,6 +70,22 @@ public class NseTransactionController {
     @Autowired
     private NseTransactionRepository nseTransactionRepository;
 
+    /**
+     * Cart ids are only collected when the order originates from a cart (Mobile source, or
+     * Website with a cartid). For direct Website orders the list stays empty, and the NSE
+     * response can also carry more transaction_details rows than we sent carts for, so the
+     * response index cannot be used blindly.
+     */
+    private static String cartIdAt(List<String> cart_id_array, int index)
+    {
+        if (cart_id_array == null || index < 0 || index >= cart_id_array.size())
+        {
+            return "";
+        }
+        String cart_id = cart_id_array.get(index);
+        return cart_id == null ? "" : cart_id;
+    }
+
 
     @Operation(
             summary = "Save Lumpsum Purchase",
@@ -212,6 +228,7 @@ public class NseTransactionController {
             euin_code = NseUtils.checkParem(euin_code);
             source = NseUtils.checkParem(source);
             buy_sell_type = NseUtils.checkParem(buy_sell_type);
+            cartid = NseUtils.checkParem(cartid);
 
             if(StringHelper.isEmpty(payment_type)){payment_type = "EMAIL";};
             if(StringHelper.isEmpty(payment_mode)){payment_mode = "Net Banking";};
@@ -822,10 +839,10 @@ public class NseTransactionController {
                     nsetrans.setFund_trans_to_amc("");
                     nsetrans.setRefund_status("");
                     nsetrans.setRefund_amount("");
-                    nsetrans.setIp_address(ip_address);
-                    nsetrans.setOrigin_user_id(origin_user_id);
-                    nsetrans.setOrigin_first_name(origin_first_name);
-                    nsetrans.setCart_id(cart_id_array.get(i));
+//                    nsetrans.setIp_address(ip_address);
+//                    nsetrans.setOrigin_user_id(origin_user_id);
+//                    nsetrans.setOrigin_first_name(origin_first_name);
+                    nsetrans.setCart_id(cartIdAt(cart_id_array, i));
 
                     try {
                         nseTransactionService.save(nsetrans);
@@ -4361,10 +4378,10 @@ public class NseTransactionController {
                     nsetrans.setFund_trans_to_amc("");
                     nsetrans.setRefund_status("");
                     nsetrans.setRefund_amount("");
-                    nsetrans.setIp_address(ip_address);
-                    nsetrans.setOrigin_user_id(origin_user_id);
-                    nsetrans.setOrigin_first_name(origin_first_name);
-                    nsetrans.setCart_id(cart_id_array.get(i));
+//                    nsetrans.setIp_address(ip_address);
+//                    nsetrans.setOrigin_user_id(origin_user_id);
+//                    nsetrans.setOrigin_first_name(origin_first_name);
+                    nsetrans.setCart_id(cartIdAt(cart_id_array, i));
                     nseTransactionService.save(nsetrans);
 
                     if(source.equalsIgnoreCase("Mobile"))
@@ -5072,14 +5089,14 @@ public class NseTransactionController {
                             nsetrans.setFund_trans_to_amc("");
                             nsetrans.setRefund_status("");
                             nsetrans.setRefund_amount("");
-                            nsetrans.setIp_address(ip_address);
-                            nsetrans.setOrigin_user_id(origin_user_id);
-                            nsetrans.setOrigin_first_name(origin_first_name);
+//                            nsetrans.setIp_address(ip_address);
+//                            nsetrans.setOrigin_user_id(origin_user_id);
+//                            nsetrans.setOrigin_first_name(origin_first_name);
                             if(cartid.isEmpty())
                             {
                                 cartid = "0";
                             }
-                            nsetrans.setCart_id(cart_id_array.get(i));
+                            nsetrans.setCart_id(cartIdAt(cart_id_array, i));
                             nseTransactionService.save(nsetrans);
 
                             for (CartDto cart : cartList)

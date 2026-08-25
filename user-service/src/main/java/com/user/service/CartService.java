@@ -157,4 +157,55 @@ public class CartService
         return cartRepository.findAllCartsBasedOnIds(Ids);
     }
 
+    public List<Cart> findAllActiveCartsByUserId(Integer userId, String clientName,String vendor)
+    {
+        try
+        {
+            return cartRepository.findAllActiveCartsByUserId(userId, clientName,vendor);
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
+    public List<Cart> findAllActiveCartsByUserIdAndClientCode(Integer userId, String clientName,String vendor,String purchase_type,String broker_code)
+    {
+        try
+        {
+            broker_code = UserUtils.checkParem(broker_code);
+            System.out.println("broker_code " + broker_code);
+
+            if(broker_code == null || broker_code.isEmpty())
+            {
+                return cartRepository.findAllActiveCartsByUserIdAndClientCodeWithoutBrokerCode(userId, clientName,vendor,purchase_type);
+            }else{
+                return cartRepository.findAllActiveCartsByUserIdAndClientCode(userId, clientName,vendor,purchase_type,broker_code);
+            }
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
+    public Cart getPurchaseCartForNse(Integer userid,String clientName,String schemeName,String investorCode,String folioNo,String purchaseType,String schemeReinvestTag,String to_scheme_name)
+    {
+        Cart cart = null;
+        try
+        {
+            List<Cart> list = cartRepository.findCartByAllParamsForNse(userid,investorCode,folioNo,purchaseType,schemeName,schemeReinvestTag,to_scheme_name,clientName);
+
+            if(list != null && list.size() > 0)
+            {
+                cart = list.get(0);
+            }
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
+        }
+        return cart;
+    }
+
 }

@@ -275,6 +275,65 @@ public class CartController
         }
     }
 
+    @Hidden
+    @GetMapping("/getAllActiveCartsByUserId")
+    public ResponseEntity<List<Cart>> getAllActiveCartsByUserId(@RequestParam Integer userid,@RequestParam String clientName,@RequestParam String vendor)
+    {
+        try
+        {
+            List<Cart> list = cartService.findAllActiveCartsByUserId(userid, clientName,vendor);
+            return ResponseEntity.ok(list);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
+    @Hidden
+    @GetMapping("/getAllActiveCartsByUserIdAndClientCode")
+    public ResponseEntity<List<Cart>> getAllActiveCartsByUserIdAndClientCode(@RequestParam Integer userid,
+                                                                             @RequestParam String clientName,
+                                                                             @RequestParam String vendor,
+                                                                             @RequestParam String purchase_type,
+                                                                             @RequestParam String broker_code)
+    {
+        try
+        {
+            List<Cart> list = cartService.findAllActiveCartsByUserIdAndClientCode(userid, clientName,vendor,purchase_type,broker_code);
+            return ResponseEntity.ok(list);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @Hidden
+    @GetMapping("/getPurchaseCartUserForNse")
+    public ResponseEntity<?> getPurchaseCartUserForNse(@RequestParam Integer userid,
+                                                       @RequestParam String investorCode,
+                                                       @RequestParam String folioNo,
+                                                       @RequestParam String purchaseType,
+                                                       @RequestParam String schemeName,
+                                                       @RequestParam String schemeReinvestTag,
+                                                       @RequestParam String to_scheme_name,
+                                                       @RequestParam String clientName)
+    {
+        try
+        {
+            List<Cart> detailsOptional  = Collections.singletonList(cartService.getPurchaseCartForNse(userid, clientName,schemeName,investorCode,folioNo,purchaseType,schemeReinvestTag,to_scheme_name));
+
+            if (detailsOptional.size() > 0)
+            {
+                return ResponseEntity.ok(detailsOptional);
+            } else
+            {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "No record found for the given IIN Number and Client Name."));
+            }
+        }catch (Exception ex)
+        {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
+        }
+    }
 
 }

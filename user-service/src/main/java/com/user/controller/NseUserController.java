@@ -5846,4 +5846,28 @@ public class NseUserController
             return UserUtils.errorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/getBankDetailsByIINNumber")
+    public ResponseEntity<?> getBankDetailsByIINNumber(@RequestHeader("Authorization") String token, String client_name, String iin_number,String broker_code)
+    {
+        List<UsersBankDetails> list = usersBankDetailsRepository.getBankDetailsByIINNumber(broker_code,iin_number,client_name,"NSE");
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/getNomineeInfoByClientCodeAndBrokerCode")
+    public ResponseEntity<?> getNomineeInfoByClientCodeAndBrokerCode( @RequestParam String clientCode, @RequestParam String brokerCode, @RequestParam String clientName, @RequestHeader("Authorization") String token)
+    {
+        try
+        {
+            UsersNomineeDetails nomineeDetails = usersNomineeDetailsRepository.getNomineeInfoByClientCodeAndBrokerCode(clientCode, brokerCode, "NSE", clientName);
+            if(nomineeDetails == null){
+                return UserUtils.errorResponse("No nominee information found.", HttpStatus.NOT_FOUND);
+            }
+            return ResponseEntity.ok(nomineeDetails);
+        }catch(Exception ex)
+        {
+            logger.error("Error while saving personal information", ex);
+            return UserUtils.errorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

@@ -86,4 +86,49 @@ public interface CartRepository extends JpaRepository<Cart, Integer>
     @Query("SELECT c FROM Cart c WHERE c.id IN :ids AND c.active = true")
     List<Cart> findAllCartsBasedOnIds(@Param("ids") List<Integer> ids);
 
+    @Query("FROM Cart c WHERE c.user_id = :userId AND c.client_name = :clientName AND c.vendor = :vendor AND c.active = true ORDER BY c.id DESC")
+    List<Cart> findAllActiveCartsByUserId(
+            @Param("userId") Integer userId,
+            @Param("clientName") String clientName,
+            @Param("vendor") String vendor
+    );
+
+    @Query("FROM Cart c WHERE c.user_id = :userId AND c.client_name = :clientName AND c.vendor = :vendor AND c.purchase_type = :purchase_type AND c.active = true ORDER BY c.id DESC")
+    List<Cart> findAllActiveCartsByUserIdAndClientCodeWithoutBrokerCode(
+            @Param("userId") Integer userId,
+            @Param("clientName") String clientName,
+            @Param("vendor") String vendor,
+            @Param("purchase_type") String purchase_type
+    );
+
+    @Query("FROM Cart c WHERE c.user_id = :userId AND c.client_name = :clientName AND c.vendor = :vendor AND c.purchase_type = :purchase_type AND broker_code = :broker_code AND c.active = true ORDER BY c.id DESC")
+    List<Cart> findAllActiveCartsByUserIdAndClientCode(
+            @Param("userId") Integer userId,
+            @Param("clientName") String clientName,
+            @Param("vendor") String vendor,
+            @Param("purchase_type") String purchase_type,
+            @Param("broker_code") String broker_code
+    );
+
+    @Query("FROM Cart c WHERE c.user_id = :userId " +
+            "AND c.investor_code = :investorCode " +
+            "AND c.folio_no = :folioNo " +
+            "AND c.purchase_type = :purchaseType " +
+            "AND (c.scheme_name = :schemeName OR c.scheme_amfi_short_name = :schemeName) " +
+            "AND (c.to_scheme_name = :toSchemeName OR c.to_scheme_amfi_short_name = :toSchemeName) " +
+            "AND c.scheme_reinvest_tag = :schemeReinvestTag " +
+            "AND c.client_name = :clientName " +
+            "AND c.active = true " +
+            "ORDER BY c.id DESC")
+    List<Cart> findCartByAllParamsForNse(
+            @Param("userId") Integer userId,
+            @Param("investorCode") String investorCode,
+            @Param("folioNo") String folioNo,
+            @Param("purchaseType") String purchaseType,
+            @Param("schemeName") String schemeName,
+            @Param("schemeReinvestTag") String schemeReinvestTag,
+            @Param("toSchemeName") String toSchemeName,
+            @Param("clientName") String clientName
+    );
+
 }

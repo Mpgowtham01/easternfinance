@@ -7,6 +7,7 @@ import java.util.Date;
 @Data
 public class UserDto {
     private Integer id;
+    private Integer user_id;
     private String name = "";
     private String pan = "";
     private String mobile = "";
@@ -366,7 +367,7 @@ public class UserDto {
     private boolean is_switch_allowed = true;
     private boolean is_stp_allowed = true;
     private boolean is_swp_allowed = true;
-    private Integer mf_oneday_change;
+    private Boolean mf_oneday_change = true;
     private String acquired_by = "";
     private String freshchat_restoreid = "";
 
@@ -420,7 +421,7 @@ public class UserDto {
     public boolean isIs_swp_allowed() {
         return is_swp_allowed;
     }
-    public Integer getMf_oneday_change() {
+    public Boolean getMf_oneday_change() {
         return mf_oneday_change;
     }
 }

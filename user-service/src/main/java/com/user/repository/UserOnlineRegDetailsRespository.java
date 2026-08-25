@@ -17,8 +17,17 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
     @Query("SELECT u FROM UsersOnlineRegDetails u WHERE u.user_id = :userId")
     List<UsersOnlineRegDetails> findNseUserByUserId(@Param("userId") Integer userId);
 
-    @Query("SELECT u FROM UsersOnlineRegDetails u WHERE u.user_id = :userId AND u.client_name = :clientName")
-    Optional<UsersOnlineRegDetails> findNseUserByUserIdAndClientName(@Param("userId") Integer userId,@Param("clientName") String clientName);
+    @Query(value = """
+    SELECT *
+    FROM users_online_reg_details
+    WHERE user_id = :userId
+      AND client_name = :clientName
+    LIMIT 1
+    """, nativeQuery = true)
+    Optional<UsersOnlineRegDetails> findNseUserByUserIdAndClientName(
+            @Param("userId") Integer userId,
+            @Param("clientName") String clientName
+    );
 
     @Query("SELECT u FROM UsersOnlineRegDetails u WHERE u.user_id = :userId AND u.client_name = :clientName")
     List<UsersOnlineRegDetails> findListOfNseUserByUserIdAndClientName(@Param("userId") Integer userId,@Param("clientName") String clientName);
@@ -194,5 +203,11 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("clientName") String clientName,
             @Param("online_flag") String online_flag
     );
+
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND tax_status_code = :tax_status_code AND holding_nature_code = :holding_nature_code", nativeQuery = true)
+    List<UsersOnlineRegDetails> getUserRegDetailsForCartByUserIdTaxStatus(@Param("userId") Integer userid, @Param("clientName") String clientName, @Param("tax_status_code") String tax_status_code, @Param("holding_nature_code") String holding_nature_code);
+
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND nse_iin_number = :iin_number", nativeQuery = true)
+    List<UsersOnlineRegDetails> findUserByIdAndClientNameAndiin_number(@Param("userId") Integer userid, @Param("clientName") String clientName, @Param("iin_number") String iin_number);
 
 }

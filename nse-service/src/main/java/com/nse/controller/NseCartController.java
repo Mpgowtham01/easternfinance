@@ -14,6 +14,7 @@ import com.nse.repository.NseOnlineSchemeMasterRepository;
 import com.nse.response.*;
 import com.nse.services.CartService;
 import com.nse.services.NseServiceDAO;
+import com.nse.utils.FeignErrorHandler;
 import com.nse.utils.NseUtils;
 import com.nse.utils.NumberUtils;
 import feign.FeignException;
@@ -172,109 +173,104 @@ public class NseCartController {
 
     @PostMapping("/saveOrUpdateCartByUserId")
     public ResponseEntity<?> saveOrUpdateCartByUserId(HttpServletRequest request,
-                                                      @RequestHeader("Authorization") String token, @RequestParam(required = false) String tax_status,
+                                                      @RequestParam String cart_id,
+                                                      @RequestParam String broker_code,
+                                                      @RequestParam String purchase_type,
+                                                      @RequestParam String investor_code,
+                                                      @RequestParam String scheme_name,
+                                                      @RequestParam String scheme_reinvest_tag,
+                                                      @RequestParam String to_scheme_name,
+                                                      @RequestParam String to_scheme_reinvest_tag,
+                                                      @RequestParam String folio_no,
+                                                      @RequestParam String amount_type,
+                                                      @RequestParam String amount,
+                                                      @RequestParam String units,
+                                                      @RequestParam String until_cancel,
+                                                      @RequestParam String frequency,
+                                                      @RequestParam String sip_date,
+                                                      @RequestParam String stp_date,
+                                                      @RequestParam String start_date,
+                                                      @RequestParam String end_date,
+                                                      @RequestParam String trnx_type,
+                                                      @RequestParam String total_amount,
+                                                      @RequestParam String total_units,
+                                                      @RequestParam String  installment,
+                                                      @RequestParam String sip_first_date,
+                                                      @RequestParam String sip_second_date,
+                                                      @RequestParam(required = false) String tax_status,
                                                       @RequestParam(required = false) String tax_status_code,
                                                       @RequestParam(required = false) String holding_nature,
-                                                      @RequestParam(required = false) String holding_nature_code)
+                                                      @RequestParam(required = false) String holding_nature_code,
+                                                      @RequestParam(required = false) String inv_name,
+                                                      @RequestParam(required = false) String step_up_flag,
+                                                      @RequestParam(required = false) String step_up_frequency,
+                                                      @RequestParam(required = false) String step_up_start_date,
+                                                      @RequestParam(required = false) String step_up_end_date,
+                                                      @RequestParam(required = false) String step_up_amount,
+                                                      @RequestParam(required = false) String mandate_id,
+                                                      @RequestParam(required = false) String first_order_flag,
+                                                      @RequestParam String nfo_flag,
+                                                      @RequestParam String sip_tenure,
+                                                      @RequestParam(required = false) String source,
+                                                      @RequestParam(required = false) String otherArn,
+                                                      @RequestHeader("Authorization") String token)
     {
         StopWatch watch = new StopWatch();
         watch.start();
-        MyMFBoxApiValidityResponse mutualFundApiAndIpValidityResponse = null;
-        String ipAddr = "";
         UserDto user = null;
         CartDto cart = null;
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-        Integer log_id = null;
 
         try
         {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            UserDto users = null;
 
-            try
-            {
-                users = userServiceClient.getUserById(Integer.valueOf(userid), token);
-            } catch (FeignException e)
-            {
-                if (e.status() == 400)
-                {
-                    return NseUtils.commonResponse("User Not Found", HttpStatus.BAD_REQUEST);
-                } else if (e.status() == 404)
-                {
-                    return NseUtils.commonResponse("User not found.", HttpStatus.NOT_FOUND);
-                } else
-                {
-                    return NseUtils.commonResponse("Downstream service error.", HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            }
-
-
-            String client_name=users.getClient_name();
-
+            String client_name= TokenInterceptor.extractClientNamedFromToken(token, secretKey);
             String bse_nse_mfu_flag = NseUtils.checkParem("NSE");
 
-            String inv_name = NseUtils.checkParem(users.getName());
-
+            cart_id = NseUtils.checkParem(cart_id);
+            broker_code = NseUtils.checkParem(broker_code);
+            purchase_type = NseUtils.checkParem(purchase_type);
+            investor_code = NseUtils.checkParem(investor_code);
+            scheme_name = NseUtils.checkParem(scheme_name);
+            scheme_reinvest_tag = NseUtils.checkParem(scheme_reinvest_tag);
+            to_scheme_name = NseUtils.checkParem(to_scheme_name);
+            to_scheme_reinvest_tag = NseUtils.checkParem(to_scheme_reinvest_tag);
+            folio_no = NseUtils.checkParem(folio_no);
+            amount_type = NseUtils.checkParem(amount_type);
+            frequency = NseUtils.checkParem(frequency);
+            sip_date = NseUtils.checkParem(sip_date);
+            stp_date = NseUtils.checkParem(stp_date);
+            start_date = NseUtils.checkParem(start_date);
+            end_date = NseUtils.checkParem(end_date);
+            trnx_type = NseUtils.checkParem(trnx_type);
+            sip_first_date = NseUtils.checkParem(sip_first_date);
+            sip_second_date = NseUtils.checkParem(sip_second_date);
+            nfo_flag = NseUtils.checkParem(nfo_flag);
+            inv_name = NseUtils.checkParem(inv_name);
             tax_status = NseUtils.checkParem(tax_status);
             tax_status_code = NseUtils.checkParem(tax_status_code);
             holding_nature = NseUtils.checkParem(holding_nature);
             holding_nature_code = NseUtils.checkParem(holding_nature_code);
+            mandate_id = NseUtils.checkParem(mandate_id);
+            first_order_flag = NseUtils.checkParem(first_order_flag);
+            otherArn = NseUtils.checkParem(otherArn);
 
-            if(tax_status.isEmpty() || tax_status_code.isEmpty() || holding_nature.isEmpty() || holding_nature_code.isEmpty())
+            if(first_order_flag.isEmpty())
             {
-                tax_status = NseUtils.checkParem(users.getTax_status());
-                tax_status_code = NseUtils.checkParem(users.getTax_status_code());
-                holding_nature = NseUtils.checkParem(users.getHolding_nature());
-                holding_nature_code = NseUtils.checkParem(users.getHolding_nature_code());
-            }else{
-                tax_status = NseUtils.checkParem(tax_status);
-                tax_status_code = NseUtils.checkParem(tax_status_code);
-                holding_nature = NseUtils.checkParem(holding_nature);
-                holding_nature_code = NseUtils.checkParem(holding_nature_code);
+                first_order_flag = "N";
             }
+            step_up_flag = NseUtils.checkParem(step_up_flag);
+            step_up_frequency = NseUtils.checkParem(step_up_frequency);
+            step_up_start_date = NseUtils.checkParem(step_up_start_date);
+            step_up_end_date = NseUtils.checkParem(step_up_end_date);
+            step_up_amount = NseUtils.checkParem(step_up_amount);
+            source = NseUtils.checkParem(source);
 
+            if(StringHelper.isEmpty(step_up_flag)) {step_up_flag = "N";}
 
-            String cart_id = NseUtils.checkParem(request.getParameter("cart_id"));
-//            String broker_code = NseUtils.checkParem(request.getParameter("broker_code"));
-            String broker_code = "ARN-0030";
-            String purchase_type = NseUtils.checkParem(request.getParameter("purchase_type"));
-            String investor_code = NseUtils.checkParem(request.getParameter("investor_code"));
-            String scheme_name = NseUtils.checkParem(request.getParameter("scheme_name"));
-            String scheme_reinvest_tag = NseUtils.checkParem(request.getParameter("scheme_reinvest_tag"));
-            String to_scheme_name = NseUtils.checkParem(request.getParameter("to_scheme_name"));
-            String to_scheme_reinvest_tag = NseUtils.checkParem(request.getParameter("to_scheme_reinvest_tag"));
-            String folio_no = NseUtils.checkParem(request.getParameter("folio_no"));
-            String amount_type = NseUtils.checkParem(request.getParameter("amount_type"));
-            String amount = NseUtils.checkParem(request.getParameter("amount"));
-            String units = NseUtils.checkParem(request.getParameter("units"));
-            String until_cancel = NseUtils.checkParem(request.getParameter("until_cancel"));
-            String frequency = NseUtils.checkParem(request.getParameter("frequency"));
-            String sip_date = NseUtils.checkParem(request.getParameter("sip_date"));
-            String stp_date = NseUtils.checkParem(request.getParameter("stp_date"));
-            String start_date = NseUtils.checkParem(request.getParameter("start_date"));
-            String end_date = NseUtils.checkParem(request.getParameter("end_date"));
-            String trnx_type = NseUtils.checkParem(request.getParameter("trnx_type"));
-            String total_amount = NseUtils.checkParem(request.getParameter("total_amount"));
-            String total_units = NseUtils.checkParem(request.getParameter("total_units"));
-            String installment = NseUtils.checkParem(request.getParameter("installment"));
-            String sip_first_date = NseUtils.checkParem(request.getParameter("sip_first_date"));
-            String sip_second_date = NseUtils.checkParem(request.getParameter("sip_second_date"));
-            String nfo_flag = NseUtils.checkParem(request.getParameter("nfo_flag"));
-            String sip_tenure = NseUtils.checkParem(request.getParameter("sip_tenure"));
-            String first_order_flag = NseUtils.checkParem(request.getParameter("first_order_flag"));
-            String bank_mandate = NseUtils.checkParem(request.getParameter("bank_mandate"));
-//            String tax_status = NseUtils.checkParem(request.getParameter("tax_status"));
-//            String tax_status_code = NseUtils.checkParem(request.getParameter("tax_status_code"));
-//            String holding_nature = NseUtils.checkParem(request.getParameter("holding_nature"));
-//            String holding_nature_code = NseUtils.checkParem(request.getParameter("holding_nature_code"));
-
-            Boolean firstOrderFlag = false;
-            if(first_order_flag.equalsIgnoreCase("Y"))
-            {
-                firstOrderFlag = true;
-            }else{
-                firstOrderFlag =  false;
-            }
+            System.out.println("sip_date = " + sip_date);
+            System.out.println("frequency = " + frequency);
 
             String start_day = "";
             String start_month = "";
@@ -284,700 +280,577 @@ public class NseCartController {
             String end_month = "";
             String end_year = "";
 
-                if(StringHelper.isEmpty(purchase_type))
+            if(StringHelper.isEmpty(purchase_type))
+            {
+                return NseUtils.commonResponse("Please provide the Purchase Type", HttpStatus.BAD_REQUEST);
+            }
+
+            if(StringHelper.isEmpty(investor_code))
+            {
+                return NseUtils.commonResponse("Please provide the Investor Code",  HttpStatus.BAD_REQUEST);
+            }
+
+            if(StringHelper.isEmpty(scheme_reinvest_tag)) {
+                return NseUtils.commonResponse("Please provide the scheme_reinvest_tag",  HttpStatus.BAD_REQUEST);
+            }
+
+            System.out.println("GET USER ID = " + userid);
+            System.out.println("GET USER client_name = " + client_name);
+
+            if(StringHelper.isNotEmpty(tax_status_code) && StringHelper.isNotEmpty(holding_nature_code))
+            {
+                user = userServiceClient.getUserRegDetailsForCartByUserIdTaxStatus(client_name, Integer.valueOf(userid),tax_status_code,holding_nature_code,token);
+            }else
+            {
+                try
                 {
-                    return NseUtils.commonResponse("Please provide the Purchase Type", HttpStatus.BAD_REQUEST);
-                }
-
-                if(StringHelper.isEmpty(investor_code))
+                    user =  userServiceClient.getUserByIdAndClientNameAndiinnumber(client_name, Integer.valueOf(userid),investor_code,token);
+                }catch (FeignException e)
                 {
-                    return NseUtils.commonResponse("Please provide the Investor Code",  HttpStatus.BAD_REQUEST);
+                    return FeignErrorHandler.handle(e, "User Service", "User not found");
                 }
+            }
 
-                if(StringHelper.isEmpty(inv_name))
+            if(user != null)
+            {
+                if(StringHelper.isEmpty(inv_name)){inv_name = user.getName();}
+                if(StringHelper.isEmpty(tax_status)){tax_status = user.getTax_status();}
+                if(StringHelper.isEmpty(tax_status_code)){tax_status_code = user.getTax_status_code();}
+                if(StringHelper.isEmpty(holding_nature)){holding_nature = user.getHolding_nature();}
+                if(StringHelper.isEmpty(holding_nature_code)){holding_nature_code = user.getHolding_nature_code();}
+                if(StringHelper.isEmpty(broker_code)){broker_code = user.getBroker_code();}
+
+                System.out.println("second users name & Pan  = " + user.getName() + " &  PAN = " + user.getPan());
+                Boolean cart_status = false;
+
+                if (StringHelper.isNotEmpty(cart_id))
                 {
-                    return NseUtils.commonResponse("Please provide the Investor Name",  HttpStatus.BAD_REQUEST);
+                    cart = (CartDto) userServiceClient.getCartDetails(Integer.valueOf(cart_id), client_name, token);
+                    System.out.println("CART DETAILS By NSE = " + cart);
                 }
 
-                if(StringHelper.isEmpty(tax_status))
+                if (cart == null)
                 {
-                    return NseUtils.commonResponse("Please provide the Tax Status",  HttpStatus.BAD_REQUEST);
+                    System.out.println("CAME HERE FOR CREATE NEW CART");
+                    cart = new CartDto();
+                    cart_status = false;
+                } else {
+                    cart_status = true;
                 }
 
-                if(StringHelper.isEmpty(tax_status_code))
+                System.out.println("user = "+ user);
+
+                if (purchase_type.equalsIgnoreCase("Lumpsum Purchase"))
                 {
-                    return NseUtils.commonResponse("Please provide the Tax Status Code",  HttpStatus.BAD_REQUEST);
-                }
-
-                if(StringHelper.isEmpty(holding_nature))
-                {
-                    return NseUtils.commonResponse("Please provide the Holding Nature",  HttpStatus.BAD_REQUEST);
-                }
-
-                if(StringHelper.isEmpty(holding_nature_code))
-                {
-                    return NseUtils.commonResponse("Please provide the Holding Nature Code",  HttpStatus.BAD_REQUEST);
-                }
-
-                if(StringHelper.isEmpty(broker_code)) {
-                    return NseUtils.commonResponse("Please provide the Broker Code",  HttpStatus.BAD_REQUEST);
-                }
-
-                if(StringHelper.isEmpty(scheme_reinvest_tag)) {
-                    return NseUtils.commonResponse("Please provide the scheme_reinvest_tag",  HttpStatus.BAD_REQUEST);
-                }
-
-                user = userServiceClient.getUserDetailsByID(client_name, Integer.valueOf(userid),token);
-
-                if(user != null) {
-                    Boolean cart_status = false;
-
-                    if (!cart_id.isEmpty()) {
-                        cart = (CartDto) userServiceClient.getCartDetails(Integer.valueOf(cart_id), client_name, token);
+                    if (StringHelper.isEmpty(scheme_name)) {
+                        return NseUtils.commonResponse("Please provide the Scheme Name", HttpStatus.BAD_REQUEST);
                     }
 
-                    if (cart == null) {
-                        cart = new CartDto();
-                        cart_status = false;
-                    } else {
-                        cart_status = true;
+                    if (nfo_flag.equalsIgnoreCase("N") && StringHelper.isEmpty(scheme_reinvest_tag)) {
+                        return NseUtils.commonResponse("Please provide the Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
                     }
 
-                    System.out.println("user = "+ user);
-
-                    if (purchase_type.equalsIgnoreCase("Lumpsum Purchase")) {
-                        if (StringHelper.isEmpty(scheme_name)) {
-                            return NseUtils.commonResponse("Please provide the Scheme Name", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (nfo_flag.equalsIgnoreCase("N") && StringHelper.isEmpty(scheme_reinvest_tag)) {
-                            return NseUtils.commonResponse("Please provide the Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(amount)) {
-                            return NseUtils.commonResponse("Please provide the Amount", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (nfo_flag.equalsIgnoreCase("N")) {
-                            Double minAmount = 0.0;
-
-                            if (bse_nse_mfu_flag.equalsIgnoreCase("NSE")) {
-                                minAmount = cartService.getNSELumpsumMinAmountBySchemeName(scheme_name, trnx_type, scheme_reinvest_tag);
-                            }
-
-                            if (StringHelper.isNotEmpty(String.valueOf(minAmount))) {
-                                Double minAmt = minAmount;
-                                Double amt = Double.parseDouble(amount);
-
-                                if (minAmt > amt) {
-                                    return NseUtils.commonResponse("Entered amount less than min product limits for " + scheme_name + ", (Min amount shoud be Rs." + minAmt + ")", HttpStatus.BAD_REQUEST);
-                                }
-                            }
-                        }
-
-                        if (StringHelper.isEmpty(folio_no)) {
-                            return NseUtils.commonResponse("Please provide the Folio Number", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(trnx_type)) {
-                            return NseUtils.commonResponse("Please provide Trasaction Type", HttpStatus.BAD_REQUEST);
-                        }
+                    if (StringHelper.isEmpty(amount)) {
+                        return NseUtils.commonResponse("Please provide the Amount", HttpStatus.BAD_REQUEST);
                     }
-                    else if (purchase_type.equalsIgnoreCase("SIP Purchase"))
-                    {
 
-                        if (StringHelper.isEmpty(scheme_name)) {
-                            return NseUtils.commonResponse("Please provide the Scheme Name", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (nfo_flag.equalsIgnoreCase("N")) {
-                            if (StringHelper.isEmpty(scheme_reinvest_tag)) {
-                                return NseUtils.commonResponse("Please provide the Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
-                            }
-                        }
-
-                        if (StringHelper.isEmpty(amount)) {
-                            return NseUtils.commonResponse("Please provide the Amount", HttpStatus.BAD_REQUEST);
-                        }
-                        System.out.println("228 + " + nfo_flag);
-                        if (nfo_flag.equalsIgnoreCase("N")) {
-                            double minAmount = 0.0;
-
-                            if (bse_nse_mfu_flag.equalsIgnoreCase("NSE")) {
-                                minAmount = cartService.validateSipamount(scheme_name, trnx_type, scheme_reinvest_tag);
-                            }
-
-
-                            if (StringHelper.isNotEmpty(String.valueOf(minAmount))) {
-                                Double minAmt = minAmount;
-                                Double amt = Double.parseDouble(amount);
-
-                                if (minAmt > amt) {
-                                    return NseUtils.commonResponse("Entered amount less than min product limits for " + scheme_name + ", (Min amount shoud be Rs." + minAmt + ")", HttpStatus.BAD_REQUEST);
-                                }
-                            }
-
-                            System.out.println("min amount = " +  minAmount);
-                        }
-
-                        if (StringHelper.isEmpty(folio_no)) {
-                            return NseUtils.commonResponse("Please provide the Folio Number", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(trnx_type)) {
-                            return NseUtils.commonResponse("Please provide Trasaction Type", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(frequency)) {
-                            return NseUtils.commonResponse("Please provide Frequency", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(start_date)) {
-                            return NseUtils.commonResponse("Please provide Start Date", HttpStatus.BAD_REQUEST);
-                        }
+                    if (nfo_flag.equalsIgnoreCase("N")) {
+                        Double minAmount = 0.0;
 
                         if (bse_nse_mfu_flag.equalsIgnoreCase("NSE")) {
-                            if (frequency.equalsIgnoreCase("OW")) {
-                                if (StringHelper.isEmpty(sip_date)) {
-                                    return NseUtils.commonResponse("Please provide SIP Date", HttpStatus.BAD_REQUEST);
-                                }
-                            }
-
-                            if (frequency.equalsIgnoreCase("TM")) {
-                                if (StringHelper.isEmpty(sip_first_date)) {
-                                    return NseUtils.commonResponse("Please provide SIP First Date", HttpStatus.BAD_REQUEST);
-                                }
-
-                                if (StringHelper.isEmpty(sip_second_date)) {
-                                    return NseUtils.commonResponse("Please provide SIP Second Date", HttpStatus.BAD_REQUEST);
-                                }
-                            }
-                        }
-                    } else if (purchase_type.equalsIgnoreCase("Switch Purchase"))
-                    {
-                        if (StringHelper.isEmpty(folio_no)) {
-                            return NseUtils.commonResponse("Please provide the Folio Number", HttpStatus.BAD_REQUEST);
+                            minAmount = cartService.getNSELumpsumMinAmountBySchemeName(scheme_name, trnx_type, scheme_reinvest_tag);
                         }
 
-                        if (StringHelper.isEmpty(scheme_name)) {
-                            return NseUtils.commonResponse("Please provide the From Scheme Name", HttpStatus.BAD_REQUEST);
-                        }
+                        Double minAmt = minAmount;
+                        Double amt = Double.parseDouble(amount);
 
-                        if (StringHelper.isEmpty(scheme_reinvest_tag)) {
-                            return NseUtils.commonResponse("Please provide the From Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(to_scheme_name)) {
-                            return NseUtils.commonResponse("Please provide the To Scheme Name", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(to_scheme_reinvest_tag)) {
-                            return NseUtils.commonResponse("Please provide the TO Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(amount_type)) {
-                            return NseUtils.commonResponse("Please provide the Switch Type", HttpStatus.BAD_REQUEST);
-                        }
-
-                        if (StringHelper.isEmpty(cart_id)) {
-                            cart = cartService.getPurchaseCart(Integer.parseInt(userid), investor_code, folio_no, scheme_name, scheme_reinvest_tag, client_name, purchase_type,token);
-
-                            if(cart != null)
-                            {
-                                cart_id = String.valueOf(cart.getId());
-                                return NseUtils.commonResponse("This scheme is already in your cart. Please review your cart before proceeding.", HttpStatus.BAD_REQUEST);
-                            }else
-                            {
-                                cart = new CartDto();
-                                cart_status = false;
-                            }
-                        }
-
-                        SchemeHoldingUnitsPojo values = new SchemeHoldingUnitsPojo();
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the Switch Amount",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.equalsIgnoreCase("0.0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid Switch Amount",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the Switch Amount",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.equalsIgnoreCase("0.0"))
-                        {
-                           return NseUtils.commonResponse("Please provide the Valid Switch Amount",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && units.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the Switch Amount",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && units.equalsIgnoreCase("0.0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid Switch Amount",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(StringHelper.isNotEmpty(cart_id))
-                        {
-
-                            if(bse_nse_mfu_flag.equalsIgnoreCase("NSE"))
-                            {
-                                values = cartService.getSchemeHoldingUnits(client_name, folio_no, scheme_name, Integer.parseInt(userid),token);
-                            }else
-                            {
-                                return NseUtils.commonResponse("Please provide the Valid bse_nse_mfu_flag",HttpStatus.BAD_REQUEST);
-                            }
-
-                            if(values != null)
-                            {
-                                Double total_units_val = values.getTotal_units();
-
-                                if(total_units_val.equals(0.0))
-                                {
-                                    return NseUtils.commonResponse("Your current value is zero. You can't give the request right now",HttpStatus.BAD_REQUEST);
-                                }else
-                                {
-                                    cart = new CartDto();
-                                    cart_status = false;
-                                }
-                            }else
-                            {
-                                cart = new CartDto();
-                                cart_status = false;
-                            }
-                        }
-
-                        System.out.println("values = " + values);
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the Switch Units",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.equalsIgnoreCase("0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid Switch Units",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the Switch All Units",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.equalsIgnoreCase("0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid Switch All Units",HttpStatus.BAD_REQUEST);
+                        if (minAmt > amt) {
+                            return NseUtils.commonResponse("Entered amount less than min product limits for " + scheme_name + ", (Min amount shoud be Rs." + minAmt + ")", HttpStatus.BAD_REQUEST);
                         }
                     }
 
-                    else if(purchase_type.equalsIgnoreCase("Redemption Purchase"))
+                    if (StringHelper.isEmpty(folio_no)) {
+                        return NseUtils.commonResponse("Please provide the Folio Number", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(trnx_type)) {
+                        return NseUtils.commonResponse("Please provide Trasaction Type", HttpStatus.BAD_REQUEST);
+                    }
+                }
+                else if (purchase_type.equalsIgnoreCase("SIP Purchase"))
+                {
+
+                    if (StringHelper.isEmpty(scheme_name)) {
+                        return NseUtils.commonResponse("Please provide the Scheme Name", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (nfo_flag.equalsIgnoreCase("N") && StringHelper.isEmpty(scheme_reinvest_tag)) {
+                        return NseUtils.commonResponse("Please provide the Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(amount)) {
+                        return NseUtils.commonResponse("Please provide the Amount", HttpStatus.BAD_REQUEST);
+                    }
+                    System.out.println("228 + " + nfo_flag);
+                    if (nfo_flag.equalsIgnoreCase("N")) {
+                        double minAmount = 0.0;
+
+                        if (bse_nse_mfu_flag.equalsIgnoreCase("NSE")) {
+                            minAmount = cartService.validateSipamount(scheme_name, trnx_type, scheme_reinvest_tag);
+                        }
+
+
+                        Double minAmt = minAmount;
+                        Double amt = Double.parseDouble(amount);
+
+                        if (minAmt > amt) {
+                            return NseUtils.commonResponse("Entered amount less than min product limits for " + scheme_name + ", (Min amount shoud be Rs." + minAmt + ")", HttpStatus.BAD_REQUEST);
+                        }
+
+                        System.out.println("min amount = " +  minAmount);
+                    }
+
+                    if (StringHelper.isEmpty(folio_no)) {
+                        return NseUtils.commonResponse("Please provide the Folio Number", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(trnx_type)) {
+                        return NseUtils.commonResponse("Please provide Trasaction Type", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(frequency)) {
+                        return NseUtils.commonResponse("Please provide Frequency", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(start_date)) {
+                        return NseUtils.commonResponse("Please provide Start Date", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (bse_nse_mfu_flag.equalsIgnoreCase("NSE")) {
+                        if (frequency.equalsIgnoreCase("OW") && StringHelper.isEmpty(sip_date)) {
+                            return NseUtils.commonResponse("Please provide SIP Date", HttpStatus.BAD_REQUEST);
+                        }
+
+                        if (frequency.equalsIgnoreCase("TM")) {
+                            if (StringHelper.isEmpty(sip_first_date)) {
+                                return NseUtils.commonResponse("Please provide SIP First Date", HttpStatus.BAD_REQUEST);
+                            }
+
+                            if (StringHelper.isEmpty(sip_second_date)) {
+                                return NseUtils.commonResponse("Please provide SIP Second Date", HttpStatus.BAD_REQUEST);
+                            }
+                        }
+                    }
+
+                    if(step_up_flag.equalsIgnoreCase("Y"))
                     {
-                        if(StringHelper.isEmpty(scheme_name))
+                        if (StringHelper.isEmpty(step_up_frequency))
                         {
-                            return NseUtils.commonResponse("Please provide the Scheme Name",HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse("Please provide SIP Step Up Frequency", HttpStatus.BAD_REQUEST);
                         }
 
-                        if(StringHelper.isEmpty(folio_no))
+                        if (StringHelper.isEmpty(step_up_start_date))
                         {
-                            return NseUtils.commonResponse("Please provide the Folio Number",HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse("Please provide SIP Step Up Start Date", HttpStatus.BAD_REQUEST);
                         }
 
-                        if(StringHelper.isEmpty(amount_type))
+                        if (StringHelper.isEmpty(step_up_end_date))
                         {
-                            return NseUtils.commonResponse("Please provide the Redemption Type",HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse("Please provide SIP Step Up End Date", HttpStatus.BAD_REQUEST);
                         }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
+                        if (StringHelper.isEmpty(step_up_amount))
                         {
-                            return NseUtils.commonResponse("Please provide the Redemption Amount",HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse("Please provide SIP Step Up Amount", HttpStatus.BAD_REQUEST);
+                        }
+                    }
+
+                } else if (purchase_type.equalsIgnoreCase("Switch Purchase"))
+                {
+                    if (StringHelper.isEmpty(folio_no)) {
+                        return NseUtils.commonResponse("Please provide the Folio Number", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(scheme_name)) {
+                        return NseUtils.commonResponse("Please provide the From Scheme Name", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(scheme_reinvest_tag)) {
+                        return NseUtils.commonResponse("Please provide the From Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(to_scheme_name)) {
+                        return NseUtils.commonResponse("Please provide the To Scheme Name", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(to_scheme_reinvest_tag)) {
+                        return NseUtils.commonResponse("Please provide the TO Scheme Reinvest Tag", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(amount_type)) {
+                        return NseUtils.commonResponse("Please provide the Switch Type", HttpStatus.BAD_REQUEST);
+                    }
+
+                    if (StringHelper.isEmpty(cart_id)) {
+                        if(otherArn.equalsIgnoreCase("T"))
+                        {
+                            cart = null;
+                        }else{
+                            cart = cartService.getPurchaseCartForBse(Integer.parseInt(userid), investor_code, folio_no, scheme_name, scheme_reinvest_tag,to_scheme_name, client_name, purchase_type,token);
                         }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
+                        System.out.println("cart = " + cart);
+                        if(cart != null)
                         {
-                            return NseUtils.commonResponse("Please provide the Redemption Units",HttpStatus.BAD_REQUEST);
-                        }
-
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.isEmpty())
+                            return NseUtils.commonResponse("This scheme is already in your cart. Please review your cart before proceeding.", HttpStatus.BAD_REQUEST);
+                        }else
                         {
-                            return NseUtils.commonResponse("Please provide the Redemption All Units",HttpStatus.BAD_REQUEST);
+                            cart = new CartDto();
+                            cart_status = false;
                         }
+                    }
 
-//                        if(StringHelper.isEmpty(cart_id))
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the Switch Amount",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.equalsIgnoreCase("0.0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid Switch Amount",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the Switch Amount",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.equalsIgnoreCase("0.0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid Switch Amount",HttpStatus.BAD_REQUEST);
+                    }
+
+//                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && units.isEmpty())
 //                        {
-//                            cart = cartService.getPurchaseCart(Integer.parseInt(userid), investor_code, folio_no, scheme_name, scheme_reinvest_tag, client_name, purchase_type,token);
+//                            return NseUtils.commonResponse("Please provide the Switch Amount",HttpStatus.BAD_REQUEST);
+//                        }
 //
-//                            if(cart != null)
-//                            {
-//                                return NseUtils.commonResponse("This scheme is already in your cart. Please review your cart before proceeding.",HttpStatus.BAD_REQUEST);
-//                            }else
-//                            {
-//                                cart = new CartDto();
-//                                cart_status = false;
-//                            }
+//                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && units.equalsIgnoreCase("0.0"))
+//                        {
+//                            return NseUtils.commonResponse("Please provide the Valid Switch Amount",HttpStatus.BAD_REQUEST);
 //                        }
 
-                        if(StringHelper.isEmpty(cart_id))
+                    if(!otherArn.equalsIgnoreCase("T"))
+                    {
+                        SchemeHoldingUnitsPojo values = cartService.getSchemeHoldingUnits(client_name, folio_no, scheme_name, Integer.parseInt(userid), token);
+
+                        Double total_units_val = values.getTotal_units();
+
+                        if (total_units_val == null) {
+                            total_units_val = 0.0;
+                        }
+
+                        if (total_units_val.equals(0.0)) {
+                            return NseUtils.commonResponse("Your current value is zero. You can't give the request right now", HttpStatus.BAD_REQUEST);
+                        }
+
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the Switch Units",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.equalsIgnoreCase("0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid Switch Units",HttpStatus.BAD_REQUEST);
+                    }
+
+//                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.isEmpty())
+//                        {
+//                            return NseUtils.commonResponse("Please provide the Switch All Units",HttpStatus.BAD_REQUEST);
+//                        }
+//
+//                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.equalsIgnoreCase("0"))
+//                        {
+//                            return NseUtils.commonResponse("Please provide the Valid Switch All Units",HttpStatus.BAD_REQUEST);
+//                        }
+                }
+
+                else if(purchase_type.equalsIgnoreCase("Redemption Purchase"))
+                {
+                    if(StringHelper.isEmpty(scheme_name))
+                    {
+                        return NseUtils.commonResponse("Please provide the Scheme Name",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(StringHelper.isEmpty(folio_no))
+                    {
+                        return NseUtils.commonResponse("Please provide the Folio Number",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(StringHelper.isEmpty(amount_type))
+                    {
+                        return NseUtils.commonResponse("Please provide the Redemption Type",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the Redemption Amount",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the Redemption Units",HttpStatus.BAD_REQUEST);
+                    }
+
+//                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.isEmpty())
+//                        {
+//                            return NseUtils.commonResponse("Please provide the Redemption All Units",HttpStatus.BAD_REQUEST);
+//                        }
+
+                    if(StringHelper.isEmpty(cart_id))
+                    {
+                        cart = cartService.getPurchaseCart(Integer.parseInt(userid), investor_code, folio_no, scheme_name, scheme_reinvest_tag, client_name, purchase_type,token);
+
+                        if(cart != null)
                         {
-                            SchemeHoldingUnitsPojo values = new SchemeHoldingUnitsPojo();
-
-                            if(bse_nse_mfu_flag.equalsIgnoreCase("NSE"))
-                            {
-                                values = cartService.getSchemeHoldingUnits(client_name, folio_no, scheme_name, Integer.parseInt(userid),token);
-                            }else
-                            {
-                                return NseUtils.commonResponse("Please provide the Valid bse_nse_mfu_flag",HttpStatus.BAD_REQUEST);
-                            }
-
-                            if(values != null)
-                            {
-                                Double total_units_val = values.getTotal_units();
-
-                                if(total_units_val.equals(0.0))
-                                {
-                                    return NseUtils.commonResponse("You cannot redeem your units or amount as your ELSS scheme does not have any free units available.",HttpStatus.BAD_REQUEST);
-                                }else
-                                {
-                                    cart = new CartDto();
-                                    cart_status = false;
-                                }
-                            }else
-                            {
-                                cart = new CartDto();
-                                cart_status = false;
-                            }
+                            return NseUtils.commonResponse("This scheme is already in your cart. Please review your cart before proceeding.",HttpStatus.BAD_REQUEST);
+                        }else
+                        {
+                            cart = new CartDto();
+                            cart_status = false;
                         }
                     }
 
-                    else if(purchase_type.equalsIgnoreCase("STP Purchase"))
+                    if(!otherArn.equalsIgnoreCase("T"))
                     {
-                        if(StringHelper.isEmpty(folio_no))
-                        {
-                            return NseUtils.commonResponse("Please provide the Folio Number",HttpStatus.BAD_REQUEST);
-                        }
+                        SchemeHoldingUnitsPojo values = cartService.getSchemeHoldingUnits(client_name, folio_no, scheme_name, Integer.parseInt(userid), token);
+                        Double total_units_val = values.getTotal_units();
 
-                        if(StringHelper.isEmpty(scheme_name))
-                        {
-                             return NseUtils.commonResponse("Please provide the From Scheme Name",HttpStatus.BAD_REQUEST);
+                        if (total_units_val == null) {
+                            total_units_val = 0.0;
                         }
+                        if (total_units_val.equals(0.0)) {
+                            return NseUtils.commonResponse("You cannot redeem your units or amount as your ELSS scheme does not have any free units available.", HttpStatus.BAD_REQUEST);
+                        }
+                    }
+                }
 
-                        if(StringHelper.isEmpty(scheme_reinvest_tag))
-                        {
-                            return NseUtils.commonResponse("Please provide the From Scheme Reinvest Tag",HttpStatus.BAD_REQUEST);
-                        }
+                else if(purchase_type.equalsIgnoreCase("STP Purchase"))
+                {
+                    if(StringHelper.isEmpty(folio_no))
+                    {
+                        return NseUtils.commonResponse("Please provide the Folio Number",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(to_scheme_name))
-                        {
-                            return NseUtils.commonResponse("Please provide the To Scheme Name",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(scheme_name))
+                    {
+                        return NseUtils.commonResponse("Please provide the From Scheme Name",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(to_scheme_reinvest_tag))
-                        {
-                            return NseUtils.commonResponse("Please provide the TO Scheme Reinvest Tag",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(scheme_reinvest_tag))
+                    {
+                        return NseUtils.commonResponse("Please provide the From Scheme Reinvest Tag",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(amount_type))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Type",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(to_scheme_name))
+                    {
+                        return NseUtils.commonResponse("Please provide the To Scheme Name",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Amount",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(to_scheme_reinvest_tag))
+                    {
+                        return NseUtils.commonResponse("Please provide the TO Scheme Reinvest Tag",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.equalsIgnoreCase("0"))
-                        {
-                             return NseUtils.commonResponse("Please provide the Valid STP Amount",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(amount_type))
+                    {
+                        return NseUtils.commonResponse("Please provide the STP Type",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Units",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the STP Amount",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.equalsIgnoreCase("0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid STP Units",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.equalsIgnoreCase("0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid STP Amount",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the STP All Units",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the STP Units",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.equalsIgnoreCase("0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid STP All Units",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && units.equalsIgnoreCase("0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid STP Units",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && !NumberUtils.isParsable(amount))
-                        {
-                             return NseUtils.commonResponse("Please provide the Valid STP Amount",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the STP All Units",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && !NumberUtils.isParsable(units))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Units",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && total_units.equalsIgnoreCase("0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid STP All Units",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && !NumberUtils.isParsable(total_units))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP All Units",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && !NumberUtils.isParsable(amount))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid STP Amount",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(start_date))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Start Date",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Units") && !NumberUtils.isParsable(units))
+                    {
+                        return NseUtils.commonResponse("Please provide the STP Units",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(frequency))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Frequency",HttpStatus.BAD_REQUEST);
-                        }
-                        if(bse_nse_mfu_flag.equalsIgnoreCase("NSE"))
-                        {
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("All Units") && !NumberUtils.isParsable(total_units))
+                    {
+                        return NseUtils.commonResponse("Please provide the STP All Units",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(StringHelper.isEmpty(start_date))
+                    {
+                        return NseUtils.commonResponse("Please provide the STP Start Date",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(StringHelper.isEmpty(frequency))
+                    {
+                        return NseUtils.commonResponse("Please provide the STP Frequency",HttpStatus.BAD_REQUEST);
+                    }
+
+                    if(bse_nse_mfu_flag.equalsIgnoreCase("NSE"))
+                    {
 //                            if(StringHelper.isEmpty(end_date))
 //                            {
 //                                return NseUtils.commonResponse("Please provide the STP End Date",HttpStatus.BAD_REQUEST);
 //                            }
 
-                            if(frequency.equalsIgnoreCase("OW") && stp_date.isEmpty())
-                            {
-                                return NseUtils.commonResponse("Please provide the STP Date",HttpStatus.BAD_REQUEST);
-                            }else
-                            {
-                                sip_date = stp_date;
-                            }
+                        if(frequency.equalsIgnoreCase("OW") && stp_date.isEmpty())
+                        {
+                            return NseUtils.commonResponse("Please provide the STP Date",HttpStatus.BAD_REQUEST);
+                        }else
+                        {
+                            sip_date = stp_date;
                         }
+                    }
+                }
 
+                else if(purchase_type.equalsIgnoreCase("SWP Purchase"))
+                {
+                    if(StringHelper.isEmpty(folio_no))
+                    {
+                        return NseUtils.commonResponse("Please provide the Folio Number",HttpStatus.BAD_REQUEST);
                     }
 
-                    else if(purchase_type.equalsIgnoreCase("SWP Purchase"))
+                    if(StringHelper.isEmpty(scheme_name))
                     {
-                        if(StringHelper.isEmpty(folio_no))
-                        {
-                             return NseUtils.commonResponse("Please provide the Folio Number",HttpStatus.BAD_REQUEST);
-                        }
+                        return NseUtils.commonResponse("Please provide the Scheme Name",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(scheme_name))
-                        {
-                            return NseUtils.commonResponse("Please provide the Scheme Name",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(scheme_reinvest_tag))
+                    {
+                        return NseUtils.commonResponse("Please provide the Scheme Reinvest Tag",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(scheme_reinvest_tag))
-                        {
-                            return NseUtils.commonResponse("Please provide the Scheme Reinvest Tag",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(amount_type))
+                    {
+                        return NseUtils.commonResponse("Please provide the SWP Type",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(amount_type))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Type",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide the SWP Amount",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.isEmpty())
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Amount",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.equalsIgnoreCase("0"))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid SWP Amount",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && amount.equalsIgnoreCase("0"))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid STP Amount",HttpStatus.BAD_REQUEST);
-                        }
+                    if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && !NumberUtils.isParsable(amount))
+                    {
+                        return NseUtils.commonResponse("Please provide the Valid SWP Amount",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(!amount_type.isEmpty() && amount_type.equalsIgnoreCase("Amount") && !NumberUtils.isParsable(amount))
-                        {
-                            return NseUtils.commonResponse("Please provide the Valid STP Amount",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(start_date))
+                    {
+                        return NseUtils.commonResponse("Please provide the SWP Start Date",HttpStatus.BAD_REQUEST);
+                    }
 
-                        if(StringHelper.isEmpty(start_date))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Start Date",HttpStatus.BAD_REQUEST);
-                        }
+                    if(StringHelper.isEmpty(frequency))
+                    {
+                        return NseUtils.commonResponse("Please provide the SWP Frequency",HttpStatus.BAD_REQUEST);
+                    }
 
-//                        if(StringHelper.isEmpty(end_date))
+//                        if(!cart_id.isEmpty())
 //                        {
-//                            return NseUtils.commonResponse("Please provide the STP End Date",HttpStatus.BAD_REQUEST);
+//
+//                        }else{
+//                            List<CartDto> cartList = userServiceClient.getCartDetailsByUserID(Integer.valueOf(userid),"NSE",investor_code,purchase_type,token);
+//                            if (cartList != null && !cartList.isEmpty())
+//                            {
+//                                return NseUtils.commonResponse(
+//                                        "You can add only one SWP Fund in Cart.",
+//                                        HttpStatus.BAD_REQUEST
+//                                );
+//                            }
 //                        }
 
-                        if(StringHelper.isEmpty(frequency))
-                        {
-                            return NseUtils.commonResponse("Please provide the STP Frequency",HttpStatus.BAD_REQUEST);
-                        }
-                    }
-                    NseOnlineSchemeMaster nseSchemeMaster = null;
-                    NseOnlineSchemeMaster nseOnlineSchemeMaster = null;
+                }
+                NseOnlineSchemeMaster nseSchemeMaster = null;
+                NseOnlineSchemeMaster nseOnlineSchemeMaster = null;
 
-                    String scheme_amfi = "";
-                    String scheme_amfi_short_name = "";
-                    String scheme_product_code = "";
-                    String scheme_company = "";
-                    String scheme_company_code = "";
-                    String to_product_name = "";
-                    String to_scheme_amfi = "";
-                    String to_scheme_amfi_short_name = "";
-                    String to_scheme_product_code = "";
-                    String to_scheme_company = "";
-                    String to_scheme_company_code = "";
-                    System.out.println("scheme_name = " + scheme_name);
+                String scheme_amfi = "";
+                String scheme_amfi_short_name = "";
+                String scheme_product_code = "";
+                String scheme_company = "";
+                String scheme_company_code = "";
+                String to_product_name = "";
+                String to_scheme_amfi = "";
+                String to_scheme_amfi_short_name = "";
+                String to_scheme_product_code = "";
+                String to_scheme_company = "";
+                String to_scheme_company_code = "";
 
-                    if(bse_nse_mfu_flag.equalsIgnoreCase("NSE"))
+                System.out.println("bse_nse_mfu_flag = " + bse_nse_mfu_flag);
+
+                System.out.println("purchase_type = " + purchase_type);
+
+                if(bse_nse_mfu_flag.equalsIgnoreCase("NSE"))
+                {
+                    if(purchase_type.equalsIgnoreCase("Lumpsum Purchase"))
                     {
-                        if(purchase_type.equalsIgnoreCase("Lumpsum Purchase"))
+                        if(nfo_flag.equalsIgnoreCase("Y"))
+                        {
+                            nseOnlineSchemeMaster = cartService.getNSENFOLumpsumSchemecode(scheme_name);
+                        }else
+                        {
+                            nseOnlineSchemeMaster = nseService.getLumpsumSchemecodeService(scheme_name, scheme_reinvest_tag, amount);
+                        }
+
+                        if(nseOnlineSchemeMaster != null)
+                        {
+                            scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
+                            scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
+                            scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
+                            scheme_company = nseOnlineSchemeMaster.getAmcName();
+                            scheme_company_code = nseOnlineSchemeMaster.getAmcCode();
+
+                            if(scheme_reinvest_tag.isEmpty() && nfo_flag.equalsIgnoreCase("Y"))
+                            {
+                                scheme_reinvest_tag = nseOnlineSchemeMaster.getDivReinvestFlag();
+                            }
+                        }else
                         {
                             if(nfo_flag.equalsIgnoreCase("Y"))
                             {
-                                System.out.println("scheme_name1 = " + scheme_name);
-                                nseOnlineSchemeMaster = cartService.getNSENFOLumpsumSchemecode(scheme_name);
-                            }else
-                            {
-                                System.out.println("scheme_name2 = " + scheme_name);
-                                nseOnlineSchemeMaster = nseService.getLumpsumSchemecodeService(scheme_name, scheme_reinvest_tag, amount);
-                            }
-                            System.out.println("nseOnlineSchemeMaster = " + nseOnlineSchemeMaster);
-                            if(nseOnlineSchemeMaster != null)
-                            {
-                                scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
-                                scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
-                                scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
-                                scheme_company = nseOnlineSchemeMaster.getAmcName();
-                                scheme_company_code = nseOnlineSchemeMaster.getAmcCode();
-
-                                if(scheme_reinvest_tag.isEmpty() && nfo_flag.equalsIgnoreCase("Y"))
-                                {
-                                    scheme_reinvest_tag = nseOnlineSchemeMaster.getDivReinvestFlag();
-                                }
-                            }else
-                            {
-                                if(nfo_flag.equalsIgnoreCase("Y"))
-                                {
-                                    if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                    {
-                                        String dividend_type = "";
-
-                                        if(scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                        {
-                                            dividend_type = "Dividend Payout";
-                                        }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                        {
-                                            dividend_type = "Dividend Reinvest";
-                                        }
-
-                                        return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
-                                    }else
-                                    {
-                                        return NseUtils.commonResponse("This scheme not allowed purchase. Please select other scheme!", HttpStatus.BAD_REQUEST);
-                                    }
-                                }else
-                                {
-                                    if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                    {
-                                        String dividend_type = "";
-
-                                        if(scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                        {
-                                            dividend_type = "Dividend Payout";
-                                        }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                        {
-                                            dividend_type = "Dividend Reinvest";
-                                        }
-                                        return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
-                                    }else
-                                    {
-                                        return NseUtils.commonResponse("This scheme not allowed purchase. Please select other scheme!", HttpStatus.BAD_REQUEST);
-                                    }
-                                }
-                            }
-
-                        }else if(purchase_type.equalsIgnoreCase("SIP Purchase"))
-                        {
-
-                            System.out.println("schemeName " + scheme_name);
-
-                            if(nfo_flag.equalsIgnoreCase("Y"))
-                            {
-                                nseOnlineSchemeMaster = cartService.getNSENFOSipSchemecode(scheme_name);
-                            }else
-                            {
-                                nseOnlineSchemeMaster = cartService.getNSESipSchemecode(scheme_name, scheme_reinvest_tag);
-                            }
-
-                            if(nseOnlineSchemeMaster != null)
-                            {
-                                scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
-                                scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
-                                scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
-                                scheme_company = nseOnlineSchemeMaster.getAmcName();
-                                scheme_company_code = nseOnlineSchemeMaster.getAmcCode();
-
-                                if(scheme_reinvest_tag.isEmpty() && nfo_flag.equalsIgnoreCase("Y"))
-                                {
-                                    scheme_reinvest_tag = nseOnlineSchemeMaster.getDivReinvestFlag();
-                                }
-                            }else
-                            {
-                                if(nfo_flag.equalsIgnoreCase("Y"))
-                                {
-                                    if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                    {
-                                        String dividend_type = "";
-
-                                        if(scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                        {
-                                            dividend_type = "Dividend Payout";
-                                        }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                        {
-                                            dividend_type = "Dividend Reinvest";
-                                        }
-                                        return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
-                                    }else
-                                    {
-                                        return NseUtils.commonResponse(""+scheme_name+" not accept the SIP Purchase. Please choose other scheme.", HttpStatus.BAD_REQUEST);
-                                    }
-                                }else
-                                {
-                                    if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                    {
-                                        String dividend_type = "";
-
-                                        if(scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                        {
-                                            dividend_type = "Dividend Payout";
-                                        }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                        {
-                                            dividend_type = "Dividend Reinvest";
-                                        }
-                                       return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
-                                    }else
-                                    {
-                                        return NseUtils.commonResponse(""+scheme_name+" not accept the SIP Purchase. Please choose other scheme.", HttpStatus.BAD_REQUEST);
-                                    }
-                                }
-                            }
-                        }else if(purchase_type.equalsIgnoreCase("Switch Purchase"))
-                        {
-
-                            nseOnlineSchemeMaster = cartService.getNSESwitchSchemecode(scheme_name, scheme_reinvest_tag);
-
-                            if(nseOnlineSchemeMaster != null)
-                            {
-                                scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
-                                scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
-                                scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
-                                scheme_company = nseOnlineSchemeMaster.getAmcCode();
-                                scheme_company_code = nseOnlineSchemeMaster.getAmcName();
-                            }else
-                            {
-                                if(scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                {
-                                    return NseUtils.commonResponse("Selected scheme switch not allowed. Please contact the admin.", HttpStatus.BAD_REQUEST);
-                                }else
+                                if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
                                 {
                                     String dividend_type = "";
 
@@ -988,65 +861,15 @@ public class NseCartController {
                                     {
                                         dividend_type = "Dividend Reinvest";
                                     }
-                                    return NseUtils.commonResponse("Selected scheme does't have " +dividend_type+ " option. please select another option!", HttpStatus.BAD_REQUEST);
-                                }
-                            }
 
-                            if(!to_scheme_name.isEmpty())
-                            {
-                                nseOnlineSchemeMaster = cartService.getNSESwitchSchemecode(to_scheme_name, to_scheme_reinvest_tag);
-
-                                if(nseOnlineSchemeMaster != null)
-                                {
-                                    to_scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
-                                    to_scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
-                                    to_scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
-                                    to_scheme_company = nseOnlineSchemeMaster.getAmcCode();
-                                    to_scheme_company_code = nseOnlineSchemeMaster.getAmcName();
+                                    return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
                                 }else
                                 {
-                                    if(to_scheme_reinvest_tag.isEmpty() && to_scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                    {
-                                        return NseUtils.commonResponse("Selected scheme not allowed for the fresh purchase. Please contact the admin.", HttpStatus.BAD_REQUEST);
-                                    }else
-                                    {
-                                        String dividend_type = "";
-
-                                        if(to_scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                        {
-                                            dividend_type = "Dividend Payout";
-                                        }else if(to_scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                        {
-                                            dividend_type = "Dividend Reinvest";
-                                        }
-                                        return NseUtils.commonResponse(""+dividend_type+" Option is not available in " + to_scheme_name + ". Please choose another option.", HttpStatus.BAD_REQUEST);
-                                    }
+                                    return NseUtils.commonResponse("This scheme not allowed purchase. Please select other scheme!", HttpStatus.BAD_REQUEST);
                                 }
-                            }
-
-                            if(!scheme_company_code.isEmpty() && !to_scheme_company_code.isEmpty() && !scheme_company_code.equalsIgnoreCase(to_scheme_company_code))
-                            {
-                                return NseUtils.commonResponse("Your From Scheme AMC Name and To Scheme Not Matching, Please choose the correct Scheme.", HttpStatus.BAD_REQUEST);
-                            }
-
-                        }else if(purchase_type.equalsIgnoreCase("Redemption Purchase"))
-                        {
-                            nseOnlineSchemeMaster = cartService.getNSERedemSchemeCode(scheme_name, scheme_reinvest_tag);
-
-                            if(nseOnlineSchemeMaster != null)
-                            {
-                                scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
-                                scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
-                                scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
-                                scheme_company = nseOnlineSchemeMaster.getAmcCode();
-                                scheme_company_code = nseOnlineSchemeMaster.getAmcName();
                             }else
                             {
-                                if(!scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                {
-                                    return NseUtils.commonResponse("Selected scheme redemption not allowed. Please select some other scheme", HttpStatus.BAD_REQUEST);
-                                }
-                                else if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                                if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
                                 {
                                     String dividend_type = "";
 
@@ -1060,257 +883,456 @@ public class NseCartController {
                                     return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
                                 }else
                                 {
-                                    return NseUtils.commonResponse(""+scheme_name+" not accept the Redemption. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                                    return NseUtils.commonResponse("This scheme not allowed purchase. Please select other scheme!", HttpStatus.BAD_REQUEST);
                                 }
                             }
+                        }
 
-                        }else if(purchase_type.equalsIgnoreCase("STP Purchase"))
+                    }else if(purchase_type.equalsIgnoreCase("SIP Purchase"))
+                    {
+
+                        System.out.println("schemeName " + scheme_name);
+
+                        if(nfo_flag.equalsIgnoreCase("Y"))
                         {
-//                            nseSchemeMaster = cartService.getNSEStpSchemecode(scheme_name, scheme_reinvest_tag);
+                            nseOnlineSchemeMaster = cartService.getNSENFOSipSchemecode(scheme_name);
+                        }else
+                        {
+                            nseOnlineSchemeMaster = cartService.getNSESipSchemecode(scheme_name, scheme_reinvest_tag);
+                        }
 
-                            List<NseOnlineSchemeMaster> nseSchemeMasterList = nseOnlineSchemeMasterRepository.findSTPEnabledSchemesForMobile(scheme_name, scheme_reinvest_tag);
+                        if(nseOnlineSchemeMaster != null)
+                        {
+                            scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
+                            scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
+                            scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
+                            scheme_company = nseOnlineSchemeMaster.getAmcName();
+                            scheme_company_code = nseOnlineSchemeMaster.getAmcCode();
 
-                            if(nseSchemeMasterList != null && nseSchemeMasterList.size() > 0)
+                            if(scheme_reinvest_tag.isEmpty() && nfo_flag.equalsIgnoreCase("Y"))
+                            {
+                                scheme_reinvest_tag = nseOnlineSchemeMaster.getDivReinvestFlag();
+                            }
+                        }else
+                        {
+                            if(nfo_flag.equalsIgnoreCase("Y"))
+                            {
+                                if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                                {
+                                    String dividend_type = "";
+
+                                    if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                    {
+                                        dividend_type = "Dividend Payout";
+                                    }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                    {
+                                        dividend_type = "Dividend Reinvest";
+                                    }
+                                    return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
+                                }else
+                                {
+                                    return NseUtils.commonResponse(""+scheme_name+" not accept the SIP Purchase. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                                }
+                            }else
+                            {
+                                if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                                {
+                                    String dividend_type = "";
+
+                                    if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                    {
+                                        dividend_type = "Dividend Payout";
+                                    }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                    {
+                                        dividend_type = "Dividend Reinvest";
+                                    }
+                                    return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
+                                }else
+                                {
+                                    return NseUtils.commonResponse(""+scheme_name+" not accept the SIP Purchase. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                                }
+                            }
+                        }
+                    }else if(purchase_type.equalsIgnoreCase("Switch Purchase"))
+                    {
+
+                        nseOnlineSchemeMaster = cartService.getNSESwitchSchemecode(scheme_name, scheme_reinvest_tag);
+
+                        if(nseOnlineSchemeMaster != null)
+                        {
+                            scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
+                            scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
+                            scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
+                            scheme_company = nseOnlineSchemeMaster.getAmcCode();
+                            scheme_company_code = nseOnlineSchemeMaster.getAmcName();
+                        }else
+                        {
+                            if(scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                return NseUtils.commonResponse("Selected scheme switch not allowed. Please contact the admin.", HttpStatus.BAD_REQUEST);
+                            }else
+                            {
+                                String dividend_type = "";
+
+                                if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                {
+                                    dividend_type = "Dividend Payout";
+                                }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                {
+                                    dividend_type = "Dividend Reinvest";
+                                }
+                                return NseUtils.commonResponse("Selected scheme does't have " +dividend_type+ " option. please select another option!", HttpStatus.BAD_REQUEST);
+                            }
+                        }
+
+                        if(!to_scheme_name.isEmpty())
+                        {
+                            nseOnlineSchemeMaster = cartService.getNSESwitchSchemecode(to_scheme_name, to_scheme_reinvest_tag);
+
+                            if(nseOnlineSchemeMaster != null)
+                            {
+                                to_scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
+                                to_scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
+                                to_scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
+                                to_scheme_company = nseOnlineSchemeMaster.getAmcCode();
+                                to_scheme_company_code = nseOnlineSchemeMaster.getAmcName();
+                            }else
+                            {
+                                if(to_scheme_reinvest_tag.isEmpty() && to_scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                                {
+                                    return NseUtils.commonResponse("Selected scheme not allowed for the fresh purchase. Please contact the admin.", HttpStatus.BAD_REQUEST);
+                                }else
+                                {
+                                    String dividend_type = "";
+
+                                    if(to_scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                    {
+                                        dividend_type = "Dividend Payout";
+                                    }else if(to_scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                    {
+                                        dividend_type = "Dividend Reinvest";
+                                    }
+                                    return NseUtils.commonResponse(""+dividend_type+" Option is not available in " + to_scheme_name + ". Please choose another option.", HttpStatus.BAD_REQUEST);
+                                }
+                            }
+                        }
+
+                        if(!scheme_company_code.isEmpty() && !to_scheme_company_code.isEmpty() && !scheme_company_code.equalsIgnoreCase(to_scheme_company_code))
+                        {
+                            return NseUtils.commonResponse("Your From Scheme AMC Name and To Scheme Not Matching, Please choose the correct Scheme.", HttpStatus.BAD_REQUEST);
+                        }
+
+                    }else if(purchase_type.equalsIgnoreCase("Redemption Purchase"))
+                    {
+                        nseOnlineSchemeMaster = cartService.getNSERedemSchemeCode(scheme_name, scheme_reinvest_tag);
+
+                        if(nseOnlineSchemeMaster != null)
+                        {
+                            scheme_amfi = nseOnlineSchemeMaster.getSchemeName();
+                            scheme_amfi_short_name = nseOnlineSchemeMaster.getSchemeAmfiShortName();
+                            scheme_product_code = nseOnlineSchemeMaster.getSchemeCode();
+                            scheme_company = nseOnlineSchemeMaster.getAmcCode();
+                            scheme_company_code = nseOnlineSchemeMaster.getAmcName();
+                        }else
+                        {
+                            if(!scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                return NseUtils.commonResponse("Selected scheme redemption not allowed. Please select some other scheme", HttpStatus.BAD_REQUEST);
+                            }
+                            else if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                String dividend_type = "";
+
+                                if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                {
+                                    dividend_type = "Dividend Payout";
+                                }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                {
+                                    dividend_type = "Dividend Reinvest";
+                                }
+                                return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
+                            }else
+                            {
+                                return NseUtils.commonResponse(""+scheme_name+" not accept the Redemption. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                            }
+                        }
+
+                    }else if(purchase_type.equalsIgnoreCase("STP Purchase"))
+                    {
+                        System.out.println("FINDING SCHEME NAME AND SCHEME CODE FROM");
+
+                        List<NseOnlineSchemeMaster> nseSchemeMasterList = nseOnlineSchemeMasterRepository.findSTPEnabledSchemesForMobile(scheme_name, scheme_reinvest_tag);
+
+                        if(!nseSchemeMasterList.isEmpty())
+                        {
+                            nseSchemeMaster = nseSchemeMasterList.get(0);
+                        }
+
+                        System.out.println("FINDING SCHEME NAME AND SCHEME CODE END");
+
+                        if(nseSchemeMaster != null)
+                        {
+                            scheme_amfi = nseSchemeMaster.getSchemeName();
+                            scheme_product_code = nseSchemeMaster.getSchemeCode();
+                            scheme_company = nseSchemeMaster.getAmcName();
+                            scheme_company_code = nseSchemeMaster.getAmcCode();
+                        }else
+                        {
+                            if(!scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                return NseUtils.commonResponse("Selected scheme STP not allowed. Please select some other scheme", HttpStatus.BAD_REQUEST);
+                            }
+                            else if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                String dividend_type = "";
+
+                                if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                {
+                                    dividend_type = "Dividend Payout";
+                                }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                {
+                                    dividend_type = "Dividend Reinvest";
+                                }
+                                return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
+                            }else
+                            {
+                                return NseUtils.commonResponse(""+scheme_name+" not accept the STP. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                            }
+                        }
+                        if(!to_scheme_name.isEmpty())
+                        {
+
+                            System.out.println("FINDING SCHEME NAME AND SCHEME CODE 1 FROM");
+
+                            System.out.println("to_scheme_name = " + to_scheme_name);
+                            System.out.println("to_scheme_reinvest_tag = " + to_scheme_reinvest_tag);
+
+                            nseSchemeMasterList = nseOnlineSchemeMasterRepository.findSTPEnabledSchemesForMobile(to_scheme_name, to_scheme_reinvest_tag);
+
+                            if(!nseSchemeMasterList.isEmpty())
                             {
                                 nseSchemeMaster = nseSchemeMasterList.get(0);
                             }
 
-                            System.out.println("FINDING SCHEME NAME AND SCHEME CODE END");
-
-
-                            if(nseSchemeMaster != null)
-                            {
-                                scheme_amfi = nseSchemeMaster.getSchemeName();
-                                scheme_product_code = nseSchemeMaster.getSchemeCode();
-                                scheme_company = nseSchemeMaster.getAmcName();
-                                scheme_company_code = nseSchemeMaster.getAmcCode();
-                            }else
-                            {
-                                if(!scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                {
-                                   return NseUtils.commonResponse("Selected scheme STP not allowed. Please select some other scheme", HttpStatus.BAD_REQUEST);
-                                }
-                                else if(!scheme_reinvest_tag.isEmpty() && !scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                {
-                                    String dividend_type = "";
-
-                                    if(scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                    {
-                                        dividend_type = "Dividend Payout";
-                                    }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                    {
-                                        dividend_type = "Dividend Reinvest";
-                                    }
-                                    return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
-                                }else
-                                {
-                                    return NseUtils.commonResponse(""+scheme_name+" not accept the STP. Please choose other scheme.", HttpStatus.BAD_REQUEST);
-                                }
-                            }
-
-                            if(!to_scheme_name.isEmpty())
-                            {
-                                System.out.println("FINDING SCHEME NAME AND SCHEME CODE 1 FROM");
-
-                                System.out.println("to_scheme_name = " + to_scheme_name);
-                                System.out.println("to_scheme_reinvest_tag = " + to_scheme_reinvest_tag);
-
-                                nseSchemeMasterList = nseOnlineSchemeMasterRepository.findSTPEnabledSchemesForMobile(to_scheme_name, to_scheme_reinvest_tag);
-
-                                if(nseSchemeMasterList != null && nseSchemeMasterList.size() > 0)
-                                {
-                                    nseSchemeMaster = nseSchemeMasterList.get(0);
-                                }
-
-                                if(nseSchemeMaster != null)
-                                {
-                                    to_scheme_amfi = nseSchemeMaster.getSchemeName();
-                                    to_scheme_product_code = nseSchemeMaster.getSchemeCode();
-                                    to_scheme_company = nseSchemeMaster.getAmcName();
-                                    to_scheme_company_code = nseSchemeMaster.getAmcCode();
-                                }else
-                                {
-                                    if(to_scheme_reinvest_tag.isEmpty() && to_scheme_reinvest_tag.equalsIgnoreCase("Z"))
-                                    {
-                                        return NseUtils.commonResponse("Selected scheme not allowed for the fresh purchase. Please contact the admin.", HttpStatus.BAD_REQUEST);
-                                    }else
-                                    {
-                                        String dividend_type = "";
-
-                                        if(to_scheme_reinvest_tag.equalsIgnoreCase("N"))
-                                        {
-                                            dividend_type = "Dividend Payout";
-                                        }else if(to_scheme_reinvest_tag.equalsIgnoreCase("Y"))
-                                        {
-                                            dividend_type = "Dividend Reinvest";
-                                        }
-                                        return NseUtils.commonResponse(""+dividend_type+" Option is not available in " + to_scheme_amfi + ". Please choose another option.", HttpStatus.BAD_REQUEST);
-                                    }
-                                }
-                            }
-
-                            if(!scheme_company_code.isEmpty() && !to_scheme_company_code.isEmpty() && !scheme_company_code.equalsIgnoreCase(to_scheme_company_code))
-                            {
-                                return NseUtils.commonResponse("Your From Scheme AMC Name and To Scheme Not Matching, Please choose the correct Scheme.", HttpStatus.BAD_REQUEST);
-                            }
-
-                        }else if(purchase_type.equalsIgnoreCase("SWP Purchase"))
-                        {
-                            Date startDate = sdf.parse(start_date);
-                            Calendar calendar = Calendar.getInstance();
-                            calendar.setTime(startDate);
-
-                            start_day = String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH));
-                            start_month = String.format("%02d", calendar.get(Calendar.MONTH) + 1);
-                            start_year = String.valueOf(calendar.get(Calendar.YEAR));
-                            if(StringHelper.isNotEmpty(end_date))
-                            {
-                                Date endDate = sdf.parse(end_date);
-                                calendar = Calendar.getInstance();
-                                calendar.setTime(endDate);
-                            }
-
-
-                            end_day = String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH));
-                            end_month = String.format("%02d", calendar.get(Calendar.MONTH) + 1);
-                            end_year = String.valueOf(calendar.get(Calendar.YEAR));
-
-                            nseSchemeMaster = nseOnlineSchemeMasterRepository.findSWPEnabledSchemesForMobile(scheme_name, scheme_reinvest_tag);
-
-                            System.out.println("nseSchemeMaster = " + nseSchemeMaster);
-
-                            System.out.println("scheme_reinvest_tag = " + scheme_reinvest_tag);
+                            System.out.println("FINDING SCHEME NAME AND SCHEME CODE 2 END");
 
                             if(nseSchemeMaster != null)
                             {
-                                scheme_amfi = nseSchemeMaster.getSchemeName();
-                                scheme_product_code = nseSchemeMaster.getSchemeCode();
-                                scheme_company = nseSchemeMaster.getAmcName();
-                                scheme_company_code = nseSchemeMaster.getAmcCode();
+                                to_scheme_amfi = nseSchemeMaster.getSchemeName();
+                                to_scheme_product_code = nseSchemeMaster.getSchemeCode();
+                                to_scheme_company = nseSchemeMaster.getAmcName();
+                                to_scheme_company_code = nseSchemeMaster.getAmcCode();
                             }else
                             {
-                                if(!scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                                if(to_scheme_reinvest_tag.isEmpty() && to_scheme_reinvest_tag.equalsIgnoreCase("Z"))
                                 {
-                                    return NseUtils.commonResponse("Selected scheme SWP not allowed. Please select some other scheme", HttpStatus.BAD_REQUEST);
-                                }
-                                else if(!scheme_reinvest_tag.isEmpty() || !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                                    return NseUtils.commonResponse("Selected scheme not allowed for the fresh purchase. Please contact the admin.", HttpStatus.BAD_REQUEST);
+                                }else
                                 {
                                     String dividend_type = "";
 
-                                    if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                    if(to_scheme_reinvest_tag.equalsIgnoreCase("N"))
                                     {
                                         dividend_type = "Dividend Payout";
-                                    }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                    }else if(to_scheme_reinvest_tag.equalsIgnoreCase("Y"))
                                     {
                                         dividend_type = "Dividend Reinvest";
                                     }
-                                    return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
-                                }else
-                                {
-                                    return NseUtils.commonResponse(""+scheme_name+" not accept the SWP. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                                    return NseUtils.commonResponse(""+dividend_type+" Option is not available in " + to_scheme_amfi + ". Please choose another option.", HttpStatus.BAD_REQUEST);
                                 }
                             }
                         }
+
+                        if(!scheme_company_code.isEmpty() && !to_scheme_company_code.isEmpty() && !scheme_company_code.equalsIgnoreCase(to_scheme_company_code))
+                        {
+                            return NseUtils.commonResponse("Your From Scheme AMC Name and To Scheme Not Matching, Please choose the correct Scheme.", HttpStatus.BAD_REQUEST);
+                        }
+
+                    }else if(purchase_type.equalsIgnoreCase("SWP Purchase"))
+                    {
+                        Date startDate = sdf.parse(start_date);
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.setTime(startDate);
+
+                        start_day = String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH));
+                        start_month = String.format("%02d", calendar.get(Calendar.MONTH) + 1);
+                        start_year = String.valueOf(calendar.get(Calendar.YEAR));
+                        if(StringHelper.isNotEmpty(end_date))
+                        {
+                            Date endDate = sdf.parse(end_date);
+                            calendar = Calendar.getInstance();
+                            calendar.setTime(endDate);
+                        }
+
+
+                        end_day = String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH));
+                        end_month = String.format("%02d", calendar.get(Calendar.MONTH) + 1);
+                        end_year = String.valueOf(calendar.get(Calendar.YEAR));
+
+                        nseSchemeMaster = nseOnlineSchemeMasterRepository.findSWPEnabledSchemesForMobile(scheme_name, scheme_reinvest_tag);
+
+                        System.out.println("nseSchemeMaster = " + nseSchemeMaster);
+
+                        System.out.println("scheme_reinvest_tag = " + scheme_reinvest_tag);
+
+                        if(nseSchemeMaster != null)
+                        {
+                            scheme_amfi = nseSchemeMaster.getSchemeName();
+                            scheme_product_code = nseSchemeMaster.getSchemeCode();
+                            scheme_company = nseSchemeMaster.getAmcName();
+                            scheme_company_code = nseSchemeMaster.getAmcCode();
+                        }else
+                        {
+                            if(!scheme_reinvest_tag.isEmpty() && scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                return NseUtils.commonResponse("Selected scheme SWP not allowed. Please select some other scheme", HttpStatus.BAD_REQUEST);
+                            }
+                            else if(!scheme_reinvest_tag.isEmpty() || !scheme_reinvest_tag.equalsIgnoreCase("Z"))
+                            {
+                                String dividend_type = "";
+
+                                if(scheme_reinvest_tag.equalsIgnoreCase("N"))
+                                {
+                                    dividend_type = "Dividend Payout";
+                                }else if(scheme_reinvest_tag.equalsIgnoreCase("Y"))
+                                {
+                                    dividend_type = "Dividend Reinvest";
+                                }
+                                return NseUtils.commonResponse("Selected scheme does't have "+dividend_type+" option. please select another option!", HttpStatus.BAD_REQUEST);
+                            }else
+                            {
+                                return NseUtils.commonResponse(""+scheme_name+" not accept the SWP. Please choose other scheme.", HttpStatus.BAD_REQUEST);
+                            }
+                        }
                     }
-
-                    System.out.println("cart = " + cart_id);
-                    if (cart_id != null && !cart_id.trim().isEmpty()) {
-                        cart.setId(Integer.valueOf(cart_id));
-                    }
-                    System.out.println("cart = " + cart_id);
-                    cart.setUser_id(user.getId());
-                    cart.setName(inv_name);
-                    cart.setTax_status_desc(tax_status);
-                    cart.setTax_status_code(tax_status_code);
-                    cart.setHolding_nature_code(holding_nature_code);
-                    cart.setHolding_nature_desc(holding_nature);
-                    cart.setPurchase_type(purchase_type);
-                    cart.setTrnx_type(trnx_type);
-                    cart.setVendor(bse_nse_mfu_flag);
-                    cart.setProduct_name("");
-
-                    if(nfo_flag.equalsIgnoreCase("Y"))
-                    {
-                        cart.setNfo_flag(true);
-                    }else
-                    {
-                        cart.setNfo_flag(false);
-                    }
-                    cart.setScheme_name(scheme_amfi);
-                    cart.setScheme_amfi_short_name(scheme_amfi_short_name);
-                    cart.setScheme_product_code(scheme_product_code);
-                    cart.setScheme_company(scheme_company);
-                    cart.setScheme_company_code(scheme_company_code);
-                    cart.setScheme_reinvest_tag(scheme_reinvest_tag);
-                    cart.setTo_product_name(to_product_name);
-                    cart.setTo_scheme_name(to_scheme_amfi);
-                    cart.setTo_scheme_amfi_short_name(to_scheme_amfi_short_name);
-                    cart.setTo_scheme_product_code(to_scheme_product_code);
-                    cart.setTo_scheme_company(to_scheme_company);
-                    cart.setTo_scheme_company_code(to_scheme_company_code);
-                    cart.setTo_scheme_reinvest_tag(to_scheme_reinvest_tag);
-                    cart.setFolio_no(folio_no);
-                    cart.setAmount_type(amount_type);
-                    cart.setAmount(amount);
-                    cart.setTotal_amount(total_amount);
-                    cart.setUnits(units);
-                    cart.setTotal_units(total_units);
-                    cart.setFrequency(frequency);
-                    cart.setSip_date(sip_date);
-                    cart.setStart_date(start_date);
-                    cart.setEnd_date(end_date);
-                    cart.setBroker_code(broker_code);
-                    cart.setInvestor_code(investor_code);
-                    cart.setEuin_code("");
-                    cart.setBank_account_number("");
-                    cart.setBank_ifsc("");
-                    cart.setBank_name("");
-                    cart.setPayment_mode("");
-                    cart.setInstallment(installment);
-                    cart.setStart_day(start_day);
-                    cart.setStart_month(start_month);
-                    cart.setStart_year(start_year);
-                    cart.setEnd_day(end_day);
-                    cart.setEnd_month(end_month);
-                    cart.setEnd_year(end_year);
-                    cart.setFirst_order_flag(firstOrderFlag);
-                    cart.setBank_mandate(bank_mandate);
-                    cart.setTenure(sip_tenure);
-                    cart.setFirst_date(sip_first_date);
-                    cart.setSecond_date(sip_second_date);
-                    if(until_cancel.equalsIgnoreCase("1"))
-                    {
-                        cart.setUntil_cancel(true);
-                    }else
-                    {
-                        cart.setUntil_cancel(false);
-                    }
-
-                    cart.setStatus("");
-                    cart.setStatus_date(new Date());
-                    cart.setActive(true);
-                    cart.setClient_name(client_name);
-                    System.out.println("cart = " + cart);
-
-                    userServiceClient.saveOrUpdateCart(cart,token);
-
-                    if(cart_status)
-                    {
-                        return NseUtils.commonResponse("Cart Details Updated Successfully.", HttpStatus.OK);
-                    }else
-                    {
-                        return NseUtils.commonResponse("Cart Details Saved Successfully.", HttpStatus.OK);
-                    }
-
-                }else
-                {
-                    return NseUtils.commonResponse("Investor details not available.", HttpStatus.BAD_REQUEST);
                 }
 
+                System.out.println("sip dates = " + sip_date);
+
+                if(StringHelper.isNotEmpty(cart_id))
+                {
+                    cart.setId(Integer.parseInt(cart_id));
+                }
+
+                cart.setUser_id(user.getUser_id());
+                cart.setName(inv_name);
+                cart.setTax_status_desc(tax_status);
+                cart.setTax_status_code(tax_status_code);
+                cart.setHolding_nature_code(holding_nature_code);
+                cart.setHolding_nature_desc(holding_nature);
+                cart.setPurchase_type(purchase_type);
+                cart.setTrnx_type(trnx_type);
+                cart.setVendor(bse_nse_mfu_flag);
+                cart.setProduct_name("");
+
+                if(nfo_flag.equalsIgnoreCase("Y"))
+                {
+                    cart.setNfo_flag(true);
+                }else
+                {
+                    cart.setNfo_flag(false);
+                }
+
+                cart.setScheme_name(scheme_amfi);
+                cart.setScheme_amfi_short_name(scheme_amfi_short_name);
+                cart.setScheme_product_code(scheme_product_code);
+                cart.setScheme_company(scheme_company);
+                cart.setScheme_company_code(scheme_company_code);
+                cart.setScheme_reinvest_tag(scheme_reinvest_tag);
+                cart.setTo_product_name(to_product_name);
+                cart.setTo_scheme_name(to_scheme_amfi);
+                cart.setTo_scheme_amfi_short_name(to_scheme_amfi_short_name);
+                cart.setTo_scheme_product_code(to_scheme_product_code);
+                cart.setTo_scheme_company(to_scheme_company);
+                cart.setTo_scheme_company_code(to_scheme_company_code);
+                cart.setTo_scheme_reinvest_tag(to_scheme_reinvest_tag);
+                cart.setFolio_no(folio_no);
+                cart.setAmount_type(amount_type);
+                cart.setAmount(amount);
+                cart.setTotal_amount(total_amount);
+                cart.setUnits(units);
+                cart.setTotal_units(total_units);
+                cart.setFrequency(frequency);
+                cart.setSip_date(sip_date);
+                cart.setStart_date(start_date);
+                cart.setEnd_date(end_date);
+                cart.setBroker_code(broker_code);
+                cart.setInvestor_code(investor_code);
+                cart.setEuin_code("");
+                cart.setBank_account_number("");
+                cart.setBank_ifsc("");
+                cart.setBank_name("");
+                cart.setPayment_mode("");
+                cart.setBank_mandate(mandate_id);
+                System.out.println("first_order_flag = " + first_order_flag);
+                if(first_order_flag.equalsIgnoreCase("Y") || first_order_flag.equalsIgnoreCase("1"))
+                {
+                    cart.setFirst_order_flag(true);
+                }else {
+                    cart.setFirst_order_flag(false);
+                }
+                cart.setInstallment(installment);
+                cart.setStart_day(start_day);
+                cart.setStart_month(start_month);
+                cart.setStart_year(start_year);
+                cart.setEnd_day(end_day);
+                cart.setEnd_month(end_month);
+                cart.setEnd_year(end_year);
+                cart.setTenure(sip_tenure);
+                cart.setFirst_date(sip_first_date);
+                cart.setSecond_date(sip_second_date);
+
+                if(until_cancel.equalsIgnoreCase("1"))
+                {
+                    cart.setUntil_cancel(true);
+                }else
+                {
+                    cart.setUntil_cancel(false);
+                }
+
+                cart.setStatus("");
+                cart.setStatus_date(new Date());
+                cart.setActive(true);
+                cart.setClient_name(client_name);
+
+                if(step_up_flag.equalsIgnoreCase("Y"))
+                {
+                    cart.setIs_step_up(true);
+                    cart.setStep_up_frequency(step_up_frequency);
+                    cart.setStep_up_start_date(step_up_start_date);
+                    cart.setStep_up_end_date(step_up_end_date);
+                    cart.setStep_up_amount(step_up_amount);
+                }else
+                {
+                    cart.setIs_step_up(false);
+                    cart.setStep_up_frequency("");
+                    cart.setStep_up_start_date("");
+                    cart.setStep_up_end_date("");
+                    cart.setStep_up_amount("");
+                }
+
+                cart.setRegister_source(source);
+
+                System.out.println("cart = " + cart);
+
+                userServiceClient.saveOrUpdateCart(cart,token);
+
+                if(cart_status)
+                {
+                    return NseUtils.commonResponse("Cart Details Updated Successfully.", HttpStatus.OK);
+                }else
+                {
+                    return NseUtils.commonResponse("Cart Details Saved Successfully.", HttpStatus.OK);
+                }
+
+            }else
+            {
+                return NseUtils.commonResponse("Investor details not available.", HttpStatus.BAD_REQUEST);
+            }
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -2534,6 +2556,76 @@ public class NseCartController {
         {
             System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
             return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getCartCount")
+    public ResponseEntity<?> getCartCount(@RequestHeader("Authorization") String token)
+    {
+        String userId = "";
+        UserDto user = null;
+        try
+        {
+            userId = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            System.out.println("userId  = " + userId + " client_name = " + client_name);
+            try {
+                user =  userServiceClient.getUserDetailsByID(client_name, Integer.valueOf(userId),token);
+            }catch (FeignException e)
+            {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+
+            System.out.println("User ID = " + userId + ", Client Name = " + client_name);
+
+            List<CartDto> cartList = null;
+
+            if(user != null)
+            {
+                cartList = cartService.getCartCount(Integer.valueOf(userId), client_name,token);
+
+                return ResponseEntity.ok(cartList.size());
+            }else
+            {
+                return NseUtils.commonResponse("Investor details not available.", HttpStatus.BAD_REQUEST);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @GetMapping("/getCartCountForPurchaseType")
+    public ResponseEntity<?> getCartCountForPurchaseType(
+            @RequestHeader("Authorization") String token,@RequestParam String purchase_type,@RequestParam String broker_code)
+    {
+        String userId = "";
+        UserDto user = null;
+        try
+        {
+
+            userId = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            UserDto userOpt = userServiceClient.getUserById(Integer.valueOf(userId), token);
+
+            String client_name = userOpt.getClient_name();
+            user = userServiceClient.getUserDetailsByID( client_name,Integer.parseInt(userId),token);
+
+            if(user != null)
+            {
+                List<CartDto> cartList = cartService.getCartCountForPurchaseType(Integer.valueOf(userId), client_name,purchase_type,broker_code, token);
+
+                return ResponseEntity.ok(cartList.size());
+
+            }else
+            {
+                return NseUtils.commonResponse("Investor details not available.", HttpStatus.BAD_REQUEST);
+            }
+
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+            return NseUtils.commonResponse("Investor details not available.", HttpStatus.BAD_REQUEST);
         }
     }
 

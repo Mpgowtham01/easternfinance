@@ -182,20 +182,12 @@ public class UserInfoController
             )
     })
     @GetMapping("/getFolioBrokercode")
-    public ResponseEntity<?> getFolioBrokercode(@RequestParam(required = false) String client_name,
-                                                @RequestParam(required = false) Integer userid,
-                                                @RequestParam(required = false) String folio) {
-        try {
-            if (client_name == null) {
-                client_name = "";
-            }
-            ;
-            if (folio == null) {
-                folio = "";
-            }
-            ;
-
-            List<String> frequencies = usersPortfolioSchemewiseRepository.findDistinctBrokerCodeByUserIdAndClientNameAndFolioNo(userid, client_name, folio);
+    public ResponseEntity<?> getFolioBrokercode(@RequestHeader("Authorization") String token,@RequestParam(required = false) String folio) {
+        try
+        {
+            String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            List<String> frequencies = usersPortfolioSchemewiseRepository.findDistinctBrokerCodeByUserIdAndClientNameAndFolioNo(Integer.valueOf(userid), client_name, folio);
 
             return ResponseEntity.ok(frequencies);
         } catch (Exception ex) {
@@ -722,5 +714,244 @@ public class UserInfoController
         }
     }
 
+    @GetMapping("/getUsersBankDetailsByIIN")
+    public ResponseEntity<?> getUsersBankDetailsByIIN(@RequestParam String onlineCode,@RequestParam String clientName,@RequestParam(required = false) String online_flag,
+                                                      @RequestParam(required = false) String broker_code)
+    {
+        try
+        {
+            broker_code = UserUtils.checkParem(broker_code);
+            online_flag = UserUtils.checkParem(online_flag);
+            onlineCode = UserUtils.checkParem(onlineCode);
+            clientName = UserUtils.checkParem(clientName);
+
+            List<UsersBankDetails> key = null;
+            if(broker_code.isEmpty())
+            {
+                key = usersBankDetailsRepository.findByonlineidAndClientName(online_flag,clientName,onlineCode);
+            }else{
+                key = usersBankDetailsRepository.findByonlineidAndClientNameAndBrokerCode(online_flag,clientName,onlineCode,broker_code);
+            }
+
+            if (key != null)
+            {
+                return ResponseEntity.ok(key);
+            } else
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 404, "status_msg", "Key not found"));
+            }
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching key"));
+        }
+    }
+
+    @GetMapping("/getOnlineAccessValue")
+    public ResponseEntity<?> getByClientName(@RequestParam String clientName,@RequestParam String brokercode) {
+        try {
+            BseNseKey response = bseNseKeyRepository.findByClientNameAndBrokerCode(clientName,brokercode);
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", 500, "status_msg", "Error occurred while fetching key"));
+        }
+    }
+
+    @GetMapping("/getUsersMandateDetailsByOnlineCode")
+    public ResponseEntity<?> getUsersMandateDetailsByOnlineCode(
+            @RequestHeader("Authorization") String token,
+            @RequestParam String onlineCode,
+            @RequestParam String broker_code,
+            @RequestParam(required = false) String account_number,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String mandate_flag,
+            @RequestParam(required = false) String bse_nse_mfu_flag)
+    {
+        try
+        {
+
+            String userId = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            String clientName = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+
+            Optional<UsersOnlineRegDetails> userOptional = userOnlineRegDetailsRespository.findUSerByIdAndActive(Integer.valueOf(userId));
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "User not found"));
+            }
+            UsersOnlineRegDetails user = userOptional.get();
+
+            source = UserUtils.checkParameter(source);
+            mandate_flag = UserUtils.checkParameter(mandate_flag);
+
+            if(StringHelper.isEmpty(mandate_flag)) {mandate_flag = "N";}
+            if(StringHelper.isEmpty(source)) {mandate_flag = "Website";}
+
+//            System.out.println("USER ID = " + user.getUser_id());
+//            System.out.println("USER onlineCode = " + onlineCode);
+//            System.out.println("USER clientName = " + clientName);
+//            System.out.println("USER broker_code = " + broker_code);
+//            System.out.println("USER bse_nse_mfu_flag = " + bse_nse_mfu_flag);
+
+            List<UsersMandateDetails> mandateList = usersMandateDetailsRepository.findMandateDetailsAch(user.getUser_id(),clientName,onlineCode,bse_nse_mfu_flag,broker_code);
+
+            System.out.println("masterList = " + mandateList.size());
+
+            if (mandateList != null && mandateList.size() > 0)
+            {
+                if(source.equalsIgnoreCase("Mobile"))
+                {
+                    List<MandateDetailsPojo> mandate_list = new ArrayList<>();
+
+                    List<UsersBankDetails> bankList = usersBankDetailsRepository.findBankDetails(user.getUser_id(),clientName,onlineCode,bse_nse_mfu_flag,broker_code);
+
+                    for(UsersMandateDetails mandateDetails : mandateList)
+                    {
+                        UsersBankDetails bankDetails = bankList.stream().filter(bank -> bank.getBank_account_number().equals(mandateDetails.getBank_account_number())).findFirst().orElse(null);
+
+                        if(bankDetails != null)
+                        {
+                            String mandate_status = "";
+                            String mandate_desc = "";
+
+                            if(mandate_flag.equalsIgnoreCase("Y"))
+                            {
+                                MandateDetailsPojo mandate = new MandateDetailsPojo();
+                                mandate.setBank_name(bankDetails.getBank_name());
+                                mandate.setBank_account_number(bankDetails.getBank_account_number());
+                                mandate.setBank_ifsc_code(bankDetails.getBank_ifsc_code());
+                                mandate.setBank_micr_code(bankDetails.getBank_micr_code());
+                                mandate.setMandate_type("MANDATE");
+                                mandate.setMandate_flag(mandateDetails.getNse_ach_flag());
+                                mandate.setMandate_id(mandateDetails.getNse_ach());
+                                mandate.setMandate_amount(mandateDetails.getNse_ach_amount());
+                                mandate.setMandate_approved(mandateDetails.getNse_ach_approved());
+                                mandate.setAccount_type(bankDetails.getBank_account_type());
+                                if(mandateDetails.getNse_ach_flag().equals(0) && mandateDetails.getNse_ach().isEmpty() && mandateDetails.getNse_ach_approved().equals(0))
+                                {
+                                    mandate_status = "Generate";
+                                    mandate_desc = "Mandate not generated.";
+                                }else if(mandateDetails.getNse_ach_flag().equals(1) && mandateDetails.getNse_ach().isEmpty() && mandateDetails.getNse_ach_approved().equals(0))
+                                {
+                                    mandate_status = "Pending";
+                                    mandate_desc = "Mandate generated & not approved.";
+                                }else if(mandateDetails.getNse_ach_flag().equals(1) && !mandateDetails.getNse_ach().isEmpty() && mandateDetails.getNse_ach_approved().equals(0))
+                                {
+                                    mandate_status = "Pending";
+                                    mandate_desc = "Mandate generated & not approved.";
+                                }else if(mandateDetails.getNse_ach_flag().equals(1) && !mandateDetails.getNse_ach().isEmpty() && mandateDetails.getNse_ach_approved().equals(1))
+                                {
+                                    mandate_status = "Approved";
+                                    mandate_desc = "Mandate generated & approved.";
+                                }else
+                                {
+                                    mandate_status = "";
+                                    mandate_desc = "";
+                                }
+
+                                SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
+                                Date mandate_date = mandateDetails.getNse_ach_created_date();
+                                String mandate_date_str = "";
+                                if(mandate_date != null)
+                                {
+                                    mandate_date_str = sdf.format(mandate_date);
+                                }
+
+                                mandate.setMandate_desc(mandate_desc);
+                                mandate.setMandate_date(mandate_date_str);
+                                mandate.setMandate_status(mandate_status);
+                                mandate.setBank_account_holder_name(bankDetails.getBank_account_holder_name());
+                                mandate.setBank_branch(bankDetails.getBank_branch());
+                                mandate_list.add(mandate);
+                            }else
+                            {
+                                if(mandateDetails.getNse_ach_flag().equals(1) && StringHelper.isNotEmpty(mandateDetails.getNse_ach()))
+                                {
+                                    mandate_status = "Approved";
+                                    mandate_desc = "Mandate generated & approved.";
+
+                                    MandateDetailsPojo mandate = new MandateDetailsPojo();
+                                    mandate.setBank_name(bankDetails.getBank_name());
+                                    mandate.setBank_account_number(mandateDetails.getBank_account_number());
+                                    mandate.setMandate_type("ACH Mandate");
+                                    mandate.setMandate_flag(mandateDetails.getNse_ach_flag());
+                                    mandate.setMandate_id(mandateDetails.getNse_ach());
+                                    mandate.setMandate_amount(mandateDetails.getNse_ach_amount());
+                                    mandate.setMandate_approved(mandateDetails.getNse_ach_approved());
+                                    mandate.setMandate_status(mandate_status);
+
+                                    SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
+                                    Date mandate_date = mandateDetails.getNse_ach_created_date();
+                                    String mandate_date_str = "";
+                                    if(mandate_date != null)
+                                    {
+                                        mandate_date_str = sdf.format(mandate_date);
+                                    }
+
+                                    mandate.setMandate_date(mandate_date_str);
+                                    mandate.setMandate_desc(mandate_desc);
+                                    mandate_list.add(mandate);
+                                }else
+                                {
+                                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 400, "status_msg", "Account Details Not Found"));
+                                }
+                            }
+                        }else
+                        {
+                            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 400, "status_msg", "Bank Account Details Not Found"));
+                        }
+                    }
+
+                    return ResponseEntity.ok(mandate_list);
+                }else
+                {
+                    List<UsersBankDetails> bankList = usersBankDetailsRepository.findBankDetails(user.getUser_id(),clientName,onlineCode,bse_nse_mfu_flag,broker_code);
+                    for(UsersMandateDetails mandateDetails : mandateList) {
+                        UsersBankDetails bankDetails = bankList.stream().filter(bank -> bank.getBank_account_number().equals(mandateDetails.getBank_account_number())).findFirst().orElse(null);
+                        if(bankDetails != null){
+                            mandateDetails.setBank_name(bankDetails.getBank_name());
+                            mandateDetails.setBank_account_type(bankDetails.getBank_account_type());
+                        }
+                    }
+                    return ResponseEntity.ok(mandateList);
+                }
+            }
+            else
+            {
+                List<MandateDetailsPojo> mandate_list = new ArrayList<>();
+
+                List<UsersBankDetails> bankList = usersBankDetailsRepository.findBankDetails(user.getUser_id(),clientName,onlineCode,bse_nse_mfu_flag,broker_code);
+
+                for(UsersBankDetails bankDetails : bankList)
+                {
+                    MandateDetailsPojo mandate = new MandateDetailsPojo();
+                    mandate.setBank_name(bankDetails.getBank_name());
+                    mandate.setBank_account_number(bankDetails.getBank_account_number());
+                    mandate.setBank_ifsc_code(bankDetails.getBank_ifsc_code());
+                    mandate.setBank_micr_code(bankDetails.getBank_micr_code());
+                    mandate.setMandate_type("MANDATE");
+                    mandate.setMandate_flag(0);
+                    mandate.setMandate_id("");
+                    mandate.setMandate_amount("0");
+                    mandate.setMandate_approved(0);
+                    mandate.setAccount_type(bankDetails.getBank_account_type());
+                    mandate.setMandate_desc("");
+                    mandate.setMandate_date("");
+                    mandate.setMandate_status("");
+                    mandate.setBank_account_holder_name(bankDetails.getBank_account_holder_name());
+                    mandate.setBank_branch(bankDetails.getBank_branch());
+                    mandate_list.add(mandate);
+                }
+                return ResponseEntity.ok(mandate_list);
+            }
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching key"));
+        }
+    }
 
 }

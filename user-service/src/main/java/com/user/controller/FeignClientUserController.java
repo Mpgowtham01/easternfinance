@@ -2,8 +2,11 @@ package com.user.controller;
 
 import com.user.config.TokenInterceptor;
 import com.user.dao.UserDAO;
+import com.user.dto.BankDto;
 import com.user.dto.UserDto;
+import com.user.dto.UserMandateDetailsDto;
 import com.user.dto.UsersNseRegReportDto;
+import com.user.mapper.BankInfoMapper;
 import com.user.mapper.UserMapper;
 import com.user.model.*;
 import com.user.repository.*;
@@ -1096,10 +1099,10 @@ public class FeignClientUserController
 	public ResponseEntity<?> getinvestorMasterKarvySchemes(
 			@RequestParam Integer user_id,
 			@RequestParam String client_name,
-			@RequestParam String scheme_name) {
+			@RequestParam List<String> productList) {
 		try
 		{
-			List<InvestorMasterKarvy> schemeCodes = investorMasterKarvyRepository.findByUserIdAndClientNameAndProductCode(user_id, client_name, scheme_name);
+			List<InvestorMasterKarvy> schemeCodes = investorMasterKarvyRepository.findByUserIdAndClientNameAndProductCode(user_id, client_name, productList);
 
 			if (schemeCodes.isEmpty())
 			{
@@ -2130,5 +2133,176 @@ public class FeignClientUserController
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
 		}
 	}
+
+	@Hidden
+	@GetMapping("/getMandateDetailsByBrokerCode")
+	public ResponseEntity<?> getMandateDetailsByBrokerCode(
+			@RequestParam("user_id") Integer userId,
+			@RequestParam("client_name") String clientName,
+			@RequestParam("online_code") String onlineCode,
+			@RequestParam("broker_code") String broker_code) {
+		try
+		{
+			List<UsersMandateDetails> detailsOptional =
+					usersMandateDetailsRespository.getMandateDetailsByClientCode(
+							userId, clientName, onlineCode, broker_code);
+
+			// Convert entity -> DTO
+			List<UserMandateDetailsDto> dtoList = detailsOptional.stream()
+					.map(d -> {
+						UserMandateDetailsDto dto = new UserMandateDetailsDto();
+						dto.setId(d.getId());
+						dto.setUser_id(d.getUser_id());
+						dto.setOnline_id(d.getOnline_id());
+						dto.setOnline_flag(d.getOnline_flag());
+						dto.setOnline_code(d.getOnline_code());
+						dto.setBroker_code(d.getBroker_code());
+						dto.setBank_account_number(d.getBank_account_number());
+
+						dto.setXsip_otm_flag(d.getXsip_otm_flag());
+						dto.setXsip_otm(d.getXsip_otm());
+						dto.setXsip_otm_amount(d.getXsip_otm_amount());
+						dto.setXsip_otm_approved(d.getXsip_otm_approved());
+						dto.setXsip_otm_rej_reason(d.getXsip_otm_rej_reason());
+//                        dto.setXsip_otm_created_date(d.getXsip_otm_created_date() != null
+//                                ? d.getXsip_otm_created_date().toLocalDate() : null);
+
+						dto.setEmandate_otm_flag(d.getEmandate_otm_flag());
+						dto.setEmandate_otm(d.getEmandate_otm());
+						dto.setEmandate_otm_amount(d.getEmandate_otm_amount());
+						dto.setEmandate_otm_approved(d.getEmandate_otm_approved());
+						dto.setEmandate_otm_rej_reason(d.getEmandate_otm_rej_reason());
+//                        dto.setEmandate_otm_created_date(d.getEmandate_otm_created_date() != null
+//                                ? d.getEmandate_otm_created_date().toLocalDate() : null);
+
+						// NSE ACH
+						dto.setNse_ach_flag(d.getNse_ach_flag());
+						dto.setNse_ach(d.getNse_ach());
+						dto.setNse_ach_amount(d.getNse_ach_amount());
+						dto.setNse_ach_approved(d.getNse_ach_approved());
+						dto.setNse_ach_rej_reason(d.getNse_ach_rej_reason());
+
+						dto.setClient_name(d.getClient_name());
+						dto.setCreated_date(d.getCreated_date());
+
+						dto.setNse_ach_end_date(d.getNse_ach_end_date());
+						dto.setNse_ach_start_date(d.getNse_ach_start_date());
+
+						return dto;
+					})
+					.toList();
+
+			return ResponseEntity.ok(dtoList);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error retrieving user mandate details");
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getBankDetailsByBrokerCode")
+	public ResponseEntity<?> getBankDetailsByBrokerCode(
+			@RequestParam("user_id") Integer userId,
+			@RequestParam("client_name") String clientName,
+			@RequestParam("online_code") String onlineCode,
+			@RequestParam("broker_code") String broker_code) {
+		try
+		{
+			List<UsersBankDetails> detailsOptional =
+					usersBankDetailsRepository.getNseUserBankDetail(userId, onlineCode, clientName, broker_code);
+
+			List<UsersBankDetails> dtoList = detailsOptional.stream()
+					.map(d -> {
+						UsersBankDetails dto = new UsersBankDetails();
+						dto.setId(d.getId());
+						dto.setUser_id(d.getUser_id());
+						dto.setOnline_id(d.getOnline_id());
+						dto.setOnline_flag(d.getOnline_flag());
+						dto.setOnline_code(d.getOnline_code());
+						dto.setBroker_code(d.getBroker_code());
+						dto.setClient_name(d.getClient_name());
+
+						dto.setBank_name(d.getBank_name());
+						dto.setBank_branch(d.getBank_branch());
+						dto.setBank_address(d.getBank_address());
+						dto.setBank_account_number(d.getBank_account_number());
+						dto.setBank_account_holder_name(d.getBank_account_holder_name());
+						dto.setBank_account_type(d.getBank_account_type());
+						dto.setBank_ifsc_code(d.getBank_ifsc_code());
+						dto.setBank_micr_code(d.getBank_micr_code());
+						dto.setBank_proof(d.getBank_proof());
+
+						dto.setCreated_date(d.getCreated_date());
+
+						return dto;
+					})
+					.toList();
+
+			return ResponseEntity.ok(dtoList);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error retrieving user bank details");
+		}
+	}
+
+	@Hidden
+	@PostMapping("/saveBankMandateDetails")
+	public ResponseEntity<?> saveBankMandateDetails(@RequestBody List<BankDto> bankDtos) {
+		try
+		{
+			List<UsersBankDetails> entities = bankDtos.stream()
+					.map(BankInfoMapper::toEntity)
+					.collect(Collectors.toList());
+
+			List<UsersBankDetails> savedEntities = usersBankDetailsRepository.saveAll(entities);
+
+			List<BankDto> savedDtos = savedEntities.stream()
+					.map(BankInfoMapper::toDto)
+					.collect(Collectors.toList());
+
+			return ResponseEntity.ok(savedDtos);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error saving Bank details: " + e.getMessage());
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getUserRegDetailsForCartByUserIdTaxStatus")
+	public ResponseEntity<?> getUserRegDetailsForCartByUserIdTaxStatus(@RequestParam String clientName, @RequestParam Integer userid, @RequestParam String tax_status_code, @RequestParam String holding_nature_code) {
+		try {
+			List<UsersOnlineRegDetails> key = userOnlineRegDetailsRespository.getUserRegDetailsForCartByUserIdTaxStatus(userid, clientName,tax_status_code,holding_nature_code);
+			if (key != null) {
+				return ResponseEntity.ok(key.get(0));
+			} else {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 404, "status_msg", "User not found"));
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching user details"));
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getUserByIdAndClientNameAndiinnumber")
+	public ResponseEntity<?> getUserByIdAndClientNameAndiinnumber(@RequestParam String clientName, @RequestParam Integer userid,@RequestParam String iin_number) {
+		try {
+			List<UsersOnlineRegDetails> key = userOnlineRegDetailsRespository.findUserByIdAndClientNameAndiin_number(userid, clientName,iin_number);
+			if (key != null) {
+				return ResponseEntity.ok(key.get(0));
+			} else {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 404, "status_msg", "User not found"));
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching user details"));
+		}
+	}
+
+
 
 }

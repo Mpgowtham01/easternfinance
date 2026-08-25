@@ -1,13 +1,11 @@
 package com.user.service;
 
-import com.user.model.UserMandateDetails;
 import com.user.model.UsersMapping;
 import com.user.repository.UsersMappingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserMappingService

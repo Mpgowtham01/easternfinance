@@ -399,4 +399,54 @@ public class CartService {
         return list;
     }
 
+    public List<CartDto> getCartCount(Integer user_id, String client_name,@RequestHeader("Authorization") String token)
+    {
+        List<CartDto> list = null;
+        try
+        {
+            list = userServiceClient.getAllActiveCartsByUserId(user_id,client_name, "NSE",token);
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
+        }
+        return list;
+    }
+
+    public List<CartDto> getCartCountForPurchaseType(Integer user_id, String client_name,String purchase_type,String broker_code,@RequestHeader("Authorization") String token)
+    {
+        List<CartDto> list = null;
+        try
+        {
+            list = userServiceClient.getAllActiveCartsByUserIdAndClientCode(user_id,client_name, "NSE",purchase_type,broker_code,token);
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+        }
+        return list;
+    }
+
+    public CartDto getPurchaseCartForBse(Integer user_id, String investor_code, String folio_no, String scheme_name, String scheme_reinvest_tag,String to_scheme_name, String client_name, String purchase_type,@RequestHeader("Authorization") String token)
+    {
+        CartDto cart = null;
+        try
+        {
+
+            List<CartDto> list = userServiceClient.getPurchaseCartUserForNse(user_id,investor_code,folio_no,purchase_type,scheme_name,scheme_reinvest_tag,to_scheme_name,client_name,token);
+
+            if(list != null && list.size() > 0)
+            {
+                cart = list.get(0);
+            }
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+        }
+        return cart;
+    }
+
 }

@@ -243,7 +243,7 @@ public interface UserServiceClient {
     List<InvestorMasterKarvyDto> getinvestorMasterKarvySchemes(
             @RequestParam("user_id") Integer user_id,
             @RequestParam("client_name") String client_name,
-            @RequestParam("scheme_name") String scheme_name, @RequestHeader("Authorization") String token
+            @RequestParam("productList") List<String> productList, @RequestHeader("Authorization") String token
     );
 
     @GetMapping("/getAllTransactionType")
@@ -437,4 +437,52 @@ public interface UserServiceClient {
 
     @GetMapping("/getLatestByClientName")
     List<BasketDetailsDto> getLatestByClientName(@RequestParam("clientName") String clientName, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getAllActiveCartsByUserId")
+    List<CartDto> getAllActiveCartsByUserId(@RequestParam("userid") Integer userId,@RequestParam("clientName") String clientName,@RequestParam("vendor") String vendor, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getMandateDetailsByBrokerCode")
+    List<UserMandateDetailsDto> getMandateDetailsByBrokerCode (
+            @RequestParam("user_id") Integer userId,
+            @RequestParam("client_name") String clientName,
+            @RequestParam("online_code") String client_code,
+            @RequestParam("broker_code") String broker_code,
+            @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getBankDetailsByBrokerCode")
+    List<UsersBankDetailsDTO> getBankDetailsByBrokerCode (
+            @RequestParam("user_id") Integer userId,
+            @RequestParam("client_name") String clientName,
+            @RequestParam("online_code") String client_code,
+            @RequestParam("broker_code") String broker_code,
+            @RequestHeader("Authorization") String token);
+
+    @PostMapping("/saveBankMandateDetails")
+    ResponseEntity<String>  saveBankMandateDetails(@RequestBody List<BankDto> bankDetails, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getAllActiveCartsByUserIdAndClientCode")
+    List<CartDto> getAllActiveCartsByUserIdAndClientCode(@RequestParam("userid") Integer userId,@RequestParam("clientName") String clientName,@RequestParam("vendor") String vendor,@RequestParam("purchase_type") String purchase_type,@RequestParam("broker_code") String broker_code, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getUserRegDetailsForCartByUserIdTaxStatus")
+    UserDto getUserRegDetailsForCartByUserIdTaxStatus(@RequestParam("clientName") String clientName,@RequestParam("userid") Integer userid,@RequestParam("tax_status_code") String tax_status_code,@RequestParam("holding_nature_code") String holding_nature_code, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getUserByIdAndClientNameAndiinnumber")
+    UserDto getUserByIdAndClientNameAndiinnumber(@RequestParam("clientName") String clientName,@RequestParam("userid") Integer userid,@RequestParam("iin_number") String iin_number, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getPurchaseCartUserForNse")
+    List<CartDto> getPurchaseCartUserForNse(
+            @RequestParam("userid") Integer userid,
+            @RequestParam("investorCode") String investorCode,
+            @RequestParam("folioNo") String folioNo,
+            @RequestParam("purchaseType") String purchaseType,
+            @RequestParam("schemeName") String schemeName,
+            @RequestParam("schemeReinvestTag") String schemeReinvestTag,
+            @RequestParam("to_scheme_name") String to_scheme_name,
+            @RequestParam("clientName") String clientName,
+            @RequestHeader("Authorization") String token
+    );
+
+    @GetMapping("/getRegisterByAmcCode")
+    String getRegisterByAmcCode(@RequestParam("amc_code") String amc_code, @RequestHeader("Authorization") String token);
+
 }

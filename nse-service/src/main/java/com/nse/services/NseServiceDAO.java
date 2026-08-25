@@ -550,7 +550,7 @@ public class NseServiceDAO {
                     if (amc_code.equalsIgnoreCase("103")) {
                         karvyList = userServiceClient.getinvestorMasterKarvyScheme(user_id, client_name, scheme_name,token);
                     } else {
-                        karvyList = userServiceClient.getinvestorMasterKarvySchemes(user_id, client_name, scheme_name,token);
+                        karvyList = userServiceClient.getinvestorMasterKarvySchemes(user_id, client_name, productList,token);
                     }
 
                     if (karvyList.size() > 0) {
@@ -2154,7 +2154,7 @@ public class NseServiceDAO {
                             obj.set_stp_allowed(false);
                             obj.set_swp_allowed(false);
 
-                            obj.setMf_oneday_change(1);
+                            obj.setMf_oneday_change(true);
                             obj.setRegister_source("IIN Update");
                             obj.setOnline_flag("NSE");
                             obj.setOnline_kyc_flag(0);
@@ -2593,7 +2593,7 @@ public class NseServiceDAO {
                             obj.set_stp_allowed(false);
                             obj.set_swp_allowed(false);
 
-                            obj.setMf_oneday_change(1);
+                            obj.setMf_oneday_change(true);
                             obj.setRegister_source("IIN Update");
                             obj.setOnline_flag("NSE");
                             obj.setOnline_kyc_flag(0);

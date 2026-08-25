@@ -73,9 +73,9 @@ public class NseTransactions {
     private String refund_status;
     private String refund_amount;
     private Integer first_order_today;
-    private String ip_address;
-    private String origin_user_id;
-    private String origin_first_name;
+//    private String ip_address;
+//    private String origin_user_id;
+//    private String origin_first_name;
     private String cart_id;
     @Transient
     private String logo;

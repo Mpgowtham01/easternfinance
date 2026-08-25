@@ -34,11 +34,11 @@ public interface InvestorMasterKarvyRepository extends JpaRepository<InvestorMas
             @Param("client_name") String clientName,
             @Param("scheme_code") String schemeCode
     );
-    @Query("FROM InvestorMasterKarvy i WHERE i.user_id = :user_id AND i.client_name = :client_name AND i.product_code = :product_code")
+    @Query("FROM InvestorMasterKarvy i WHERE i.user_id = :user_id AND i.client_name = :client_name AND i.product_code IN (:product_code)")
     List<InvestorMasterKarvy> findByUserIdAndClientNameAndProductCode(
             @Param("user_id") Integer user_id,
             @Param("client_name") String client_name,
-            @Param("product_code") String scheme_name
+            @Param("product_code") List<String> productList
     );
 
     @Query("SELECT i FROM InvestorMasterKarvy i " +

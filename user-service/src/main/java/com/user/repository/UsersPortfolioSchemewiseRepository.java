@@ -102,4 +102,16 @@ public interface UsersPortfolioSchemewiseRepository extends JpaRepository<UsersP
             @Param("folioNos") List<String> folioNos
     );
 
+    @Query(value = """
+       SELECT registrar
+       FROM users_portfolio_schemewise
+       WHERE amc_code = :amc_code
+         AND registrar IS NOT NULL
+         AND registrar <> ''
+       LIMIT 1
+       """, nativeQuery = true)
+    String findRegisterByAmcCode(
+            @Param("amc_code") String amc_code
+    );
+
 }

@@ -1,5 +1,6 @@
 package com.user.mapper;
 
+import com.user.dto.BankDto;
 import com.user.dto.BankInfoDTO;
 import com.user.model.User;
 import com.user.model.UsersBankDetails;
@@ -27,6 +28,32 @@ public class BankInfoMapper
         user.setDefault_bank("Y"); // hardcoded as default
 
         return user;
+    }
+
+    public static UsersBankDetails toEntity(BankDto dto)
+    {
+        UsersBankDetails entity = new UsersBankDetails();
+        entity.setId(dto.getId());
+        entity.setUser_id(dto.getUser_id());
+        entity.setOnline_flag(dto.getOnline_flag());
+        entity.setOnline_id(dto.getOnline_id());
+        entity.setOnline_code(dto.getOnline_code());
+        entity.setBroker_code(dto.getBroker_code());
+        entity.setClient_name(dto.getClient_name());
+        entity.setBank_name(dto.getBank_name());
+        entity.setBank_branch(dto.getBank_branch());
+        entity.setBank_address(dto.getBank_address());
+        entity.setBank_code(dto.getBank_code());
+        entity.setBank_account_number(dto.getBank_account_number());
+        entity.setBank_account_holder_name(dto.getBank_account_holder_name());
+        entity.setBank_account_type(dto.getBank_account_type());
+        entity.setBank_ifsc_code(dto.getBank_ifsc_code());
+        entity.setBank_micr_code(dto.getBank_micr_code());
+        if (dto.getCreated_date() != null)
+        {
+            entity.setCreated_date(dto.getCreated_date());
+        }
+        return entity;
     }
 
 //    public static BankInfoDTO userToDto(User user)
@@ -87,5 +114,27 @@ public class BankInfoMapper
         return users.stream().map(BankInfoMapper::userBseNseDetailsToDto).collect(Collectors.toList());
     }
 
+    public static BankDto toDto(UsersBankDetails entity) {
+        BankDto dto = new BankDto();
+        dto.setId(entity.getId());
+        dto.setUser_id(entity.getUser_id());
+        dto.setOnline_id(entity.getOnline_id());
+        dto.setOnline_flag(entity.getOnline_flag());
+        dto.setOnline_code(entity.getOnline_code());
+        dto.setBroker_code(entity.getBroker_code());
+        dto.setClient_name(entity.getClient_name());
+        dto.setBank_name(entity.getBank_name());
+        dto.setBank_branch(entity.getBank_branch());
+        dto.setBank_address(entity.getBank_address());
+        dto.setBank_account_number(entity.getBank_account_number());
+        dto.setBank_account_holder_name(entity.getBank_account_holder_name());
+        dto.setBank_account_type(entity.getBank_account_type());
+        dto.setBank_ifsc_code(entity.getBank_ifsc_code());
+        dto.setBank_micr_code(entity.getBank_micr_code());
+        if (dto.getCreated_date() != null) {
+            entity.setCreated_date(dto.getCreated_date());
+        }
+        return dto;
+    }
 
 }
