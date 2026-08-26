@@ -263,11 +263,20 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
             @Param("divReinvestFlag") String divReinvestFlag);
 
     @Query("SELECT n FROM NseOnlineSchemeMaster n " +
-            "WHERE n.schemeName = :schemeName " +
+            "WHERE n.schemeCode = :schemeName " +
             "AND n.scheme NOT LIKE '%INSURED%' " +
             "AND n.divReinvestFlag = :divReinvestFlag " +
             "AND n.switchAllowed = 'Y'")
     List<NseOnlineSchemeMaster> findEligibleSchemesForSwitchAndRedemptions(
+            @Param("schemeName") String schemeName,
+            @Param("divReinvestFlag") String divReinvestFlag);
+
+    @Query("SELECT n FROM NseOnlineSchemeMaster n " +
+            "WHERE n.schemeName = :schemeName " +
+            "AND n.scheme NOT LIKE '%INSURED%' " +
+            "AND n.divReinvestFlag = :divReinvestFlag " +
+            "AND n.switchAllowed = 'Y'")
+    List<NseOnlineSchemeMaster> findEligibleSchemeNameForSwitchAndRedemptions(
             @Param("schemeName") String schemeName,
             @Param("divReinvestFlag") String divReinvestFlag);
 
@@ -533,5 +542,40 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
     List<NseOnlineSchemeMaster> findEligibleSchemeForSwitchAndRedemption(
             @Param("schemeName") String schemeName,
             @Param("divReinvestFlag") String divReinvestFlag);
+
+    @Query("""
+    SELECT n 
+    FROM NseOnlineSchemeMaster n
+    WHERE n.schemeName = :schemeName
+      AND n.scheme NOT LIKE '%INSURED%'
+""")
+    List<NseOnlineSchemeMaster> findBySchemeNameExcludeInsured(
+            @Param("schemeName") String schemeName
+    );
+
+    @Query(value = """
+    SELECT * 
+    FROM nse_online_scheme_master
+    WHERE amc_name = :amc_name
+      AND plan_type = 'NORMAL'
+      AND switch_allowed = 'Y'
+      AND STR_TO_DATE(NULLIF(scheme_start_date,''), '%d-%m-%Y') <= CURDATE()
+      AND scheme_category <> 'ETFs'
+      AND settlement_type = 'MF'
+    ORDER BY scheme_name ASC
+    """, nativeQuery = true)
+    List<NseOnlineSchemeMaster> findSchemesByAmc(@Param("amc_name") String amc_name);
+
+    @Query(value = """
+    SELECT * 
+    FROM nse_online_scheme_master
+    WHERE plan_type = 'NORMAL'
+      AND switch_allowed = 'Y'
+      AND STR_TO_DATE(NULLIF(scheme_start_date,''), '%d-%m-%Y') <= CURDATE()
+      AND scheme_category <> 'ETFs'
+      AND settlement_type = 'MF'
+    ORDER BY scheme_name ASC
+    """, nativeQuery = true)
+    List<NseOnlineSchemeMaster> findSchemesByAmcCodeAndStartDateWithSettlementCheckNew();
 
 }

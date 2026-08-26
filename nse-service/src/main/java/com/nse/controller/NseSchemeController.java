@@ -5358,6 +5358,37 @@ public class NseSchemeController {
         }
     }
 
+    @GetMapping("/getSwitchSchemeName")
+    public ResponseEntity<?> getSwitchSchemeName(@RequestHeader("Authorization") String token,
+                                                 @RequestParam String scheme,
+                                                 @RequestParam String dividend_code)
+    {
+        try
+        {
+            NseOnlineSchemeMaster schemeMaster = null;
+
+            if(NseUtils.isUrlEncoded(scheme))
+            {
+                scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
+            }
+            System.out.println("schem = " + scheme);
+            System.out.println("dividend_code" + dividend_code);
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findEligibleSchemeNameForSwitchAndRedemptions(scheme,dividend_code);
+
+            if(list.size() > 0)
+            {
+                schemeMaster = list.get(0);
+            }
+
+            return ResponseEntity.ok(schemeMaster);
+        } catch (Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @Operation(
             summary = "Get Switch Scheme Details",
             description = "Fetches scheme details based on provided scheme code and AMC code. This is used for validating switch transactions in mutual fund processing."
@@ -8273,6 +8304,31 @@ public class NseSchemeController {
             System.out.println("schemName = " + schemeNames);
             return ResponseEntity.ok(schemeNames);
 
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getNewNFOSwitchSchemeByAmc")
+    public ResponseEntity<?> getNewNFOSwitchSchemeByAmc(@RequestParam(required = false) String scheme_name,@RequestHeader("Authorization") String token)
+    {
+        try
+        {
+            List<NseOnlineSchemeMaster> filteredSchemes = null;
+            if(StringHelper.isNotEmpty(scheme_name))
+            {
+                List<NseOnlineSchemeMaster> amcNames = nseOnlineSchemeMasterRepository.findBySchemeNameExcludeInsured(scheme_name);
+
+                NseOnlineSchemeMaster amcList = amcNames.get(0);
+                filteredSchemes = nseOnlineSchemeMasterRepository.findSchemesByAmc(amcList.getAmcName());
+
+            }else{
+                filteredSchemes = nseOnlineSchemeMasterRepository.findSchemesByAmcCodeAndStartDateWithSettlementCheckNew();
+            }
+
+            return ResponseEntity.ok(filteredSchemes);
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
