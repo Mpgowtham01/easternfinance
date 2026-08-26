@@ -398,15 +398,13 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
     );
 
     @Query("FROM NseOnlineSchemeMaster n " +
-            "WHERE n.amcCode = :amcCode " +
-            "AND n.schemeName = :schemeName " +
+            "WHERE n.schemeName = :schemeName " +
             "AND n.scheme NOT LIKE '%INSURED%' " +
             "AND n.swpEnabled = 'Y' " +
             "AND n.divReinvestFlag = :divReinvestFlag " +
             "AND n.amcActiveFlag = 'Y' " +
             "AND n.planType = 'NORMAL'")
     List<NseOnlineSchemeMaster> findSWPEnabledSchemes(
-            @Param("amcCode") String amcCode,
             @Param("schemeName") String schemeName,
             @Param("divReinvestFlag") String divReinvestFlag
     );
@@ -527,5 +525,14 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
     List<String> findDistinctSchemeNameByAmcCodeAndMinAmountschemeName(
             @Param("schemeName") String schemeName
     );
+
+    @Query("SELECT n FROM NseOnlineSchemeMaster n " +
+            "WHERE n.schemeName = :schemeName " +
+            "AND n.scheme NOT LIKE '%INSURED%' " +
+            "AND n.divReinvestFlag = :divReinvestFlag " +
+            "AND n.redemptionAllowed = 'Y'")
+    List<NseOnlineSchemeMaster> findEligibleSchemeForSwitchAndRedemption(
+            @Param("schemeName") String schemeName,
+            @Param("divReinvestFlag") String divReinvestFlag);
 
 }

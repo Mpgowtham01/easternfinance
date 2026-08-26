@@ -482,6 +482,9 @@ public interface UserServiceClient {
             @RequestHeader("Authorization") String token
     );
 
+    @GetMapping("/getAmcCodeByAmcName")
+    String getAmcCodeByAmcName(@RequestParam("amc_name") String amc_name, @RequestHeader("Authorization") String token);
+
     @GetMapping("/getRegisterByAmcCode")
     String getRegisterByAmcCode(@RequestParam("amc_code") String amc_code, @RequestHeader("Authorization") String token);
 

@@ -2051,21 +2051,21 @@ public class NseSchemeController {
                                                @RequestParam String amc_code) {
         try {
 
-            if(scheme_code == null){scheme_code = "";};
-            if(amc_code == null){amc_code = "";};
-            if(sip_frequency == null){sip_frequency = "";};
+            if(scheme_code == null){scheme_code = "";}
+            if(amc_code == null){amc_code = "";}
+            if(sip_frequency == null){sip_frequency = "";}
 
             scheme_code = scheme_code.trim();
             amc_code = amc_code.trim();
             sip_frequency = sip_frequency.trim();
 
-            List<NseOnlineSipStpSwpMaster> nse= nseOnlineSipStpSwpMasterRepository.findByAmcNameAndSchemeCodeAndFrequency(amc_code, scheme_code, sip_frequency);
+            List<NseOnlineSipStpSwpMaster> nse= nseOnlineSipStpSwpMasterRepository.findByAmcCodeAndSchemeCodeAndFrequency(amc_code, scheme_code, sip_frequency);
             return ResponseEntity.ok(nse);
 
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -3487,7 +3487,7 @@ public class NseSchemeController {
     @GetMapping("/getStpSchemeFrequency")
     public ResponseEntity<?> getStpSchemeFrequency(@RequestHeader("Authorization") String token,
                                                    @RequestParam String scheme_name,
-                                                   @RequestParam String amc_name,
+                                                   @RequestParam(required = false) String amc_name,
                                                    @RequestParam String dividend_code)
     {
         try {
@@ -3497,21 +3497,18 @@ public class NseSchemeController {
             }
 
             if(scheme_name == null){scheme_name = "";}
-            if(amc_name == null){amc_name = "";}
             if(dividend_code == null){dividend_code = "";}
 
             scheme_name = scheme_name.trim();
-            amc_name = amc_name.trim();
-            dividend_code = dividend_code.trim();
 
-            List<NseOnlineSipStpSwpMaster>  schemeList = nseOnlineSipStpSwpMasterRepository.findDistinctAstpFrequenciesByAmcNameAndSchemeName(amc_name,scheme_name);
+            List<NseOnlineSipStpSwpMaster>  schemeList = nseOnlineSipStpSwpMasterRepository.findDistinctAstpFrequenciesByAmcNameAndSchemeName(scheme_name);
 
             return ResponseEntity.ok(schemeList);
 
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -5237,9 +5234,9 @@ public class NseSchemeController {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
 
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findEligibleSchemesForSwitchAndRedemption(amc_code,scheme,dividend_code);
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findEligibleSchemeForSwitchAndRedemption(scheme,dividend_code);
 
-            if(list != null && list.size() > 0)
+            if(list.size() > 0)
             {
                 schemeMaster = list.get(0);
             }
@@ -5249,7 +5246,7 @@ public class NseSchemeController {
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -6490,7 +6487,7 @@ public class NseSchemeController {
     @GetMapping("/getSwpSchemecode")
     public ResponseEntity<?> getSwpSchemecode(@RequestHeader("Authorization") String token,
                                               @RequestParam String scheme,
-                                              @RequestParam String amc_code,
+                                              @RequestParam(required = false) String amc_code,
                                               @RequestParam String dividend_code)
     {
         try
@@ -6500,8 +6497,8 @@ public class NseSchemeController {
             {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSWPEnabledSchemes(amc_code,scheme,dividend_code);
-            if(list != null && list.size() > 0)
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSWPEnabledSchemes(scheme,dividend_code);
+            if(list.size() > 0)
             {
                 schemeMaster = list.get(0);
             }
@@ -6511,7 +6508,7 @@ public class NseSchemeController {
         {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -8142,4 +8139,144 @@ public class NseSchemeController {
         }
     }
 
+    @GetMapping("/getSIPActiveSchemeList")
+    public ResponseEntity<?> getSIPActiveSchemeList(@RequestHeader("Authorization") String token,
+                                                    @RequestParam String client_code,
+                                                    @RequestParam String broker_code,
+                                                    @RequestParam String client_name)
+    {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH);
+        List<NseTransactions> nseTransactionsList = new ArrayList<>();
+        try {
+
+            System.out.println("clientCode: " + client_code);
+            System.out.println("brokerCode: " + broker_code);
+
+            BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
+            if(online_access == null)
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+            }
+
+            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+
+            HttpHeaders headers = NseUtils.getHttpHeaders(nse_memberid, base64Encoded);
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("xsip_reg_id", "");
+            requestBody.put("client_code", client_code);
+            requestBody.put("from_date", "");
+            requestBody.put("to_date", "");
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
+
+            String provisionalReport_url= nseUrl+"/nsemfdesk/api/v2/reports/XSIP_REG_REPORT";
+
+            try {
+                ResponseEntity<String> result = RestTemplateFactory.createRestTemplate().postForEntity(provisionalReport_url, entity, String.class);
+
+                String responseBody = result.getBody();
+
+                JSONObject jsonObject = new JSONObject(responseBody);
+                System.out.println("jsonObject: " + jsonObject);
+                JSONArray jsonRegArray = jsonObject.getJSONArray("report_data");
+
+                String xsip_registration_no = "";
+                String installments_amount = "";
+                String scheme_name = "";
+                String start_date = "";
+                String end_date = "";
+                String primary_holder_mobile = "";
+                String primary_holder_email = "";
+                String euin_no = "";
+                String rta_scheme_code = "";
+                String folio_number = "";
+                String nse_mandate_id = "";
+                String status = "";
+                String freq_type="";
+                System.out.println("jsonRegArray:size: " + jsonRegArray.length());
+                NseTransactions nse;
+                for (int i = 0; i < jsonRegArray.length(); i++) {
+
+                    JSONObject report_data = jsonRegArray.getJSONObject(i);
+                    status = report_data.optString("status");
+                    xsip_registration_no = report_data.optString("xsip_registration_no");
+
+                    System.out.println("round: " + i  + " :xsip_registration_no: "+xsip_registration_no+" : " + status);
+
+                    nse = new NseTransactions();
+                    if(status.equalsIgnoreCase("ACTIVE")) {
+
+                        installments_amount = report_data.optString("installments_amount");
+                        scheme_name = report_data.optString("scheme_name");
+                        start_date = report_data.optString("start_date");
+                        end_date = report_data.optString("end_date");
+                        primary_holder_mobile = report_data.optString("primary_holder_mobile");
+                        primary_holder_email = report_data.optString("primary_holder_email");
+                        euin_no = report_data.optString("euin_no");
+                        rta_scheme_code = report_data.optString("rta_scheme_code");
+                        folio_number = report_data.optString("folio_number");
+                        nse_mandate_id = report_data.optString("nse_mandate_id");
+                        freq_type = report_data.optString("frequency_type");
+
+                        nse.setIin_number(client_code);
+                        nse.setFolio_no(folio_number);
+                        nse.setAmount_units(installments_amount);
+                        nse.setSip_reg_no(xsip_registration_no);
+                        nse.setTransaction_status(status);
+                        nse.setScheme_name(scheme_name);
+                        nse.setStart_date(sdf.parse(start_date));
+                        nse.setEnd_date(sdf.parse(end_date));
+                        nse.setEuin_number(euin_no);
+                        nse.setScheme_code(rta_scheme_code);
+                        nse.setMandate_id(nse_mandate_id);
+//                        nse.setPrimary_holder_mobile(primary_holder_mobile);
+//                        nse.setPrimary_holder_email(primary_holder_email);
+                        nse.setBroker_code(broker_code);
+                        nse.setFrequency(freq_type);
+
+                        nseTransactionsList.add(nse);
+                    }
+                }
+            }catch (Exception ex) {
+                ex.printStackTrace();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching AMC codes and names.");
+            }
+            System.out.println("nseTransactionsList size: " + nseTransactionsList.size());
+            return ResponseEntity.ok(nseTransactionsList);
+
+        } catch (Exception ex) {
+
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);}
+    }
+
+    @GetMapping("/getSTPSchemeByAmcOnline")
+    public ResponseEntity<?> getSTPSchemeByAmcOnline(@RequestHeader("Authorization") String token,@RequestParam String scheme_name)
+    {
+        try {
+            List<String> filteredScheme = nseOnlineSchemeMasterRepository.findDistinctSchemeNameByAmcCodeAndMinAmountschemeName(scheme_name);
+
+            String amcname =  filteredScheme.get(0);
+
+            List<String> schemeNames = null;
+
+            schemeNames = nseOnlineSchemeMasterRepository.findDistinctSchemeNamesForStpByAmcCode(amcname);
+
+
+            System.out.println("schemName = " + schemeNames);
+            return ResponseEntity.ok(schemeNames);
+
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

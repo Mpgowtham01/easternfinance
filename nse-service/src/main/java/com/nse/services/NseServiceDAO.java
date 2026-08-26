@@ -2637,18 +2637,22 @@ public class NseServiceDAO {
 
         try {
             String amc_name = "";
-            String amc_code = "";
 
             List<NseOnlineSchemeMaster> scheme_list = null;
 
             scheme_list = nseOnlineSchemeMasterRepository.findBySchemeCodeAndSchemeName(scheme_code,scheme_name);
 
-            if(scheme_list != null && scheme_list.size() > 0){
-                amc_name = scheme_list.get(0).getAmcName();
-                amc_code = scheme_list.get(0).getAmcCode();
+            if(scheme_list != null && !scheme_list.isEmpty())
+            {
+                amc_name = scheme_list.get(0).getAmcCode();
             }
+            System.out.println("amc_name = " + amc_name);
+            String amc_code = userServiceClient.getAmcCodeByAmcName(amc_name,token);
+            String rta_name = userServiceClient.getRegisterByAmcCode(amc_code,token);
 
-            String rta_name = NseUtils.getRTAName(amc_code);
+            System.out.println("rta_name: " + rta_name);
+
+            System.out.println("amc_code: " + amc_code);
 
             list = new ArrayList<String>();
 
@@ -2777,10 +2781,6 @@ public class NseServiceDAO {
                     }
                 }
             }
-
-            System.out.println("rta_name: " + rta_name);
-
-            System.out.println("amc_code: " + amc_code);
 
             if (StringHelper.isNotEmpty(rta_name) && rta_name.equalsIgnoreCase("Karvy")) {
 

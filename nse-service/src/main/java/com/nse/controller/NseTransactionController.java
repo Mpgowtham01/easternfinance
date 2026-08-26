@@ -7780,5 +7780,244 @@ public class NseTransactionController {
         }
     }
 
+    @PostMapping("/sipTopUp")
+    public ResponseEntity<?> sipTopUp(
+            HttpServletRequest request,
+            @RequestParam String broker_code,
+            @RequestParam String client_code,
+            @RequestParam String req_type,
+            @RequestParam String sip_reg_no,
+            @RequestParam String installment_amount,
+            @RequestParam String topup_frequency,
+            @RequestParam String topup_amount,
+            @RequestParam String start_date,
+            @RequestParam String end_date,
+            @RequestParam String internal_ref_no,
+            @RequestParam String primary_holder_mobile,
+            @RequestParam String primary_holder_email,
+            @RequestParam String source,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
+            @RequestHeader("Authorization") String token)
+    {
+        try {
+
+            String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            System.out.println("User ID from token: " + userid);
+
+            UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+
+            String client_name = users.getClient_name();
+
+            client_code = NseUtils.checkParem(client_code);
+            req_type= NseUtils.checkParem(req_type);
+            sip_reg_no= NseUtils.checkParem(sip_reg_no);
+            installment_amount= NseUtils.checkParem(installment_amount);
+            topup_frequency= NseUtils.checkParem(topup_frequency);
+            topup_amount= NseUtils.checkParem(topup_amount);
+            start_date= NseUtils.checkParem(start_date);
+            end_date= NseUtils.checkParem(end_date);
+            internal_ref_no= NseUtils.checkParem(internal_ref_no);
+            primary_holder_mobile= NseUtils.checkParem(primary_holder_mobile);
+            primary_holder_email= NseUtils.checkParem(primary_holder_email);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
+
+            JSONObject sipTopUpRegObjRequestBody = new JSONObject();
+            JSONArray sipTopUpRegObjArr = new JSONArray();
+            JSONObject sipTopUpRegObj = new JSONObject();
+
+            sipTopUpRegObj.put("client_code", client_code);
+            sipTopUpRegObj.put("req_type", req_type);
+            sipTopUpRegObj.put("sip_reg_no", Long.parseLong(sip_reg_no));
+            sipTopUpRegObj.put("installment_amount", Integer.parseInt(installment_amount));
+            sipTopUpRegObj.put("topup_frequency", topup_frequency);
+            sipTopUpRegObj.put("topup_amount", Integer.parseInt(topup_amount));
+            sipTopUpRegObj.put("start_date", start_date);
+            sipTopUpRegObj.put("end_date", end_date);
+            sipTopUpRegObj.put("internal_ref_no", internal_ref_no);
+            sipTopUpRegObj.put("primary_holder_mobile", primary_holder_mobile);
+            sipTopUpRegObj.put("primary_holder_email", primary_holder_email);
+
+            sipTopUpRegObjArr.put(sipTopUpRegObj);
+            sipTopUpRegObjRequestBody.put("reg_data", sipTopUpRegObjArr);
+
+            BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
+            if(online_access == null)
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+            }
+
+            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+            System.out.println("requestBody: " + sipTopUpRegObjRequestBody);
+            System.out.println("authorization: " + base64Encoded);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("memberId", nse_memberid);
+            headers.set("Authorization", "Basic "+base64Encoded);
+            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "en-US");
+            headers.set("Connection", "keep-alive");
+            headers.set("Referer", "");
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+
+            HttpEntity<String> entity = new HttpEntity<>(sipTopUpRegObjRequestBody.toString(), headers);
+
+            String sipTopUp_url= nseUrl+"/nsemfdesk/api/v2/registration/product/SIP_TOPUP";
+
+            String reg_id;
+            String reg_status;
+            String reg_remark;
+
+            try
+            {
+                ResponseEntity<String> ScanMandateResult = restTemplate.postForEntity(sipTopUp_url, entity, String.class);
+                String statusCode = ScanMandateResult.getStatusCode().toString();
+                String responseBody = ScanMandateResult.getBody();
+
+                System.out.println("statusCode = " + statusCode);
+                System.out.println("responseBody = " + responseBody);
+
+                JSONObject jsonObject = new JSONObject(responseBody);
+                JSONArray jsonRegArray = jsonObject.getJSONArray("reg_data");
+
+                for (int i = 0; i < jsonRegArray.length(); i++)
+                {
+                    JSONObject regDetail = jsonRegArray.getJSONObject(i);
+                    reg_id = regDetail.optString("reg_id");
+                    reg_status = regDetail.optString("reg_status");
+                    reg_remark = regDetail.optString("reg_remark");
+
+                    System.out.println("reg_id: " + reg_id);
+                    System.out.println("reg_status: " + reg_status);
+                    System.out.println("reg_remark: " + reg_remark);
+
+
+                    NseTransactions nsetrans = new NseTransactions();
+                    nsetrans.setUrl(sipTopUp_url);
+                    nsetrans.setNse_request(sipTopUpRegObjRequestBody.toString());
+                    nsetrans.setNse_response(responseBody);
+
+                    if(StringHelper.isNotEmpty(reg_status))
+                    {
+                        if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                        {
+                            nsetrans.setReturn_msg("Success");
+                            nsetrans.setService_return_code("0");
+                            nsetrans.setService_msg(reg_remark);
+                        }else
+                        {
+                            nsetrans.setReturn_msg("Failure");
+                            nsetrans.setService_return_code("1");
+                            nsetrans.setService_msg(reg_remark);
+                        }
+                    }else
+                    {
+                        nsetrans.setReturn_msg("Failure");
+                        nsetrans.setService_return_code("1");
+                        nsetrans.setService_msg(reg_remark);
+                    }
+
+                    nsetrans.setReg_id(reg_id);
+                    nsetrans.setPayment_link("");
+                    nsetrans.setPan(users.getPan());
+                    nsetrans.setName(users.getName());
+                    nsetrans.setBranch(users.getBranch());
+                    nsetrans.setRm_name(users.getRm_name());
+                    nsetrans.setSubbroker_name(users.getSubbroker_name());
+                    nsetrans.setClient_name(client_name);
+                    nsetrans.setIin_number(client_code);
+                    nsetrans.setScheme_name("");
+                    nsetrans.setScheme_code("");
+                    nsetrans.setFolio_no("");
+                    nsetrans.setAmount_units(topup_amount);
+                    nsetrans.setFrequency("ANNUALLY");
+                    nsetrans.setPeriod_day("");
+                    nsetrans.setUmrn_no("");
+                    nsetrans.setPurchase_type("");
+
+                    nsetrans.setPayment_ref_no(sip_reg_no);
+
+                    nsetrans.setAuto_trxn_no("");
+                    nsetrans.setSip_reg_no(reg_id);
+                    nsetrans.setPayment_mode("");
+                    nsetrans.setTopup_amount(Double.parseDouble(topup_amount));
+                    nsetrans.setBank_acc_no("");
+                    nsetrans.setTransaction_number("");
+                    nsetrans.setApplication_number("");
+                    nsetrans.setTo_scheme_code("");
+                    nsetrans.setTo_scheme_name("");
+                    nsetrans.setTransaction_type("(X)SIP Topup Registration");
+                    nsetrans.setPayment_status("PENDING");
+                    nsetrans.setActive_ceased_status("");
+                    nsetrans.setRemarks(reg_remark);
+                    nsetrans.setMandate_id("");
+                    nsetrans.setMandate_status("");
+                    nsetrans.setEmandate_auth_flag("");
+                    nsetrans.setApp_received_flag("");
+                    nsetrans.setTransaction_date(new Date());
+                    nsetrans.setUser_id(Integer.parseInt(userid));
+
+                    if(source.equalsIgnoreCase("Mobile"))
+                    {
+                        nsetrans.setRegister_source("Mobile App");
+                    }else
+                    {
+                        nsetrans.setRegister_source("Website");
+                    }
+
+                    nsetrans.setBroker_code(broker_code);
+                    nsetrans.setEuin_number("");
+                    nsetrans.setCc_received("");
+                    nsetrans.setFund_trans_to_amc("");
+                    nsetrans.setRefund_status("");
+                    nsetrans.setRefund_amount("");
+//                    nsetrans.setIp_address(ip_address);
+//                    nsetrans.setOrigin_user_id(origin_user_id);
+//                    nsetrans.setOrigin_first_name(origin_first_name);
+                    nseTransactionService.save(nsetrans);
+
+                    if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                    {
+                        return NseUtils.commonResponse("REG_SUCCESS",HttpStatus.OK);
+                    }
+                    else
+                    {
+                        return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                ex.printStackTrace();
+                return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            }
+
+        }catch(Exception ex){
+            ex.printStackTrace();
+            try {
+            } catch (Exception logEx) {
+                logEx.printStackTrace();
+            }
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        try {
+        } catch (Exception logEx) {
+            logEx.printStackTrace();
+        }
+        return NseUtils.commonResponse("please check With Admin about Status", HttpStatus.BAD_REQUEST);
+    }
+
 
     }
