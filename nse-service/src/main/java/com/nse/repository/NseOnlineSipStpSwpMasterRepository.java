@@ -38,15 +38,14 @@ public interface NseOnlineSipStpSwpMasterRepository extends JpaRepository<NseOnl
             @Param("schemeName") String scheme_name
     );
 
+
     @Query("SELECT s " +
             "FROM NseOnlineSipStpSwpMaster s " +
-            "WHERE s.amc_name = :amcName " +
-            "AND s.master_option = 'SWP' " +
+            "WHERE s.master_option = 'SWP' " +
             "AND s.aswp_status = 'Y' " +
             "AND s.scheme_amfi = :schemeName " +
             "GROUP BY s.aswp_frequency")
     List<NseOnlineSipStpSwpMaster> findDistinctAswpFrequenciesByAmcNameAndSchemeName(
-            @Param("amcName") String amcName,
             @Param("schemeName") String schemeName
     );
 

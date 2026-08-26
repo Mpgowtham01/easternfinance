@@ -1974,10 +1974,17 @@ public class NseSchemeController {
             {
                 dividend_code = "Z";
             }
+            List<NseOnlineSchemeMaster> list = null;
 
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findBySchemeNameAndAmcNameAndReinvestFlag(scheme, amc_name, dividend_code);
+            if(amc_name.equalsIgnoreCase("all"))
+            {
+                list =  nseOnlineSchemeMasterRepository.findBySchemeNameAndReinvestFlag(scheme, dividend_code);
+            }else
+            {
+                list = nseOnlineSchemeMasterRepository.findBySchemeNameAndAmcNameAndReinvestFlag(scheme, amc_name, dividend_code);
+            }
 
-            if (list != null && !list.isEmpty())
+            if (!list.isEmpty())
             {
                 schemeMaster = list.get(0);
             }
@@ -1988,7 +1995,7 @@ public class NseSchemeController {
 
                 list = nseOnlineSchemeMasterRepository.findBySchemeNameAndAmcNameAndReinvestFlag(scheme, amc_name, dividend_code);
 
-                if (list != null && !list.isEmpty())
+                if (!list.isEmpty())
                 {
                     schemeMaster = list.get(0);
                 }
@@ -2004,7 +2011,7 @@ public class NseSchemeController {
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -4228,24 +4235,21 @@ public class NseSchemeController {
             )
     })
     @GetMapping("/SwpDates")
-    public ResponseEntity<?> SwpDates(@RequestHeader("Authorization") String token,
-                                      @RequestParam String scheme,
-                                      @RequestParam String amc_name)
+    public ResponseEntity<?> swpDates(@RequestHeader("Authorization") String token,@RequestParam String scheme)
     {
-        try {
+        try
+        {
 
             if(NseUtils.isUrlEncoded(scheme))
             {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
 
-            if(scheme == null){scheme = "";};
-            if(amc_name == null){amc_name = "";};
+            if(scheme == null){scheme = "";}
 
             scheme = scheme.trim();
-            amc_name = amc_name.trim();
 
-            List<NseOnlineSipStpSwpMaster> schemeList = nseOnlineSipStpSwpMasterRepository.findDistinctAswpFrequenciesByAmcNameAndSchemeName(amc_name,scheme);
+            List<NseOnlineSipStpSwpMaster> schemeList = nseOnlineSipStpSwpMasterRepository.findDistinctAswpFrequenciesByAmcNameAndSchemeName(scheme);
 
             return ResponseEntity.ok(schemeList);
 
@@ -5329,7 +5333,6 @@ public class NseSchemeController {
     @GetMapping("/getSwitchSchemecode")
     public ResponseEntity<?> getSwitchSchemecode(@RequestHeader("Authorization") String token,
                                                  @RequestParam String scheme,
-                                                 @RequestParam String amc_code,
                                                  @RequestParam String dividend_code)
     {
         try
@@ -5340,9 +5343,11 @@ public class NseSchemeController {
             {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findEligibleSchemesForSwitchAndRedemptions(amc_code,scheme,dividend_code);
+            System.out.println("schem = " + scheme);
+            System.out.println("dividend_code" + dividend_code);
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findEligibleSchemesForSwitchAndRedemptions(scheme,dividend_code);
 
-            if(list != null && list.size() > 0)
+            if(list.size() > 0)
             {
                 schemeMaster = list.get(0);
             }
@@ -5352,7 +5357,7 @@ public class NseSchemeController {
         {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -7688,6 +7693,448 @@ public class NseSchemeController {
 
             }
             return ResponseEntity.ok(masterList);
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getExistingSchemesOnline")
+    public ResponseEntity<?> getExistingSchemesOnline(@RequestHeader("Authorization") String token,@RequestParam String iin_number,@RequestParam String brokercode)
+    {
+        String userid = "";
+        String client_name = "";
+        try
+        {
+            userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            UserDto users =null;
+            client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            try {
+                users = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name,iin_number,brokercode,token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+            List<InvestorSchemeWisePortfolioResponse> portfolio_list = getSchemeHoldings(client_name, Integer.valueOf(userid),users,token);
+            if(!portfolio_list.isEmpty())
+            {
+                portfolio_list.stream().forEach(scheme ->
+                {
+                    scheme.setAmc_logo(amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(scheme.getAmc_name()));
+                });
+            }
+            return ResponseEntity.ok(portfolio_list);
+        } catch (Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public List<InvestorSchemeWisePortfolioResponse> getSchemeHoldings(String client_name, Integer userid,UserDto users,@RequestHeader("Authorization") String token)
+    {
+
+        InvestorSchemeWisePortfolioResponse scheme = null;
+        List<InvestorSchemeWisePortfolioResponse> master_list = new ArrayList<InvestorSchemeWisePortfolioResponse>();
+
+        try
+        {
+            String registrar = "";
+            String scheme_code = "";
+            String folio_no = "";
+            String company = "";
+            String scheme_name = "";
+            Double totalUnits;
+            Double latestNav;
+            Double totalCurrentValue;
+            String broker_code = "";
+            String euin = "";
+            String amc_name = "";
+            String amc_code = "";
+            String scheme_amfi_short_name = "";
+
+            String userTaxStatusCode = users.getTax_status_code();
+            String userHoldingNature = users.getHolding_nature_code();
+            String jointHolderpan1 = users.getJoint_holder_pan1();
+            String jointHolderpan2 = users.getJoint_holder_pan2();
+            String userBrokerCode = users.getBroker_code();
+
+            List<UsersPortfolioSchemewiseDto> list = null;
+            try {
+                list = userServiceClient.getActiveSchemesByUserAndClient(userid,client_name,token);
+            } catch (FeignException e) {
+                if (e.status() == 400) {
+                    return master_list;
+                } else if (e.status() == 404) {
+                    return master_list;
+                } else {
+                    return master_list;
+                }
+            }
+
+            if(list != null && list.size() > 0)
+            {
+                List<InvestorMasterCamsDto> camsList = userServiceClient.getByCamsUserIdAndClientName(userid,client_name,token);
+
+                List<InvestorMasterKarvyDto> karvyList = userServiceClient.getByKarvyUserIdAndClientName(userid,client_name,token);
+                ////System.out.println("karvyList = " + karvyList);
+                for (UsersPortfolioSchemewiseDto portfolio : list)
+                {
+                    scheme_name = portfolio.getScheme_name();
+                    folio_no = portfolio.getFolio_no();
+                    scheme_code = portfolio.getScheme_code();
+                    company = portfolio.getAmc_name();
+                    registrar = portfolio.getRegistrar();
+                    totalUnits = portfolio.getTotal_units();
+                    latestNav = portfolio.getLatest_nav();
+                    totalCurrentValue = portfolio.getCurrent_value();
+                    broker_code = portfolio.getBroker_code();
+                    euin = portfolio.getEuin();
+                    amc_name = portfolio.getAmc_name();
+                    amc_code = portfolio.getAmc_code();
+                    scheme_amfi_short_name = portfolio.getScheme_amfi_short_name();
+
+                    scheme = new InvestorSchemeWisePortfolioResponse();
+                    scheme.setScheme(scheme_name);
+                    scheme.setScheme_code(scheme_code);
+                    scheme.setScheme_registrar(registrar);
+                    scheme.setScheme_company(company);
+                    scheme.setFoliono(folio_no);
+                    scheme.setTotalUnits(totalUnits);
+                    scheme.setLatestNav(latestNav);
+                    scheme.setTotalCurrentValue(totalCurrentValue);
+                    scheme.setBroker_code(broker_code);
+                    scheme.setEuin(euin);
+                    scheme.setAmc_name(amc_name);
+                    scheme.setAmc_code(amc_code);
+                    scheme.setScheme_amfi_short_name(scheme_amfi_short_name);
+                    ////System.out.println("registrar = " + registrar);
+
+                    if(StringHelper.isNotEmpty(registrar) && registrar.equalsIgnoreCase("CAMS"))
+                    {
+                        InvestorMasterCamsDto camsScheme = null;
+                        if(camsList != null && camsList.size() > 0)
+                        {
+                            String folio_no1 = folio_no;
+                            String scheme_code1 = scheme_code;
+                            camsScheme = camsList.stream().filter(x -> x.getFoliochk().equalsIgnoreCase(folio_no1) && x.getProduct().equalsIgnoreCase(scheme_code1)).findAny().orElse(null);
+                        }
+                        ////System.out.println("camsScheme = " + camsScheme);
+                        if(camsScheme != null)
+                        {
+                            String holding = camsScheme.getHolding_na();
+                            String joint1_pan = camsScheme.getJoint1_pan();
+                            String joint2_pan = camsScheme.getJoint2_pan();
+                            String joint1_name = camsScheme.getJnt_name1();
+                            String joint2_name = camsScheme.getJnt_name2();
+                            String demat = camsScheme.getDemat();
+                            //String dp_id = camsScheme.getDp_id();
+                            String nominee1_name = camsScheme.getNom_name();
+                            String nominee1_relation = camsScheme.getRelation();
+                            String nominee1_percentage = String.valueOf(camsScheme.getNom_percen());
+                            String nominee2_name = camsScheme.getNom2_name();
+                            String nominee2_relation = camsScheme.getNom2_relat();
+                            String nominee2_percentage = String.valueOf(camsScheme.getNom2_perce());
+                            String nominee3_name = camsScheme.getNom3_name();
+                            String nominee3_relation = camsScheme.getNom3_relat();
+                            String nominee3_percentage = String.valueOf(camsScheme.getNom3_perce());
+                            String bank_acc_type = camsScheme.getAc_type();
+                            String tax_status = camsScheme.getTax_status();
+
+                            if(holding == null){holding = "";}
+                            if(joint1_pan == null){joint1_pan = "";}
+                            if(joint2_pan == null){joint2_pan = "";}
+                            if(joint1_name == null){joint1_name = "";}
+                            if(joint2_name == null){joint2_name = "";}
+                            if(demat == null){demat = "";}
+                            if(nominee1_name == null){nominee1_name = "";}
+                            if(nominee1_relation == null){nominee1_relation = "";}
+                            if(nominee2_name == null){nominee2_name = "";}
+                            if(nominee2_relation == null){nominee2_relation = "";}
+                            if(nominee3_name == null){nominee3_name = "";}
+                            if(nominee3_relation == null){nominee3_relation = "";}
+                            if(bank_acc_type == null){bank_acc_type = "";}
+
+
+                            scheme.setHolding_nature(holding);
+                            scheme.setJoint1_pan(joint1_pan);
+                            scheme.setJoint2_pan(joint2_pan);
+                            scheme.setJoint1_name(joint1_name);
+                            scheme.setJoint2_name(joint2_name);
+                            if(demat.equalsIgnoreCase("Y")){
+                                scheme.setIsDeamtAccount(true);
+                            }else{
+                                scheme.setIsDeamtAccount(false);
+                            }
+                            scheme.setNominee1_name(nominee1_name);
+                            scheme.setNominee1_relation(nominee1_relation);
+                            scheme.setNominee1_percentage(nominee1_percentage);
+                            scheme.setNominee2_name(nominee2_name);
+                            scheme.setNominee2_relation(nominee2_relation);
+                            scheme.setNominee2_percentage(nominee2_percentage);
+                            scheme.setNominee3_name(nominee3_name);
+                            scheme.setNominee3_relation(nominee3_relation);
+                            scheme.setNominee3_percentage(nominee3_percentage);
+                            scheme.setTax_status(tax_status);
+                            if(bank_acc_type.equalsIgnoreCase("NRE")) {
+                                scheme.setTax_status_code("21");
+                            }else if(bank_acc_type.equalsIgnoreCase("NRO") && tax_status.contains("OCI"))
+                            {
+                                scheme.setTax_status_code("62");
+                            }else if(bank_acc_type.equalsIgnoreCase("NRO"))
+                            {
+                                scheme.setTax_status_code("24");
+                            }else
+                            {
+                                scheme.setTax_status_code("");
+                            }
+                        }else
+                        {
+                            scheme.setHolding_nature("");
+                            scheme.setJoint1_pan("");
+                            scheme.setJoint2_pan("");
+                            scheme.setJoint1_name("");
+                            scheme.setJoint2_name("");
+                            scheme.setIsDeamtAccount(false);
+                            scheme.setNominee1_name("");
+                            scheme.setNominee1_relation("");
+                            scheme.setNominee1_percentage("");
+                            scheme.setNominee2_name("");
+                            scheme.setNominee2_relation("");
+                            scheme.setNominee2_percentage("");
+                            scheme.setNominee3_name("");
+                            scheme.setNominee3_relation("");
+                            scheme.setNominee3_percentage("");
+                            scheme.setTax_status_code("");
+
+                        }
+                    }
+                    if(StringHelper.isNotEmpty(registrar) && registrar.equalsIgnoreCase("KARVY"))
+                    {
+                        InvestorMasterKarvyDto karvyScheme = null;
+                        if(karvyList != null && karvyList.size() > 0)
+                        {
+                            String folio_no1 = folio_no;
+                            String scheme_code1 = scheme_code;
+                            karvyScheme = karvyList.stream().filter(x -> x.getFolio().equalsIgnoreCase(folio_no1) && x.getProduct_code().equalsIgnoreCase(scheme_code1)).findAny().orElse(null);
+                        }
+
+                        if(karvyScheme != null)
+                        {
+                            String holding = karvyScheme.getMode_of_holding();
+                            String pan2 = karvyScheme.getPan2();
+                            String pan3 = karvyScheme.getPan3();
+                            String jnt_name1 = karvyScheme.getJoint_name1();
+                            String jnt_name2 = karvyScheme.getJoint_name2();
+                            String dp_id = karvyScheme.getDp_id();
+                            String nominee1_name = karvyScheme.getNominee();
+                            String nominee1_relation = karvyScheme.getNominee_rel();
+                            String nominee1_percentage = karvyScheme.getNominee_ra5();
+                            String nominee2_name = karvyScheme.getNominee2();
+                            String nominee2_relation = karvyScheme.getNominee2_r3();
+                            String nominee2_percentage = karvyScheme.getNominee2_r6();
+                            String nominee3_name = karvyScheme.getNominee3();
+                            String nominee3_relation = karvyScheme.getNominee3_r4();
+                            String nominee3_percentage = karvyScheme.getNominee3_r7();
+                            String bank_acc_type = karvyScheme.getAccount_type();
+                            String tax_status = karvyScheme.getTax_status();
+                            String category_d1 = karvyScheme.getCategory_d1();
+
+                            if(holding == null){holding = "";}
+                            if(pan2 == null){pan2 = "";}
+                            if(pan3 == null){pan3 = "";}
+                            if(jnt_name1 == null){jnt_name1 = "";}
+                            if(jnt_name2 == null){jnt_name2 = "";}
+                            if(nominee1_name == null){nominee1_name = "";}
+                            if(nominee1_relation == null){nominee1_relation = "";}
+                            if(nominee1_percentage == null){nominee1_percentage = "";}
+                            if(nominee2_name == null){nominee2_name = "";}
+                            if(nominee2_relation == null){nominee2_relation = "";}
+                            if(nominee2_percentage == null){nominee2_percentage = "";}
+                            if(nominee3_name == null){nominee3_name = "";}
+                            if(nominee3_relation == null){nominee3_relation = "";}
+                            if(nominee3_percentage == null){nominee3_percentage = "";}
+                            if(dp_id == null || dp_id.equalsIgnoreCase("NOT PROVIDED")){dp_id = "";}
+                            if(bank_acc_type == null){bank_acc_type = "";}
+
+                            if(holding.equalsIgnoreCase("1"))
+                            {
+                                holding = "SI";
+                            }else if(holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J"))
+                            {
+                                holding = "JO";
+                            }else if(holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5"))
+                            {
+                                holding = "ES";
+                            }else if(holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7"))
+                            {
+                                holding = "AS";
+                            }else{
+                                holding = "";
+                            }
+
+                            if(holding == null || holding.isEmpty())
+                            {
+                                String holding_des = karvyScheme.getMode_of_holding_description();
+
+                                if(holding_des.equalsIgnoreCase("SINGLE") || holding_des.equalsIgnoreCase("SINGLY"))
+                                {
+                                    holding = "SI";
+                                }else if(holding_des.equalsIgnoreCase("JOINT") || holding_des.equalsIgnoreCase("JOINTLY"))
+                                {
+                                    holding = "JO";
+                                }else if(holding.equalsIgnoreCase("EITHER OR SURVIVOR"))
+                                {
+                                    holding = "ES";
+                                }else if(holding_des.equalsIgnoreCase("ANYONE OR SURVIVOR"))
+                                {
+                                    holding = "AS";
+                                }
+                            }
+
+                            scheme.setHolding_nature(holding);
+                            scheme.setJoint1_pan(pan2);
+                            scheme.setJoint2_pan(pan3);
+                            scheme.setJoint1_name(jnt_name1);
+                            scheme.setJoint2_name(jnt_name2);
+                            if(!dp_id.isEmpty()){
+                                scheme.setIsDeamtAccount(true);
+                            }else{
+                                scheme.setIsDeamtAccount(false);
+                            }
+                            scheme.setNominee1_name(nominee1_name);
+                            scheme.setNominee1_relation(nominee1_relation);
+                            scheme.setNominee1_percentage(nominee1_percentage);
+                            scheme.setNominee2_name(nominee2_name);
+                            scheme.setNominee2_relation(nominee2_relation);
+                            scheme.setNominee2_percentage(nominee2_percentage);
+                            scheme.setNominee3_name(nominee3_name);
+                            scheme.setNominee3_relation(nominee3_relation);
+                            scheme.setNominee3_percentage(nominee3_percentage);
+                            scheme.setTax_status(tax_status);
+                            if(bank_acc_type.equalsIgnoreCase("NRE"))
+                            {
+                                scheme.setTax_status_code("21");
+                            }else if(bank_acc_type.equalsIgnoreCase("NRE") && category_d1.contains("NRI"))
+                            {
+                                scheme.setTax_status_code("62");
+                            }else if(bank_acc_type.equalsIgnoreCase("NRO"))
+                            {
+                                scheme.setTax_status_code("24");
+                            }else
+                            {
+                                scheme.setTax_status_code("");
+                            }
+                        }else
+                        {
+                            scheme.setHolding_nature("");
+                            scheme.setJoint1_pan("");
+                            scheme.setJoint2_pan("");
+                            scheme.setJoint1_name("");
+                            scheme.setJoint2_name("");
+                            scheme.setIsDeamtAccount(false);
+                            scheme.setNominee1_name("");
+                            scheme.setNominee1_relation("");
+                            scheme.setNominee1_percentage("");
+                            scheme.setNominee2_name("");
+                            scheme.setNominee2_relation("");
+                            scheme.setNominee2_percentage("");
+                            scheme.setNominee3_name("");
+                            scheme.setNominee3_relation("");
+                            scheme.setNominee3_percentage("");
+                            scheme.setTax_status_code("");
+
+                        }
+                    }
+
+
+                    if(!userTaxStatusCode.equalsIgnoreCase("01")
+                            && !userTaxStatusCode.equalsIgnoreCase("21")
+                            && !userTaxStatusCode.equalsIgnoreCase("24")
+                            && !userTaxStatusCode.equalsIgnoreCase("61")
+                            && !userTaxStatusCode.equalsIgnoreCase("62"))
+                    {
+                        if(scheme.getBroker_code().equalsIgnoreCase(userBrokerCode))
+                        {
+                            master_list.add(scheme);
+                        }
+                    }
+                    else if(userTaxStatusCode.equalsIgnoreCase("21")
+                            || userTaxStatusCode.equalsIgnoreCase("24")
+                            || userTaxStatusCode.equalsIgnoreCase("61")
+                            || userTaxStatusCode.equalsIgnoreCase("62"))
+                    {
+                        if(scheme.getBroker_code().equalsIgnoreCase(userBrokerCode) && scheme.getTax_status_code().equalsIgnoreCase(userTaxStatusCode) && (scheme.getHolding_nature().equalsIgnoreCase(userHoldingNature) || ((scheme.getHolding_nature().equalsIgnoreCase("AS") && userHoldingNature.equalsIgnoreCase("ES")) || (scheme.getHolding_nature().equalsIgnoreCase("ES") && userHoldingNature.equalsIgnoreCase("AS")))) && scheme.getJoint1_pan().equalsIgnoreCase(jointHolderpan1) && scheme.getJoint2_pan().equalsIgnoreCase(jointHolderpan2))
+                        {
+                            System.out.println("entered second");
+                            master_list.add(scheme);
+                        }
+                    }
+                    else
+                    {
+                        if(scheme.getBroker_code().equalsIgnoreCase(userBrokerCode) && (scheme.getHolding_nature().equalsIgnoreCase(userHoldingNature) || ((scheme.getHolding_nature().equalsIgnoreCase("AS") && userHoldingNature.equalsIgnoreCase("ES")) || (scheme.getHolding_nature().equalsIgnoreCase("ES") && userHoldingNature.equalsIgnoreCase("AS")))) && scheme.getJoint1_pan().equalsIgnoreCase(jointHolderpan1) && scheme.getJoint2_pan().equalsIgnoreCase(jointHolderpan2))
+                        {
+                            System.out.println("entered");
+                            master_list.add(scheme);
+                        }
+                    }
+                }
+            }
+//            if (master_list.size() > 0)
+//            {
+//                Collections.sort(master_list, new Comparator<InvestorSchemeWisePortfolioResponse>()
+//                {
+//                    @Override
+//                    public int compare(final InvestorSchemeWisePortfolioResponse object1, final InvestorSchemeWisePortfolioResponse object2) {
+//                        return object1.getScheme().compareTo(object2.getScheme());
+//                    }
+//                });
+//            }
+
+            if (!master_list.isEmpty()) {
+                master_list.sort(
+                        Comparator.comparing(
+                                InvestorSchemeWisePortfolioResponse::getScheme,
+                                Comparator.nullsLast(String::compareToIgnoreCase)
+                        )
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            System.err.println("Error fetching folio numbers: " + ex.getMessage());
+        }
+        return master_list;
+
+    }
+
+    @GetMapping("/getSwitchSchemeByAmcOnline")
+    public ResponseEntity<?> getSwitchSchemeByAmcOnline(@RequestHeader("Authorization") String token,
+                                                        @RequestParam String schemeName)
+    {
+        try {
+            List<String> filteredScheme = nseOnlineSchemeMasterRepository.findDistinctSchemeNameByAmcCodeAndMinAmountschemeName(schemeName);
+
+            String amcname =  filteredScheme.get(0);
+            List<SchemePojo> schemeList =  new ArrayList<>();
+            List<Object[]> filteredSchemes = nseOnlineSchemeMasterRepository.findDistinctSchemeNameByAmcCodeAndMinAmount(amcname);
+
+            if (filteredSchemes != null && !filteredSchemes.isEmpty())
+            {
+                schemeList = filteredSchemes.stream().map(row ->
+                {
+                    String scheme = (String) row[0];
+                    String category = (String) row[1];
+                    String amc_code = (String) row[2];
+                    String amc_name = (String) row[3];
+                    String scheme_code = (String) row[4];
+                    String logo = amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(scheme);
+                    return new SchemePojo(scheme, category, amc_code, amc_name,scheme_code, logo);
+                }).collect(Collectors.toList());
+            }
+
+            return ResponseEntity.ok(schemeList);
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();

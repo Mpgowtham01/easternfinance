@@ -187,13 +187,19 @@ public class FeignClientUserController
 		{
 			System.out.println("aaaa = " + client_name + iin_number);
 
-			Optional<UsersOnlineRegDetails> detailsOptional = userOnlineRegDetailsRespository.findInactiveNseByIinNumberAndClientName(iin_number, client_name);
+			Optional<UsersOnlineRegDetails> key = userOnlineRegDetailsRespository.findInactiveNseByIinNumberAndClientName(iin_number, client_name);
 
-			if (detailsOptional.isPresent())
+			if (key.isPresent())
 			{
-				return ResponseEntity.ok(detailsOptional.get());
-			} else
-			{
+				UsersOnlineRegDetails userDetail = key.get();
+				List<UsersBankDetails> bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				Optional<UsersNomineeDetails> nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE");
+				List<UsersMandateDetails> mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+
+				UserDto userDto = UserMapper.mapToUserDtoMappers(userDetail, bankDetails, mandateDetails, nomineeDetails.isPresent() ? nomineeDetails.get() : null);
+				return ResponseEntity.ok(userDto);
+			}
+			else {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "No record found for the given IIN Number and Client Name."));
 			}
 		}catch (Exception ex)
@@ -267,15 +273,20 @@ public class FeignClientUserController
 	public ResponseEntity<?> getUserByIdAndClientName(@RequestParam String clientName, @RequestParam Integer userid) {
 		try
 		{
-
 			Optional<UsersOnlineRegDetails> key = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(userid,clientName);
-			if (key != null && key.isPresent()) {
 
-				return ResponseEntity.ok(key.get());
-			}
-			else
+			if (key.isPresent())
 			{
-				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 404, "status_msg", "User not found"));
+				UsersOnlineRegDetails userDetail = key.get();
+				List<UsersBankDetails> bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				Optional<UsersNomineeDetails> nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE");
+				List<UsersMandateDetails> mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+
+				UserDto userDto = UserMapper.mapToUserDtoMappers(userDetail, bankDetails, mandateDetails, nomineeDetails.isPresent() ? nomineeDetails.get() : null);
+				return ResponseEntity.ok(userDto);
+			}
+			 else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "No record found for the given IIN Number and Client Name."));
 			}
 		}
 		catch (Exception ex)

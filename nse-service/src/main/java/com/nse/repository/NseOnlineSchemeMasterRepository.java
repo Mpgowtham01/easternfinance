@@ -95,6 +95,22 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
 
     @Query("FROM NseOnlineSchemeMaster n " +
             "WHERE n.schemeName = :schemeName " +
+            "AND n.divReinvestFlag = :reinvestTag " +
+            "AND n.amcActiveFlag = 'Y' " +
+            "AND n.planType = 'NORMAL' " +
+            "AND n.purchaseTransactionMode IN ('P', 'DP') " +
+            "AND n.schemeCode NOT LIKE '%-L1' " +
+            "AND n.schemeCode NOT LIKE '%-L0' " +
+            "AND n.scheme NOT LIKE '%INSURED%'" +
+            "AND n.schemeCategory != 'ETFs'" +
+            "AND n.sipAllowed = 'Y'")
+    List<NseOnlineSchemeMaster> findBySchemeNameAndReinvestFlag(
+            @Param("schemeName") String schemeName,
+            @Param("reinvestTag") String reinvestTag
+    );
+
+    @Query("FROM NseOnlineSchemeMaster n " +
+            "WHERE n.schemeName = :schemeName " +
             "AND n.amcCode = :amcCode " +
             "AND n.divReinvestFlag = :reinvestTag " +
             "AND n.amcActiveFlag = 'Y' " +
@@ -247,13 +263,11 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
             @Param("divReinvestFlag") String divReinvestFlag);
 
     @Query("SELECT n FROM NseOnlineSchemeMaster n " +
-            "WHERE n.amcCode = :amcCode " +
-            "AND n.schemeName = :schemeName " +
+            "WHERE n.schemeName = :schemeName " +
             "AND n.scheme NOT LIKE '%INSURED%' " +
             "AND n.divReinvestFlag = :divReinvestFlag " +
             "AND n.switchAllowed = 'Y'")
     List<NseOnlineSchemeMaster> findEligibleSchemesForSwitchAndRedemptions(
-            @Param("amcCode") String amcCode,
             @Param("schemeName") String schemeName,
             @Param("divReinvestFlag") String divReinvestFlag);
 
@@ -505,6 +519,13 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
             "AND n.stpEnabled = 'Y' GROUP BY schemeAmfiCode")
     List<Object[]> findDistinctSchemeNamesForStp(
             @Param("schemeAmfiCodes") List<String> list1
+    );
+
+    @Query("SELECT n.amcCode FROM NseOnlineSchemeMaster n " +
+            "WHERE n.schemeName = :schemeName " +
+            "GROUP BY n.schemeAmfiCode")
+    List<String> findDistinctSchemeNameByAmcCodeAndMinAmountschemeName(
+            @Param("schemeName") String schemeName
     );
 
 }
