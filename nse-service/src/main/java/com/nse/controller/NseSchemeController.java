@@ -6384,7 +6384,7 @@ public class NseSchemeController {
     @GetMapping("/getStpSchemecode")
     public ResponseEntity<?> getStpSchemecode(@RequestHeader("Authorization") String token,
                                               @RequestParam String scheme,
-                                              @RequestParam String amc_code,
+                                              @RequestParam(required = false) String amc_code,
                                               @RequestParam String dividend_code)
     {
         try
@@ -6394,8 +6394,8 @@ public class NseSchemeController {
             {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSTPEnabledSchemes(amc_code,scheme,dividend_code);
-            if(list != null && list.size() > 0)
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSTPEnabledSchemes(scheme,dividend_code);
+            if(list.size() > 0)
             {
                 schemeMaster = list.get(0);
             }
@@ -6404,7 +6404,7 @@ public class NseSchemeController {
         {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

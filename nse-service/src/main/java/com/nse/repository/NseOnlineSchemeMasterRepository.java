@@ -384,15 +384,14 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
     );
 
     @Query("FROM NseOnlineSchemeMaster n " +
-            "WHERE n.amcCode = :amcCode " +
-            "AND n.schemeName = :schemeName " +
+            "WHERE n.schemeName = :schemeName " +
             "AND n.scheme NOT LIKE '%INSURED%' " +
             "AND n.stpEnabled = 'Y' " +
             "AND n.divReinvestFlag = :divReinvestFlag " +
             "AND n.amcActiveFlag = 'Y' " +
+            "AND n.settlementType not in ('L1','L0') " +
             "AND n.planType = 'NORMAL'")
     List<NseOnlineSchemeMaster> findSTPEnabledSchemes(
-            @Param("amcCode") String amcCode,
             @Param("schemeName") String schemeName,
             @Param("divReinvestFlag") String divReinvestFlag
     );

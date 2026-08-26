@@ -315,7 +315,7 @@ public class CartService {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
 
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSTPEnabledSchemes("",scheme,dividend_code);
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSTPEnabledSchemes(scheme,dividend_code);
 
             if(list != null && list.size() > 0)
             {
@@ -340,7 +340,7 @@ public class CartService {
                 scheme = URLDecoder.decode(scheme, StandardCharsets.UTF_8);
             }
 
-            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSTPEnabledSchemes("",scheme,dividend_code);
+            List<NseOnlineSchemeMaster> list = nseOnlineSchemeMasterRepository.findSTPEnabledSchemes(scheme,dividend_code);
 
             if(list != null && list.size() > 0)
             {
