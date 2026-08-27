@@ -5269,29 +5269,27 @@ public class NseTransactionController {
     public ResponseEntity<?> cancelSipStpSwp(
             HttpServletRequest request,
             @RequestParam(required = false) String option,
-            @RequestParam(required = false) String auto_trxn_no,
             @RequestParam(required = false) String iin_number,
             @RequestParam(required = false) String scheme_name,
-            @RequestParam(required = false) String amount_units,
             @RequestParam(required = false) String folio_no,
             @RequestParam(required = false) String scheme_code,
             @RequestParam(required = false) String unique_number,
-            @RequestParam(required = false) String trxn_no,
             @RequestParam(required = false) String sip_reg_no,
             @RequestParam(required = false) String cancel_reason,
             @RequestParam(required = false) String other_reason,
-            @RequestParam(required = false) String cancel_reason_text,
             @RequestParam(required = false) String sip_cancel_date,
             @RequestParam(required = false) String source,
+            @RequestParam(required = false) String broker_code,
+            @RequestParam(required = false) String euin,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
             @RequestHeader("Authorization") String token)
     {
 
         String ipAddr = "";
-        List<CartDto> cartList = null;
-        long currentTimeMillis = System.currentTimeMillis();
         String name = "";
         String pan = "";
-        String mobile = "";
         String client_name = "";
         try
         {
@@ -5299,27 +5297,32 @@ public class NseTransactionController {
             System.out.println("User ID from token: " + userid);
 
             option = NseUtils.checkParem(option);
-            auto_trxn_no = NseUtils.checkParem(auto_trxn_no);
             iin_number = NseUtils.checkParem(iin_number);
             scheme_name = NseUtils.checkParem(scheme_name);
-            amount_units = NseUtils.checkParem(amount_units);
             folio_no = NseUtils.checkParem(folio_no);
             scheme_code = NseUtils.checkParem(scheme_code);
-            unique_number = NseUtils.checkParem(unique_number);
-            trxn_no = NseUtils.checkParem(trxn_no);
+            //unique_number = NseUtils.checkParem(unique_number);
             sip_reg_no = NseUtils.checkParem(sip_reg_no);
             cancel_reason = NseUtils.checkParem(cancel_reason);
             other_reason = NseUtils.checkParem(other_reason);
-            cancel_reason_text = NseUtils.checkParem(cancel_reason_text);
             sip_cancel_date = NseUtils.checkParem(sip_cancel_date);
             source = NseUtils.checkParem(source);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
 
-            if (auto_trxn_no.isEmpty() || unique_number.isEmpty() || iin_number.isEmpty())
+            if (sip_reg_no.isEmpty() || iin_number.isEmpty())
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Transaction number or IIN Number is empty."));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "SIP Reg number or IIN Number is empty."));
             }
 
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            UserDto user =null;
+
+            try {
+                user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
 
             if (user == null)
             {
@@ -5328,76 +5331,27 @@ public class NseTransactionController {
 
             name = user.getName();
             pan = user.getPan();
-            mobile = user.getMobile();
             client_name = user.getClient_name();
 
-            String login_userid = userid;
             String login_name = name;
-            String login_mobile = mobile;
             String selected_name = "";
-
-            SimpleDateFormat df1 = new SimpleDateFormat("dd-MMM-yyyy");
-            String cease_req_date = df1.format(new Date());
-
-            NseTransactions transaction = null;
-            Optional<NseTransactions> transactionOpt = nseTransactionRepository.getNseTransactionDetails(unique_number, client_name);
-
-            if(transactionOpt.isPresent())
-            {
-                transaction = transactionOpt.get();
-            }else
-            {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "SIP Registration Details not available."));
-            }
-
-            Date tranDate = transaction.getTransaction_date();
-            String broker_code = transaction.getBroker_code();
-            String euin_code = transaction.getEuin_number();
-            if (broker_code == null) {
-                broker_code = "";
-            }
-            if (euin_code == null) {
-                euin_code = "";
-            }
-
-            BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
-            String broker_code1 = nsekey.getBrokerCode();
-
-            String host = nsekey.getDomain_url();
-            String appln_id = "";
-            String password = "";
-            String euin = "";
-
-            if(broker_code1 == null){broker_code1 = "";};
-
-
-
-                broker_code = broker_code1;
-                appln_id = nsekey.getNse_appln_id();
-                password = nsekey.getNse_password();
-                if (!euin_code.isEmpty()) {
-                    euin = euin_code;
-                } else {
-                    euin = nsekey.getEuin();
-                }
-
-            euin = euin.split(",")[0];
-
-            String scheme_amfi = transaction.getScheme_name();
-            UsersPortfolioSchemewiseDto usersPortfolioSchemewiseDto = userServiceClient.getRTADetails(scheme_amfi,token);
-            String registrar = usersPortfolioSchemewiseDto.getRegistrar();
-
-            if (!registrar.isEmpty() && registrar.equalsIgnoreCase("karvy"))
-            {
-                cancel_reason = cancel_reason.replace("SC", "");
-            }
 
             JSONArray requestDetailsArray = new JSONArray();
             JSONObject requestDetails = new JSONObject();
             requestDetails.put("client_code", iin_number);
-            requestDetails.put("xsip_reg_no", sip_reg_no);
+
+            if(option.equalsIgnoreCase("SIP")){
+                requestDetails.put("xsip_reg_no", sip_reg_no);
+
+            }else if(option.equalsIgnoreCase("STP")){
+                requestDetails.put("stp_reg_no", sip_reg_no);
+
+            }else if(option.equalsIgnoreCase("SWP")){
+                requestDetails.put("swp_reg_no", sip_reg_no);
+            }
 
             if(option.equalsIgnoreCase("DAILY SIP")) {
+                requestDetails.put("xsip_reg_no", sip_reg_no);
                 requestDetails.put("xsip_cancel_date", sip_cancel_date);
             }
 
@@ -5435,57 +5389,57 @@ public class NseTransactionController {
 
             JSONObject requestBody = new JSONObject();
             requestBody.put("can_data", requestDetailsArray);
-            System.out.println("requestBody = " + requestBody.toString());
+            System.out.println("requestBody = " + requestBody);
 
             HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
 
-            String cancelation_api_url = "";
-            if (option.equalsIgnoreCase("SIP")) {
+            Map<String, String> apiMap = Map.of(
+                    "SIP", NseApiUrls.cancelSip,
+                    "STP", NseApiUrls.cancelStp,
+                    "SWP", NseApiUrls.cancelSwp,
+                    "DAILY SIP", NseApiUrls.cacleDailySip
+            );
 
-                cancelation_api_url = NseApiUrls.cancelSip;
+            String cancellation_api_url = apiMap.get(option.toUpperCase(Locale.ROOT));
 
-            } else if (option.equalsIgnoreCase("STP")) {
-
-                cancelation_api_url = NseApiUrls.cancelStp;
-
-            } else if (option.equalsIgnoreCase("SWP")) {
-
-                cancelation_api_url = NseApiUrls.cancelStp;
-
-            }else if(option.equalsIgnoreCase("DAILY SIP")) {
-
-                cancelation_api_url = NseApiUrls.cacleDailySip;
+            if (cancellation_api_url == null) {
+                throw new IllegalArgumentException("Invalid option: " + option);
             }
+
             String can_status = "";
             String can_remark = "";
 
-            try {
-                ResponseEntity<String> mandateResult = RestTemplateFactory.createRestTemplate()
-                        .postForEntity(cancelation_api_url, entity, String.class);
+            try
+            {
+                System.out.println("called cancellation_api_url: " + cancellation_api_url);
+                ResponseEntity<String> mandateResult = RestTemplateFactory.createRestTemplate().postForEntity(cancellation_api_url, entity, String.class);
                 String statusCode = mandateResult.getStatusCode().toString();
-                String responseBody = mandateResult.getBody().toString();
+                String responseBody = mandateResult.getBody();
 
                 System.out.println("statusCode = " + statusCode);
                 System.out.println("responseBody = " + responseBody);
 
+                System.out.println("cancelSipStpSwp::responseBody: " + responseBody);
+
                 JSONObject jsonObject = new JSONObject(responseBody);
 
-                if (jsonObject.has("reg_data")) {
-                    JSONArray regDataArray = jsonObject.getJSONArray("reg_data");
+                if (jsonObject.has("can_data"))
+                {
+                    JSONArray regDataArray = jsonObject.getJSONArray("can_data");
 
-                    if (regDataArray.length() > 0) {
-
+                    if (!regDataArray.isEmpty())
+                    {
                         JSONObject regData = regDataArray.getJSONObject(0);
-
                         can_status = regData.optString("can_status");
                         can_remark = regData.optString("can_remark");
                     }
                 }
+
                 NseTransactions nsetrans = new NseTransactions();
-                nsetrans.setUrl(cancelation_api_url);
+                nsetrans.setUrl(cancellation_api_url);
                 nsetrans.setNse_request(requestBody.toString());
-                nsetrans.setNse_response(responseBody.toString());
-                nsetrans.setReturn_msg(can_remark);
+                nsetrans.setNse_response(responseBody);
+                nsetrans.setReturn_msg(can_status);
                 nsetrans.setService_return_code(statusCode);
                 nsetrans.setService_msg(can_remark);
                 nsetrans.setReg_id(sip_reg_no);
@@ -5497,9 +5451,9 @@ public class NseTransactionController {
                 nsetrans.setSubbroker_name(user.getSubbroker_name());
                 nsetrans.setClient_name(client_name);
                 nsetrans.setIin_number(iin_number);
-                nsetrans.setScheme_name("");
-                nsetrans.setScheme_code("");
-                nsetrans.setFolio_no("");
+                nsetrans.setScheme_name(scheme_name);
+                nsetrans.setScheme_code(scheme_code);
+                nsetrans.setFolio_no(folio_no);
                 nsetrans.setAmount_units("");
                 nsetrans.setFrequency("");
                 nsetrans.setPeriod_day("");
@@ -5508,7 +5462,7 @@ public class NseTransactionController {
                 nsetrans.setPayment_ref_no("");
                 nsetrans.setUnique_number("");
                 nsetrans.setAuto_trxn_no("");
-                nsetrans.setSip_reg_no("");
+                nsetrans.setSip_reg_no(sip_reg_no);
                 nsetrans.setPayment_mode("");
                 nsetrans.setTopup_amount(0.0);
                 nsetrans.setBank_acc_no("");
@@ -5540,14 +5494,17 @@ public class NseTransactionController {
                 nsetrans.setFund_trans_to_amc("");
                 nsetrans.setRefund_status("");
                 nsetrans.setRefund_amount("");
+//                nsetrans.setIp_address(ip_address);
+//                nsetrans.setOrigin_user_id(origin_user_id);
+//                nsetrans.setOrigin_first_name(origin_first_name);
                 nseTransactionService.save(nsetrans);
 
                 ipAddr = NseUtils.getIpAddr(request);
                 if (ipAddr == null) {ipAddr = "";}
 
-                String investor = selected_name != null && StringHelper.isNotEmpty(selected_name) ? " for " + selected_name : "";
+                String investor = StringHelper.isNotEmpty(selected_name) ? " for " + selected_name : "";
                 String logmsg = login_name + " did " + option + " cancelation " + investor + ". Details:";
-                logmsg += "trxn_no: " + trxn_no + ",";
+                logmsg += "sip_reg_no: " + sip_reg_no + ",";
                 logmsg += "scheme_name: " + scheme_name + ",";
                 logmsg += "folio_no: " + folio_no;
 
@@ -5571,23 +5528,24 @@ public class NseTransactionController {
                 log.setClientName(client_name);
                 nseLogRepository.save(log);
 
-                if (can_status.equalsIgnoreCase("REG_SUCCESS"))
+                if (can_status.equalsIgnoreCase("CAN_SUCCESS"))
                 {
-                    return NseUtils.transactionResponse(HttpStatus.OK, option + " Cancellation done Successfully " + sip_reg_no, new HashMap<>());
+                    return ResponseEntity.status(HttpStatus.OK).body(new CommonResponse(HttpStatus.OK.value(), can_status, option + " Cancellation done Successfully " + sip_reg_no));
+
                 } else
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "can_remark"));
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), can_status, can_remark));
                 }
             } catch (Exception ex)
             {
                 ex.printStackTrace();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
     }
 
@@ -5664,15 +5622,16 @@ public class NseTransactionController {
             @RequestParam(required = false) String unique_number,
             @RequestParam(required = false) String effective_date,
             @RequestParam(required = false) String source,
+            @RequestParam(required = false) String folio_no,
+            @RequestParam(required = false) String scheme_name,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
             @RequestHeader("Authorization") String token)
     {
 
-        String ipAddr = "";
-        List<CartDto> cartList = null;
-        long currentTimeMillis = System.currentTimeMillis();
         String name = "";
         String pan = "";
-        String mobile = "";
         String client_name = "";
         try
         {
@@ -5683,83 +5642,50 @@ public class NseTransactionController {
             unique_number = NseUtils.checkParem(unique_number);
             effective_date = NseUtils.checkParem(effective_date);
             source = NseUtils.checkParem(source);
+            folio_no = NseUtils.checkParem(folio_no);
+            scheme_name = NseUtils.checkParem(scheme_name);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
 
             if(effective_date.isEmpty() || unique_number.isEmpty() || iin_number.isEmpty())
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Transaction number or IIN Number is empty."));
+                return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, "Transaction number or IIN Number is empty.", new HashMap<>());
             }
 
-            if(effective_date.isEmpty() || Integer.parseInt(effective_date) <= 0)
-            {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Format : DD/MM/YYYY. A future date. effective date < next installment date."));
-            }
+            UserDto user =null;
 
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            try {
+                user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
 
             if (user == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+                return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, "User not found", new HashMap<>());
             }
 
             name = user.getName();
             pan = user.getPan();
-            mobile = user.getMobile();
             client_name = user.getClient_name();
 
-            String login_userid = userid;
-            String login_name = name;
-            String login_mobile = mobile;
-            String selected_name = "";
-
-            String appln_id = "";
             String broker_code = "";
-            String password = "";
             String euin = "";
-            String host = "";
 
             BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
-            appln_id = nsekey.getNse_appln_id();
             broker_code = nsekey.getBrokerCode();
-            password = nsekey.getNse_password();
             euin = nsekey.getEuin();
             euin = euin.split(",")[0];
-            host = nsekey.getDomain_url();
 
-            SimpleDateFormat df1 = new SimpleDateFormat("dd-MMM-yyyy");
-            String cease_req_date = df1.format(new Date());
-
-            NseTransactions transaction = null;
-            Optional<NseTransactions> transactionOpt = nseTransactionRepository.getNseTransactionDetails(unique_number, client_name);
-
-            if(transactionOpt.isPresent())
-            {
-                transaction = transactionOpt.get();
-            }else
-            {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "SIP Registration Details not available."));
-            }
-
-            Date tranDate = transaction.getTransaction_date();
-            String sip_reg_number = transaction.getSip_reg_no();
-
-            SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
-            Calendar cal = Calendar.getInstance();
-            Date today = cal.getTime();
-            cal.setTime(tranDate);
-            cal.add(Calendar.DATE, 30);
-            Date endDate = cal.getTime();
-            if(endDate.compareTo(today) > 0)
-            {
-                endDate = today;
-            }
-
-            String from_date = sdf.format(tranDate);
-            String end_date = sdf.format(endDate);
+            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+            SimpleDateFormat sdf2 = new SimpleDateFormat("dd/MM/yyyy");
+            effective_date = sdf2.format(sdf.parse(effective_date));
 
             JSONArray regDetailsArray = new JSONArray();
             JSONObject regObject = new JSONObject();
 
-            regObject.put("sip_reg_no", sip_reg_number);
+            regObject.put("sip_reg_no", unique_number);
             regObject.put("effective_date", effective_date);
             regObject.put("pause_flag", "Y");
             regObject.put("remarks", "");
@@ -5781,7 +5707,6 @@ public class NseTransactionController {
             String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
 
             String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("memberId", nse_memberid);
@@ -5793,48 +5718,44 @@ public class NseTransactionController {
             headers.set("Accept-Encoding", "gzip");
             HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
 
-            System.out.println("requestBody: " + requestBody.toString());
+            System.out.println("requestBody: " + requestBody);
 
             String xsipPauseService_url= NseApiUrls.xsipPauseService_url;
 
             System.out.println("xsipPauseService_url: " + xsipPauseService_url);
 
-            String reg_id = "";
-            String reg_status = "";
-            String reg_remark = "";
+            String pause_status = "";
+            String pause_remark = "";
 
             try
             {
                 ResponseEntity<String> result = RestTemplateFactory.createRestTemplate().postForEntity(xsipPauseService_url, entity, String.class);
                 String status_code = result.getStatusCode().toString();
-                String responseBody = result.getBody().toString();
+                String responseBody = result.getBody();
 
                 JSONObject jsonObject = new JSONObject(responseBody);
                 System.out.println("jsonObject: " + jsonObject);
-                JSONArray jsonRegArray = jsonObject.getJSONArray("reg_data");
+                JSONArray jsonRegArray = jsonObject.getJSONArray("pause_data");
 
-                System.out.println("swpRegistrationService::responseBody: " + responseBody);
+                System.out.println("pauseSip::responseBody: " + responseBody);
                 for (int i = 0; i < jsonRegArray.length(); i++)
                 {
                     JSONObject regDetail = jsonRegArray.getJSONObject(i);
+                    pause_status = regDetail.optString("pause_status");
+                    pause_remark = regDetail.optString("pause_remark");
 
-                    reg_id = regDetail.optString("reg_id");
-                    reg_status = regDetail.optString("reg_status");
-                    reg_remark = regDetail.optString("reg_remark");
-
-                    System.out.println("reg_id: " + reg_id);
-                    System.out.println("reg_status" + reg_status);
-                    System.out.println("reg_remark: " + reg_remark);
+                    System.out.println("pause_status" + pause_status);
+                    System.out.println("pause_remark: " + pause_remark);
                 }
 
                 NseTransactions nsetrans = new NseTransactions();
                 nsetrans.setUrl(xsipPauseService_url);
                 nsetrans.setNse_request(requestBody.toString());
-                nsetrans.setNse_response(responseBody.toString());
-                nsetrans.setReturn_msg(reg_status);
+                nsetrans.setNse_response(responseBody);
+                nsetrans.setReturn_msg(pause_status);
                 nsetrans.setService_return_code(status_code);
-                nsetrans.setService_msg(reg_status);
-                nsetrans.setReg_id(reg_id);
+                nsetrans.setService_msg(pause_status);
+                nsetrans.setReg_id("");
                 nsetrans.setPayment_link("");
                 nsetrans.setPan(pan);
                 nsetrans.setName(name);
@@ -5843,9 +5764,9 @@ public class NseTransactionController {
                 nsetrans.setSubbroker_name(user.getSubbroker_name());
                 nsetrans.setClient_name(client_name);
                 nsetrans.setIin_number(iin_number);
-                nsetrans.setScheme_name("");
-                nsetrans.setScheme_code("");
-                nsetrans.setFolio_no("");
+                nsetrans.setScheme_name(scheme_name);
+                nsetrans.setScheme_code(status_code);
+                nsetrans.setFolio_no(folio_no);
                 nsetrans.setAmount_units("");
                 nsetrans.setFrequency("");
                 nsetrans.setPeriod_day("");
@@ -5854,19 +5775,19 @@ public class NseTransactionController {
                 nsetrans.setPayment_ref_no("");
                 nsetrans.setUnique_number("");
                 nsetrans.setAuto_trxn_no("");
-                nsetrans.setSip_reg_no("");
+                nsetrans.setSip_reg_no(unique_number);
                 nsetrans.setPayment_mode("");
                 nsetrans.setTopup_amount(0.0);
                 nsetrans.setBank_acc_no("");
-                nsetrans.setTransaction_number(reg_id);
-                nsetrans.setApplication_number("");
+                nsetrans.setTransaction_number("");
+                nsetrans.setApplication_number(unique_number);
                 nsetrans.setTo_scheme_code("");
                 nsetrans.setTo_scheme_name("");
-                nsetrans.setTransaction_type("SIP Topup Registration Service");
+                nsetrans.setTransaction_type("Pause SIP");
                 nsetrans.setTransaction_status("");
                 nsetrans.setPayment_status("");
                 nsetrans.setActive_ceased_status("");
-                nsetrans.setRemarks(reg_remark);
+                nsetrans.setRemarks(pause_remark);
                 nsetrans.setMandate_id("");
                 nsetrans.setMandate_status("");
                 nsetrans.setEmandate_auth_flag("");
@@ -5885,33 +5806,33 @@ public class NseTransactionController {
                 nsetrans.setFund_trans_to_amc("");
                 nsetrans.setRefund_status("");
                 nsetrans.setRefund_amount("");
+//                nsetrans.setIp_address(ip_address);
+//                nsetrans.setOrigin_user_id(origin_user_id);
+//                nsetrans.setOrigin_first_name(origin_first_name);
                 nseTransactionService.save(nsetrans);
-            }
-            catch (HttpClientErrorException | HttpServerErrorException ex) {
 
-                // For 4xx and 5xx responses
-                System.out.println("swpRegistrationService::Status Code: " + ex.getStatusCode());
-                System.out.println("swpRegistrationService::Response Body: " + ex.getResponseBodyAsString());
-            } catch (Exception ex) {
-
-                // Other exceptions (e.g., connection issues)
-                ex.printStackTrace();
-            }
-
-            ipAddr = NseUtils.getIpAddr(request);
-            if(ipAddr == null){ipAddr="";}
-
-            if(reg_status.equalsIgnoreCase("TRXN SUCCESS"))
+            }catch (HttpClientErrorException | HttpServerErrorException ex)
             {
-                return NseUtils.transactionResponse(HttpStatus.OK, reg_remark + " Your Order is successfully triggered...! orderID: " + reg_id, new HashMap<>());
+                System.out.println("pauseSip::Status Code: " + ex.getStatusCode());
+                System.out.println("pauseSip::Response Body: " + ex.getResponseBodyAsString());
+                return NseUtils.transactionResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), new HashMap<>());
+
+            } catch (Exception ex)
+            {
+                ex.printStackTrace();
+                return NseUtils.transactionResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), new HashMap<>());
+            }
+            if(pause_status.equalsIgnoreCase("SUCCESS"))
+            {
+                return NseUtils.transactionResponse(HttpStatus.OK, pause_remark + " Your Order is successfully triggered...! orderID: ", new HashMap<>());
             }else{
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), reg_remark));
+                return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, pause_remark, new HashMap<>());
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
+            return NseUtils.transactionResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), new HashMap<>());
         }
     }
 
@@ -8019,5 +7940,197 @@ public class NseTransactionController {
         return NseUtils.commonResponse("please check With Admin about Status", HttpStatus.BAD_REQUEST);
     }
 
+    @PostMapping("/sipStpSwpModificationWithNse")
+    public ResponseEntity<?> sipStpSwpModificationWithNse(
+            @RequestParam String broker_code,
+            @RequestParam String iin_number,
+            @RequestParam String type,
+            @RequestParam String xsip_reg_no,
+            @RequestParam(required = false) String primary_holder_email,
+            @RequestParam(required = false) String primary_holder_mobile,
+            @RequestParam(required = false) String sub_broker_code,
+            @RequestParam(required = false) String sub_broker_arn,
+            @RequestParam(required = false) String euin_number,
+            @RequestParam(required = false) String folio_no,
+            @RequestParam(required = false) String amount,
+            @RequestParam(required = false) String trans_mode,
+            @RequestParam String source,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
+            @RequestHeader("Authorization") String token)
+    {
+        try
+        {
+            String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+
+            UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            String client_name = users.getClient_name();
+
+            iin_number = NseUtils.checkParem(iin_number);
+            xsip_reg_no = NseUtils.checkParem(xsip_reg_no);
+            amount = NseUtils.checkParem(amount);
+            primary_holder_mobile = NseUtils.checkParem(primary_holder_mobile);
+            primary_holder_email = NseUtils.checkParem(primary_holder_email);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
+            sub_broker_code = NseUtils.checkParem(sub_broker_code);
+            sub_broker_arn = NseUtils.checkParem(sub_broker_arn);
+            euin_number = NseUtils.checkParem(euin_number);
+            folio_no = NseUtils.checkParem(folio_no);
+            trans_mode = NseUtils.checkParem(trans_mode);
+
+            if(xsip_reg_no.isEmpty())
+            {
+                return NseUtils.commonResponse("xsip_reg_no is required.", HttpStatus.BAD_REQUEST);
+            }
+
+            UserDto user = userServiceClient.getUserByIdAndClientNameAndiinnumber(client_name, Integer.valueOf(userid),iin_number,token);
+            if(primary_holder_email.isEmpty())
+            {
+                primary_holder_email = NseUtils.checkParem(user.getEmail());
+            }
+
+            if(primary_holder_mobile.isEmpty())
+            {
+                primary_holder_mobile = NseUtils.checkParem(user.getMobile());
+            }
+            JSONObject modificationRequestBody = new JSONObject();
+            JSONArray modificationArr = new JSONArray();
+
+            JSONObject modificationObj = new JSONObject();
+            modificationObj.put("sys_reg_no", xsip_reg_no);
+            modificationObj.put("primary_holder_email", primary_holder_email);
+            modificationObj.put("primary_holder_mobile", primary_holder_mobile);
+            modificationObj.put("sub_broker_code", sub_broker_code);
+            modificationObj.put("sub_broker_arn", sub_broker_arn);
+            modificationObj.put("euin_number", euin_number);
+            modificationObj.put("folio_no", folio_no);
+            modificationObj.put("trans_mode", trans_mode);
+            modificationObj.put("amount", amount);
+            modificationObj.put("units", "");
+            modificationObj.put("remarks", "");
+            modificationObj.put("send_2fa", "Y");
+            modificationObj.put("send_comm", "Y");
+            modificationObj.put("filler_1", "");
+            modificationObj.put("filler_2", "");
+            modificationObj.put("member_unique_id", "");
+            modificationArr.put(modificationObj);
+
+            modificationRequestBody.put("mod_data", modificationArr);
+
+            BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
+            if(online_access == null)
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+            }
+
+            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("memberId", nse_memberid);
+            headers.set("Authorization", "Basic " + base64Encoded);
+            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "en-US");
+            headers.set("Connection", "keep-alive");
+            headers.set("Referer", "");
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+            HttpEntity<String> entity = new HttpEntity<>(modificationRequestBody.toString(), headers);
+
+            String modification_url = "";
+
+            if(type.equalsIgnoreCase("SIP"))
+            {
+                modification_url = nseUrl + "/nsemfdesk/api/v2/modification/product/XSIP_MOD";
+            }else if(type.equalsIgnoreCase("STP"))
+            {
+                modification_url = nseUrl + "/nsemfdesk/api/v2/modification/product/STP_MOD";
+            }else if(type.equalsIgnoreCase("SWP"))
+            {
+                modification_url = nseUrl + "/nsemfdesk/api/v2/modification/product/SWP_MOD";
+            }else
+            {
+                return NseUtils.commonResponse("Invalid type: " + type + ". Allowed values are SIP, STP, SWP.", HttpStatus.BAD_REQUEST);
+            }
+
+            System.out.println("modification_url: " + modification_url);
+            System.out.println("modificationRequestBody: " + modificationRequestBody);
+
+            ResponseEntity<String> result = restTemplate.postForEntity(modification_url, entity, String.class);
+            String responseBody = result.getBody();
+
+            JSONObject jsonObject = new JSONObject(responseBody);
+            System.out.println("jsonObject = " + jsonObject);
+            JSONArray jsonModArray = jsonObject.getJSONArray("mod_data");
+            System.out.println("jsonModArray = " + jsonModArray);
+            JSONObject modDetail = jsonModArray.getJSONObject(0);
+            String mod_id = modDetail.optString("sys_reg_no");
+            String mod_status = modDetail.optString("status");
+            String mod_remark = modDetail.optString("status_remarks");
+
+            System.out.println("mod_id: " + mod_id + ", mod_status: " + mod_status + ", mod_remark: " + mod_remark);
+
+            boolean mod_success = mod_status.equalsIgnoreCase("MODIFICATION_SUCCESS");
+
+            NseTransactions nsetrans = new NseTransactions();
+            nsetrans.setUrl(modification_url);
+            nsetrans.setNse_request(modificationRequestBody.toString());
+            nsetrans.setNse_response(responseBody);
+
+            if(StringHelper.isNotEmpty(mod_status) && mod_success)
+            {
+                nsetrans.setReturn_msg("Success");
+                nsetrans.setService_return_code("0");
+                nsetrans.setService_msg(mod_remark);
+            } else
+            {
+                nsetrans.setReturn_msg("Failure");
+                nsetrans.setService_return_code("1");
+                nsetrans.setService_msg(mod_remark);
+            }
+
+            nsetrans.setReg_id(mod_id);
+            nsetrans.setPan(users.getPan());
+            nsetrans.setName(users.getName());
+            nsetrans.setClient_name(client_name);
+            nsetrans.setIin_number(iin_number);
+            nsetrans.setAmount_units(amount);
+            nsetrans.setFrequency("");
+            nsetrans.setSip_reg_no(xsip_reg_no);
+            nsetrans.setTransaction_type(type + " Modification");
+            nsetrans.setTransaction_date(new Date());
+            nsetrans.setUser_id(Integer.parseInt(userid));
+            nsetrans.setRegister_source(source.equalsIgnoreCase("Mobile") ? "Mobile App" : "Website");
+            nsetrans.setBroker_code(broker_code);
+            nseTransactionService.save(nsetrans);
+
+            if(mod_success)
+            {
+                return NseUtils.commonResponse(type + " Modification Success.", HttpStatus.OK);
+            } else
+            {
+                return NseUtils.commonResponse(mod_remark, HttpStatus.BAD_REQUEST);
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException ex)
+        {
+            System.out.println("sipStpSwpModificationWithNse::Status Code: " + ex.getStatusCode());
+            System.out.println("sipStpSwpModificationWithNse::Response Body: " + ex.getResponseBodyAsString());
+            return NseUtils.commonResponse(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST);
+        } catch(Exception ex)
+        {
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     }
