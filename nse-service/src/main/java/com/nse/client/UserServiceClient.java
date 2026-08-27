@@ -488,4 +488,10 @@ public interface UserServiceClient {
     @GetMapping("/getRegisterByAmcCode")
     String getRegisterByAmcCode(@RequestParam("amc_code") String amc_code, @RequestHeader("Authorization") String token);
 
+    @GetMapping("/getMobileAppUserDetailsByOnlineId")
+    UserDto getMobileAppUserDetailsByOnlineId(@RequestParam Integer userId, @RequestHeader("Authorization") String token);
+
+        @GetMapping("/getUserByOnlineIdAndActive")
+    UserDto getUserByOnlineIdAndActive(@RequestParam Integer onlineId, @RequestParam Integer userId, @RequestHeader("Authorization") String token);
+
 }

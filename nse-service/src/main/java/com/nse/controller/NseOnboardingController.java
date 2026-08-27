@@ -1,5 +1,6 @@
 package com.nse.controller;
 
+import com.google.gson.Gson;
 import com.nse.client.UserServiceClient;
 import com.nse.config.TokenInterceptor;
 import com.nse.dto.mf.*;
@@ -14,10 +15,8 @@ import com.nse.services.LogExceptionService;
 import com.nse.services.NseLogService;
 import com.nse.services.NsePincodeService;
 import com.nse.services.NseTransactionService;
-import com.nse.utils.AESEncryptionUtilV2;
-import com.nse.utils.NseApiUrls;
-import com.nse.utils.NseUtils;
-import com.nse.utils.RestTemplateFactory;
+import com.nse.utils.*;
+import feign.FeignException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.ParseException;
@@ -99,37 +99,49 @@ public class NseOnboardingController {
             HttpServletRequest request,
             @RequestHeader("Authorization") String token,
             @RequestParam String multiple_reg,
-            @RequestParam(required = false) String source)
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
+            @RequestParam(required = false) String onlineId
+    )
     {
-        SimpleDateFormat df0 = new SimpleDateFormat("dd-MM-yyyy");
         SimpleDateFormat df1 = new SimpleDateFormat("dd/MM/yyyy");
+        SimpleDateFormat df0 = new SimpleDateFormat("dd-MM-yyyy");
         String userid = "";
         String client_name = "";
         try
         {
             userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
 
-            System.out.println("userid = " + userid);
+            if (!source.equalsIgnoreCase("mobile")
+                    && (onlineId == null || onlineId.isEmpty() || !onlineId.matches("-?\\d+")))
+            {
+                return NseUtils.commonResponse("Online Id is Not Valid", HttpStatus.BAD_REQUEST);
+            }
 
             Object userData;
 
-            if("1".equals(multiple_reg))
+            if(source.equalsIgnoreCase("Mobile"))
             {
-                userData = userServiceClient.getInactiveNseByUserIdAndClientName(client_name, Integer.valueOf(userid),token);
-            }else {
-                userData = userServiceClient.getUserById(Integer.valueOf(userid), token);
-
+                try {
+                    userData = userServiceClient.getMobileAppUserDetailsByOnlineId(Integer.valueOf(userid), token);
+                }catch (FeignException e)
+                {
+                    return FeignErrorHandler.handle(e, "User Service", "User not found");
+                }
+            }else
+            {
+                userData = userServiceClient.getUserByOnlineIdAndActive(Integer.valueOf(onlineId), Integer.valueOf(userid), token);
             }
+
             if(userData == null)
             {
                 return NseUtils.commonResponse("User not found, Please try again", HttpStatus.BAD_REQUEST);
             }
-            System.out.println("userData = " + userData);
+
             if (userData instanceof UserDto userDto)
             {
-
-                System.out.println("GENDER  = " + userDto.getNse_iin_number());
                 // Step 1: Fetch nominee state codes using nominee pincode fields
                 String nominee1_pincode = userDto.getNominee1_pincode();
                 String nominee2_pincode = userDto.getNominee2_pincode();
@@ -153,6 +165,7 @@ public class NseOnboardingController {
                     if (pin.isPresent()) userDto.setNominee3_state(pin.get().getState_code());
                 }
 
+                // Step 2: Handle relation fields
                 if (userDto.getJoint_holder_email_relation1() == null) userDto.setJoint_holder_email_relation1("");
                 if (userDto.getJoint_holder_email_relation2() == null) userDto.setJoint_holder_email_relation2("");
                 if (userDto.getJoint_holder_mobile_relation1() == null) userDto.setJoint_holder_mobile_relation1("");
@@ -188,13 +201,12 @@ public class NseOnboardingController {
                 String holding_nature = "";
                 holding_nature = userDto.getHolding_nature_code().trim();
 
-                System.out.println("Client Occupation Type: " + client_occupation_type);
                 userDto.setMobile_relation(mobile_relation);
                 userDto.setEmail_relation(email_relation);
 
                 // Step 3: Extra defaults
                 String nomination_authentication = "O";
-                String nomination_opt = StringHelper.isNotEmpty(userDto.getNominee1_name()) ? "Y" : "N";
+//                String nomination_opt = StringHelper.isNotEmpty(userDto.getNominee1_name()) ? "Y" : "N";
 
                 String primary_holder_kyc_type = "K";
                 String primary_holder_ckyc_number = "";
@@ -222,19 +234,14 @@ public class NseOnboardingController {
 
                 // Step 4: Fetch mail & host data
                 client_name = userDto.getClient_name();
-                String appln_id = "";
-                String password = "";
                 String euin = "";
-                String host = "";
-                String mail_support_name = "";
-                String mail_support_email = "";
 
                 BseNseKeyDto nsekey = null;
 
                 try
                 {
                     nsekey = userServiceClient.getByClientName(client_name,token);
-                }catch (feign.FeignException.NotFound ex)
+                }catch (FeignException.NotFound ex)
                 {
                     return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
                 }
@@ -242,13 +249,13 @@ public class NseOnboardingController {
                 JSONObject regRequestBody = null;
                 if (nsekey != null)
                 {
-                    mail_support_name = nsekey.getMail_support_name();
-                    mail_support_email = nsekey.getMail_support_email();
-                    host = nsekey.getDomain_url();
+                    //mail_support_name = nsekey.getMail_support_name();
+                    //mail_support_email = nsekey.getMail_support_email();
+                    //host = nsekey.getDomain_url();
 
                     String user_broker_code = userDto.getBroker_code();
 
-                    if(user_broker_code == null || StringHelper.isEmpty(user_broker_code))
+                    if(StringHelper.isEmpty(user_broker_code))
                     {
                         user_broker_code = nsekey.getBrokerCode();
                     }
@@ -267,26 +274,26 @@ public class NseOnboardingController {
                             userDto.setNri_country(codeOpt.get());
                         }
                     }
+                    System.out.println("userDto = " + userDto);
+                    regRequestBody = nseRegistrationMapper.buildRegistrationJson(userDto, primary_holder_kyc_type, primary_holder_ckyc_number, second_holder_kyc_type, second_holder_ckyc_number, third_holder_kyc_type, third_holder_ckyc_number, guardian_kyc_type, guardian_ckyc_number, nomination_authentication);
 
-                    regRequestBody = nseRegistrationMapper.buildRegistrationJson(userDto, primary_holder_kyc_type, primary_holder_ckyc_number, second_holder_kyc_type, second_holder_ckyc_number, third_holder_kyc_type, third_holder_ckyc_number, guardian_kyc_type, guardian_ckyc_number, nomination_opt, nomination_authentication);
-                    System.out.println("regRequestBody = " + regRequestBody);
-                    BseNseOnlineAccessDto onlineAccessDto = null;
+                    BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, user_broker_code,token);
 
-                    try
+                    if(online_access == null)
                     {
-                        onlineAccessDto = userServiceClient.getBseNseOnlineAccessByClientName(userDto.getClient_name(), userDto.getBroker_code(),token);
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+                    }
 
-                    } catch (feign.FeignException.NotFound ex)
+                    String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+                    String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+                    String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+                    String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+
+                    if(StringHelper.isEmpty(nse_userid) || StringHelper.isEmpty(nse_memberid) || StringHelper.isEmpty(nse_secret_key) || StringHelper.isEmpty(nse_license_key))
                     {
                         return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST);
                     }
-
-
-                    String nse_userid = NseUtils.trimOrEmpty(onlineAccessDto.getNse_userid());
-                    String nse_memberid = NseUtils.trimOrEmpty(onlineAccessDto.getNse_memberid());
-                    String nse_secret_key = NseUtils.trimOrEmpty(onlineAccessDto.getNse_secret_key());
-                    String nse_license_key = NseUtils.trimOrEmpty(onlineAccessDto.getNse_license_key());
-
                     String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
 
                     HttpHeaders headers = new HttpHeaders();
@@ -298,562 +305,273 @@ public class NseOnboardingController {
                     headers.set("Accept-Language", "en-US");
                     headers.set("Connection", "keep-alive");
                     headers.set("Referer", "");
-
+                    ///System.out.println("headers = " + headers);
                     RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
-
+                    ///System.out.println("regRequestBody.toString() = " + regRequestBody.toString());
                     HttpEntity<String> entity = new HttpEntity<>(regRequestBody.toString(), headers);
 
                     String requestUrl = NseApiUrls.CREATECUSTOMER;
-                    System.out.println("Request URL: " + requestUrl);
-
+                    ///System.out.println("requestUrl = " + requestUrl);
                     try
                     {
-                        ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, entity, String.class);
-
-                        String statusCode = response.getStatusCode().toString();
-                        System.out.println("Response Status Code: " + statusCode);
-                        String responseBody = response.getBody().toString();
-                        System.out.println("Response from NSE: " + responseBody);
-
-                        JSONObject jsonObject = new JSONObject(responseBody);
-                        JSONArray jsonRegArray = jsonObject.getJSONArray("reg_details");
-
-                        String reg_id = "";
-                        String reg_status = "";
-                        String reg_remark = "";
-
-                        System.out.println("sdfad" + jsonRegArray);
-
-                        for (int i = 0; i < jsonRegArray.length(); i++) {
-                            JSONObject regDetail = jsonRegArray.getJSONObject(i);
-                            reg_id = regDetail.optString("reg_id");
-                            reg_status = regDetail.optString("reg_status");
-                            reg_remark = regDetail.optString("reg_remark");
+                        ResponseEntity<String> response = null;
+                        Integer statusCodeVal = 0;
+                        String responseBody = "";
+                        try
+                        {
+                            response = RestTemplateFactory.createRestTemplate().postForEntity(requestUrl, entity, String.class);
+                            ///System.out.println("response = " + response);
+                            statusCodeVal = response.getStatusCode().value();
+                            responseBody = response.getBody();
+                        } catch (HttpClientErrorException e)
+                        {
+                            statusCodeVal = e.getStatusCode().value();
+                            responseBody = e.getResponseBodyAsString();
+                        } catch (Exception ex)
+                        {
+                            responseBody = ex.getMessage();
+                            ex.printStackTrace();
                         }
 
-                        // save transaction
-                        NseTransactions nsetrans = new NseTransactions();
-                        nsetrans.setUrl(requestUrl);
-                        nsetrans.setNse_request(regRequestBody.toString());
-                        nsetrans.setNse_response(responseBody);
-                        nsetrans.setReturn_msg(reg_status);
-                        nsetrans.setService_return_code(statusCode);
-                        nsetrans.setService_msg(reg_status);
-                        nsetrans.setReg_id(reg_id);
-                        nsetrans.setPayment_link("");
-                        nsetrans.setPan(userDto.getPan());
-                        nsetrans.setName(userDto.getName());
-                        nsetrans.setBranch(userDto.getBranch());
-                        nsetrans.setRm_name(userDto.getRm_name());
-                        nsetrans.setSubbroker_name(userDto.getSubbroker_name());
-                        nsetrans.setClient_name(client_name);
-                        nsetrans.setIin_number(userDto.getNse_iin_number());
-                        nsetrans.setScheme_name("");
-                        nsetrans.setScheme_code("");
-                        nsetrans.setFolio_no("");
-                        nsetrans.setAmount_units("");
-                        nsetrans.setFrequency("");
-                        nsetrans.setPeriod_day("");
-                        nsetrans.setUmrn_no("");
-                        nsetrans.setPurchase_type("");
-                        nsetrans.setPayment_ref_no("");
-                        nsetrans.setUnique_number("");
-                        nsetrans.setAuto_trxn_no("");
-                        nsetrans.setSip_reg_no("");
-                        nsetrans.setPayment_mode("");
-                        nsetrans.setTopup_amount(0.0);
-                        nsetrans.setBank_acc_no("");
-                        nsetrans.setTransaction_number("");
-                        nsetrans.setApplication_number("");
-                        nsetrans.setTo_scheme_code("");
-                        nsetrans.setTo_scheme_name("");
-                        nsetrans.setTransaction_type("UCC Request");
-                        nsetrans.setTransaction_status("");
-                        nsetrans.setPayment_status("");
-                        nsetrans.setActive_ceased_status("");
-                        nsetrans.setRemarks(reg_remark);
-                        nsetrans.setMandate_id("");
-                        nsetrans.setMandate_status("");
-                        nsetrans.setEmandate_auth_flag("");
-                        nsetrans.setApp_received_flag("");
-                        nsetrans.setTransaction_date(new Date());
-                        nsetrans.setUser_id(userDto.getId());
+                        System.out.println("NSE API REQUEST URL = " + requestUrl);
+                        System.out.println("NSE API REQUEST HEADER = " + new Gson().toJson(headers));
+                        System.out.println("NSE API REQUEST DATA = " + regRequestBody.toString());
+                        System.out.println("NSE API RESPONSE STATUS = " + statusCodeVal);
+                        System.out.println("NSE API RESPONSE BODY = " + responseBody);
 
-                        if(source.equalsIgnoreCase("Mobile"))
+                        ///System.out.println("statusCodeVal = " + statusCodeVal);
+                        if(statusCodeVal.equals(200))
                         {
-                            nsetrans.setRegister_source("Mobile App");
-                        }else {
-                            nsetrans.setRegister_source("Website");
-                        }
+                            JSONObject jsonObject = new JSONObject(responseBody);
+                            JSONArray jsonRegArray = jsonObject.getJSONArray("reg_details");
+                            System.out.println("jsonRegArray = " + jsonRegArray);
+                            String reg_id = "";
+                            String reg_status = "";
+                            String reg_remark = "";
 
-                        nsetrans.setBroker_code(user_broker_code);
-                        nsetrans.setEuin_number(euin);
-                        nsetrans.setCc_received("");
-                        nsetrans.setFund_trans_to_amc("");
-                        nsetrans.setRefund_status("");
-                        nsetrans.setRefund_amount("");
-                        System.out.println("Saving NSE Transaction: " + nsetrans.toString());
-                        nseTransactionService.save(nsetrans);
-                        System.out.println("393");
-                        System.out.println("reg_status + " + reg_status);
-                        if ("REG_FAILED".equalsIgnoreCase(reg_status))
-                        {
-                            return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
-                        }
-
-//                        if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
-//                        {
-//                            if(multiple_reg.equalsIgnoreCase("1"))
-//                            {
-//                                userDto.setNse_customer(1);
-//                                userDto.setNse_iin_number(userDto.getNse_iin_number());
-//                                userDto.setBroker_code(broker_code);
-//                                userDto.setEuin(euin);
-//                                userDto.setNse_active(1);
-//                                userDto.setOnline_flag("NSE");
-//
-//                            }else
-//                            {
-//                                userDto.setNse_customer(1);
-//                                userDto.setNse_iin_number(userDto.getNse_iin_number());
-//                                userDto.setBroker_code(broker_code);
-//                                userDto.setEuin(euin);
-//                                userDto.setNse_active(1);
-//                                userDto.setOnline_flag("NSE");
-//
-//                            }
-//
-//                            UsersNseRegReportDto reg = null;
-//
-//                            try
-//                            {
-//                                reg = userServiceClient.getUserNseRegDetails(userDto.getNse_iin_number(), client_name,token);
-//                            } catch (feign.FeignException.NotFound ex)
-//                            {
-//                                reg = null;
-//                            }
-//
-//                            if(reg == null)
-//                            {
-//                                reg = new UsersNseRegReportDto();
-//                            }
-//                            reg.setUser_id(userDto.getId());
-//                            reg.setName(userDto.getName());
-//                            reg.setPan(userDto.getPan());
-//                            reg.setBranch(userDto.getBranch());
-//                            reg.setRm_name(userDto.getRm_name());
-//                            reg.setSubbroker_name(userDto.getSubbroker_name());
-//                            reg.setIin_number(userDto.getNse_iin_number());
-//                            reg.setIin_created_date(sdf.format(new Date()));
-//                            reg.setForm_updated_date("");
-//                            reg.setCheque_updated_date("");
-//                            reg.setIin_status("Documents need to upload");
-//                            reg.setIin_active(0);
-//                            reg.setTransaction_date("NO");
-//                            reg.setClient_name(client_name);
-//                            reg.setMandate_active(0);
-//                            reg.setMultiple_reg(Integer.parseInt(multiple_reg));
-//                            System.out.println("451 Saving NSE Registration Report: " + reg.toString());
-//
-//                            System.out.println("481" + reg);
-//
-//                            userServiceClient.saveNseRegReport(reg,token);
-//                        }
-
-                        String fatca_reg_id = "";
-                        String fatca_reg_status = "";
-                        String fatca_reg_remark = "";
-
-                        if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
-                        {
-                            String data_src = "E";
-                            String nffe_catg = "";
-                            String id1_type = "C";
-                            String ubo_add1 = "";
-                            String ubo_add2 = "";
-                            String ubo_add3 = "";
-                            String ubo_city = "";
-                            String ubo_pin = "";
-                            String ubo_state = "";
-                            String ubo_cntry = "";
-                            String ubo_appl = "N";
-                            String ubo_count = "";
-                            String ubo_nation = "";
-                            String ubo_df = "N";
-                            String ubo_add_ty = "";
-                            String ubo_ctr = "";
-                            String ubo_tin = "";
-                            String ubo_id_ty = "";
-                            String ubo_cob = "";
-                            String ubo_dob = "";
-                            String ubo_gender = "";
-                            String ubo_fr_nam = "";
-                            String ubo_name = "";
-                            String ubo_pan = "";
-                            String ubo_occ = "";
-                            String ubo_occ_ty = "";
-                            String ubo_tel = "";
-                            String ubo_mobile = "";
-                            String ubo_code = "";
-                            String ubo_hol_pc = "";
-                            String tax_res1 = "IN";
-                            String corp_servs = "04";
-                            String ffi_drnfe = "NA";
-                            String giin_no = "NA";
-                            String giin_na = "NO";
-                            String ubo_email = "";
-                            String ubo_categ = "";
-
-                            if(client_occupation_code.equalsIgnoreCase("01"))
+                            for (int i = 0; i < jsonRegArray.length(); i++)
                             {
-                                client_occupation_type = "B";
+                                JSONObject regDetail = jsonRegArray.getJSONObject(i);
+                                reg_id = regDetail.optString("reg_id");
+                                reg_status = regDetail.optString("reg_status");
+                                reg_remark = regDetail.optString("reg_remark");
                             }
-                            else if(client_occupation_code.equalsIgnoreCase("02") || client_occupation_code.equalsIgnoreCase("03") || client_occupation_code.equalsIgnoreCase("04"))
+
+                            NseTransactions nsetrans = new NseTransactions();
+                            nsetrans.setUrl(requestUrl);
+                            nsetrans.setNse_request(regRequestBody.toString());
+                            nsetrans.setNse_response(responseBody);
+                            nsetrans.setReturn_msg(reg_status);
+                            nsetrans.setService_return_code(String.valueOf(statusCodeVal));
+                            nsetrans.setService_msg(reg_status);
+                            nsetrans.setReg_id(reg_id);
+                            nsetrans.setPayment_link("");
+                            nsetrans.setPan(userDto.getPan());
+                            nsetrans.setName(userDto.getName());
+                            nsetrans.setBranch(userDto.getBranch());
+                            nsetrans.setRm_name(userDto.getRm_name());
+                            nsetrans.setSubbroker_name(userDto.getSubbroker_name());
+                            nsetrans.setClient_name(client_name);
+                            nsetrans.setIin_number(userDto.getNse_iin_number());
+                            nsetrans.setScheme_name("");
+                            nsetrans.setScheme_code("");
+                            nsetrans.setFolio_no("");
+                            nsetrans.setAmount_units("");
+                            nsetrans.setFrequency("");
+                            nsetrans.setPeriod_day("");
+                            nsetrans.setUmrn_no("");
+                            nsetrans.setPurchase_type("");
+                            nsetrans.setPayment_ref_no("");
+                            nsetrans.setUnique_number("");
+                            nsetrans.setAuto_trxn_no("");
+                            nsetrans.setSip_reg_no("");
+                            nsetrans.setPayment_mode("");
+                            nsetrans.setTopup_amount(0.0);
+                            nsetrans.setBank_acc_no("");
+                            nsetrans.setTransaction_number("");
+                            nsetrans.setApplication_number("");
+                            nsetrans.setTo_scheme_code("");
+                            nsetrans.setTo_scheme_name("");
+                            nsetrans.setTransaction_type("UCC Request");
+                            nsetrans.setTransaction_status("");
+                            nsetrans.setPayment_status("");
+                            nsetrans.setActive_ceased_status("");
+                            nsetrans.setRemarks(reg_remark);
+                            nsetrans.setMandate_id("");
+                            nsetrans.setMandate_status("");
+                            nsetrans.setEmandate_auth_flag("");
+                            nsetrans.setApp_received_flag("");
+                            nsetrans.setTransaction_date(new Date());
+                            nsetrans.setUser_id(userDto.getUser_id());
+
+                            if(source.equalsIgnoreCase("Mobile"))
                             {
-                                client_occupation_type = "S";
-                            }
-                            else
-                            {
-                                client_occupation_type = "O";
-                            }
-
-                            if(client_taxstatus.equalsIgnoreCase("03") || client_taxstatus.equalsIgnoreCase("04") || client_taxstatus.equalsIgnoreCase("06") || client_taxstatus.equalsIgnoreCase("13") || client_taxstatus.equalsIgnoreCase("47") || client_taxstatus.equalsIgnoreCase("07") || client_taxstatus.equalsIgnoreCase("08") || client_taxstatus.equalsIgnoreCase("10"))
-                            {
-                                data_src = "P";
-                                nffe_catg = "NA";
-                                ubo_appl = "Y";
-                                ubo_count = "1";
-                                ubo_nation = "IN";
-                                ubo_name = userDto.getName();
-                                ubo_pan = userDto.getPan();
-
-                                ubo_add1 = userDto.getStreet_1();
-                                ubo_add2 = userDto.getStreet_2();
-
-                                if(ubo_add2 == null || ubo_add2.isEmpty()){
-                                    ubo_add2 = "Street 2";
-                                }
-                                ubo_add3 = userDto.getStreet_3();
-                                if(ubo_add3 == null || ubo_add3.isEmpty()){
-                                    ubo_add3 = "Street 3";
-                                }
-
-                                ubo_city = userDto.getCity();
-                                ubo_state = userDto.getState_code();
-                                ubo_pin = userDto.getPincode();
-                                ubo_cntry = "IN";
-                                ubo_add_ty = userDto.getAddress_type_code();
-                                ubo_ctr = "IN";
-                                ubo_tin = ubo_pan;
-                                ubo_id_ty = "C";
-                                ubo_cob = "IN";
-                                ubo_dob = userDto.getDate_of_birth();
-                                ubo_gender = userDto.getGender();
-                                if(ubo_gender.isEmpty())
-                                {
-                                    ubo_gender = "O";
-                                }
-                                ubo_fr_nam = userDto.getFather_name();
-                                if(ubo_fr_nam.isEmpty()){
-                                    ubo_fr_nam = "Not Provided";
-                                }
-                                ubo_occ = userDto.getOccupation_code();
-                                ubo_occ_ty = client_occupation_type;
-                                ubo_mobile = userDto.getMobile();
-                                ubo_email = userDto.getEmail();
-                                ubo_hol_pc = "100";
-                                ubo_code = "C14";
-                                ubo_df = "Y";
-                                ubo_categ = "UBO";
-                            }
-
-                            if(userDto.getDate_of_birth() != null && !userDto.getDate_of_birth().isEmpty())
-                            {
-                                Date dob = df0.parse(userDto.getDate_of_birth());
-                                client_date_of_birth = df1.format(dob);
-                                ubo_dob = df1.format(dob);
-                            }
-
-                            JSONArray fatcaReqArray = new JSONArray();
-                            JSONObject fatcaReqObject = new JSONObject();
-
-                            Set<String> minorTaxCodeList = Set.of("02", "26", "28");
-                            if (minorTaxCodeList.contains(userDto.getTax_status_code())) {
-                                fatcaReqObject.put("pan_rp", userDto.getGuard_pan());
-                            }else{
-                                fatcaReqObject.put("pan_rp", userDto.getPan());
-                            }
-                            fatcaReqObject.put("pekrn", "");
-                            fatcaReqObject.put("inv_name", userDto.getName());
-                            fatcaReqObject.put("dob", client_date_of_birth);
-                            fatcaReqObject.put("fr_name", "");
-                            fatcaReqObject.put("sp_name", "");
-                            fatcaReqObject.put("tax_status", client_taxstatus);
-                            fatcaReqObject.put("data_src", data_src);
-                            fatcaReqObject.put("addr_type", userDto.getAddress_type_code());
-                            fatcaReqObject.put("po_bir_inc", userDto.getPlace_of_birth());
-                            fatcaReqObject.put("co_bir_inc", "IN");
-                            fatcaReqObject.put("tax_res1", tax_res1);
-
-                            if (minorTaxCodeList.contains(userDto.getTax_status_code())) {
-
-                                fatcaReqObject.put("tpin1", userDto.getGuard_pan());
-                            }else{
-                                fatcaReqObject.put("tpin1", userDto.getPan());
-                            }
-                            fatcaReqObject.put("id1_type", id1_type);
-                            fatcaReqObject.put("tax_res2", "");
-                            fatcaReqObject.put("tpin2", "");
-                            fatcaReqObject.put("id2_type", "");
-                            fatcaReqObject.put("tax_res3", "");
-                            fatcaReqObject.put("tpin3", "");
-                            fatcaReqObject.put("id3_type", "");
-                            fatcaReqObject.put("tax_res4", "");
-                            fatcaReqObject.put("tpin4", "");
-                            fatcaReqObject.put("id4_type", "");
-                            fatcaReqObject.put("srce_wealt", userDto.getSource_of_wealth_code());
-                            fatcaReqObject.put("corp_servs", corp_servs);
-                            fatcaReqObject.put("inc_slab", userDto.getAnnual_income_code());
-                            fatcaReqObject.put("net_worth", userDto.getNetworth_amount());
-
-                            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-                            SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy");
-                            String formattedDate ="";
-                            if(userDto.getNetworth_dob()!= null && !userDto.getNetworth_dob().isEmpty()){
-                                formattedDate = sdf.format(sdf2.parse(userDto.getNetworth_dob()));
-                            }
-                            fatcaReqObject.put("nw_date", formattedDate);
-                            fatcaReqObject.put("pep_flag", userDto.getPolitical_code());
-                            fatcaReqObject.put("occ_code", userDto.getOccupation_code().trim());
-                            fatcaReqObject.put("occ_type", NseUtils.getOccupationTypeByCode(userDto.getOccupation_code().trim())); //OCC_TYPE M Character 1  S - Service; B - Business, O - Others;X - Not Categorized
-
-                            if (client_taxstatus.equalsIgnoreCase("01") || client_taxstatus.equalsIgnoreCase("02") ||
-                                    client_taxstatus.equalsIgnoreCase("24") || client_taxstatus.equalsIgnoreCase("21") ||
-                                    client_taxstatus.equalsIgnoreCase("61") || client_taxstatus.equalsIgnoreCase("62") ||
-                                    client_taxstatus.equalsIgnoreCase("26") || client_taxstatus.equalsIgnoreCase("28"))
-                            {
-                                fatcaReqObject.put("exemp_code", "");
-                                fatcaReqObject.put("sdf_flag", "");
-
-                            }else{
-                                fatcaReqObject.put("exemp_code", "N");
-                                fatcaReqObject.put("sdf_flag", "Y");
-                            }
-                            fatcaReqObject.put("ffi_drnfe", ffi_drnfe);
-                            fatcaReqObject.put("giin_no", giin_no);
-                            fatcaReqObject.put("spr_entity", "");
-                            fatcaReqObject.put("giin_na", giin_na);
-                            fatcaReqObject.put("giin_exemc", "");
-                            fatcaReqObject.put("nffe_catg", nffe_catg);
-                            fatcaReqObject.put("act_nfe_sc", "");
-                            fatcaReqObject.put("nature_bus", "");
-                            fatcaReqObject.put("rel_listed", "");
-                            fatcaReqObject.put("exch_name", "O");
-                            fatcaReqObject.put("ubo_appl", ubo_appl);
-                            fatcaReqObject.put("ubo_count", ubo_count);
-                            //fatcaReqObject.put("sdf_flag", "");
-                            fatcaReqObject.put("ubo_df", ubo_df);
-                            fatcaReqObject.put("aadhaar_rp", "");
-                            fatcaReqObject.put("new_change", "");
-
-                            String logName = userDto.getName();
-                            if (logName != null && logName.length() > 30) {
-                                logName = logName.substring(0, 25);
-                            }
-                            fatcaReqObject.put("log_name", logName);
-
-                            fatcaReqObject.put("ubo_exch", "");
-                            fatcaReqObject.put("ubo_isin", "");
-                            fatcaReqObject.put("ubo_rel_li", "");
-                            fatcaReqObject.put("npo_form", "N");
-                            fatcaReqObject.put("npo_dcl", "N");
-                            fatcaReqObject.put("npo_rgno", "");
-
-                            JSONArray uboReqArray = new JSONArray();
-                            JSONObject uboReqObject = new JSONObject();
-
-                            uboReqObject.put("ubo_name", ubo_name);
-                            uboReqObject.put("ubo_pan", ubo_pan);
-                            uboReqObject.put("ubo_nation", ubo_nation);
-                            uboReqObject.put("ubo_add1", ubo_add1);
-                            uboReqObject.put("ubo_add2", ubo_add2);
-                            uboReqObject.put("ubo_add3", ubo_add3);
-                            uboReqObject.put("ubo_city", ubo_city);
-                            uboReqObject.put("ubo_pin", ubo_pin);
-                            uboReqObject.put("ubo_state", NseUtils.getFatcaCode(ubo_state));
-                            uboReqObject.put("ubo_cntry", ubo_cntry);
-                            uboReqObject.put("ubo_add_ty", ubo_add_ty);
-                            uboReqObject.put("ubo_ctr", ubo_ctr);
-                            uboReqObject.put("ubo_tin", ubo_tin);
-                            uboReqObject.put("ubo_id_ty", ubo_id_ty);
-                            uboReqObject.put("ubo_cob", ubo_cob);
-                            uboReqObject.put("ubo_dob", ubo_dob);
-                            uboReqObject.put("ubo_gender", ubo_gender);
-                            uboReqObject.put("ubo_fr_nam", ubo_fr_nam);
-                            uboReqObject.put("ubo_occ", ubo_occ);
-                            uboReqObject.put("ubo_occ_ty", ubo_occ_ty);
-                            uboReqObject.put("ubo_tel", ubo_tel);
-                            uboReqObject.put("ubo_mobile", ubo_mobile);
-                            uboReqObject.put("ubo_code", ubo_code);
-                            uboReqObject.put("ubo_hol_pc", ubo_hol_pc);
-                            uboReqObject.put("ubo_categ", ubo_categ);
-                            uboReqObject.put("ubo_pep_fl", userDto.getPolitical_code());
-                            uboReqObject.put("ubo_email", ubo_email);
-                            uboReqObject.put("ubo_smo_de", "");
-                            uboReqArray.put(uboReqObject);
-
-                            fatcaReqObject.put("ubo_details", uboReqArray);
-                            fatcaReqArray.put(fatcaReqObject);
-
-                            JSONObject fatcaReqBody = new JSONObject();
-                            fatcaReqBody.put("reg_details", fatcaReqArray);
-
-                            //System.out.println("fatcaReqArray = " + fatcaReqArray);
-                            //System.out.println("uboReqArray = " + uboReqArray);
-                            //System.out.println("fatcaReqBody = " + fatcaReqBody);
-
-                            HttpEntity<String> fatcaEntity = new HttpEntity<>(fatcaReqBody.toString(), headers);
-                            String fatcaRequestUrl = nseUrl+"/nsemfdesk/api/v2/registration/FATCA_COMMON";
-
-                            ResponseEntity<String> fatcaResult = restTemplate.postForEntity(fatcaRequestUrl, fatcaEntity, String.class);
-                            String fatcaStatusCode = fatcaResult.getStatusCode().toString();
-                            String fatcaResponse = fatcaResult.getBody().toString();
-                            System.out.println("primary holder fatcaStatusCode = " + fatcaStatusCode);
-                            System.out.println("primary holder fatcaResponse = " + fatcaResponse);
-
-                            JSONObject fatcaObj = new JSONObject(fatcaResponse);
-                            JSONArray fatcaArr = fatcaObj.getJSONArray("reg_details");
-
-                            for (int i = 0; i < fatcaArr.length(); i++)
-                            {
-                                JSONObject regDetail = fatcaArr.getJSONObject(i);
-                                fatca_reg_id = regDetail.optString("reg_id");
-                                fatca_reg_status = regDetail.optString("reg_status");
-                                fatca_reg_remark = regDetail.optString("reg_remark");
-                            }
-
-                            NseTransactions nsetrans1 = new NseTransactions();
-                            nsetrans1.setUrl(fatcaRequestUrl);
-                            nsetrans1.setNse_request(fatcaReqBody.toString());
-                            nsetrans1.setNse_response(fatcaResponse);
-                            nsetrans1.setReturn_msg(fatca_reg_status);
-                            nsetrans1.setService_return_code(fatcaStatusCode);
-                            nsetrans1.setService_msg(fatca_reg_status);
-                            nsetrans1.setReg_id(fatca_reg_id);
-                            nsetrans1.setPayment_link("");
-                            nsetrans1.setPan(userDto.getPan());
-                            nsetrans1.setName(userDto.getName());
-                            nsetrans1.setBranch(userDto.getBranch());
-                            nsetrans1.setRm_name(userDto.getRm_name());
-                            nsetrans1.setSubbroker_name(userDto.getSubbroker_name());
-                            nsetrans1.setClient_name(client_name);
-                            nsetrans1.setIin_number(userDto.getNse_iin_number());
-                            nsetrans1.setScheme_name("");
-                            nsetrans1.setScheme_code("");
-                            nsetrans1.setFolio_no("");
-                            nsetrans1.setAmount_units("");
-                            nsetrans1.setFrequency("");
-                            nsetrans1.setPeriod_day("");
-                            nsetrans1.setUmrn_no("");
-                            nsetrans1.setPurchase_type("");
-                            nsetrans1.setPayment_ref_no("");
-                            nsetrans1.setUnique_number("");
-                            nsetrans1.setAuto_trxn_no("");
-                            nsetrans1.setSip_reg_no("");
-                            nsetrans1.setPayment_mode("");
-                            nsetrans1.setTopup_amount(0.0);
-                            nsetrans1.setBank_acc_no("");
-                            nsetrans1.setTransaction_number("");
-                            nsetrans1.setApplication_number("");
-                            nsetrans1.setTo_scheme_code("");
-                            nsetrans1.setTo_scheme_name("");
-                            nsetrans1.setTransaction_type("Fatca Request");
-                            nsetrans1.setTransaction_status("");
-                            nsetrans1.setPayment_status("");
-                            nsetrans1.setActive_ceased_status("");
-                            nsetrans1.setRemarks(fatca_reg_remark);
-                            nsetrans1.setMandate_id("");
-                            nsetrans1.setMandate_status("");
-                            nsetrans1.setEmandate_auth_flag("");
-                            nsetrans1.setApp_received_flag("");
-                            nsetrans1.setTransaction_date(new Date());
-                            nsetrans1.setUser_id(userDto.getId());
-                            if(source.equalsIgnoreCase("Mobile")){
-                                nsetrans1.setRegister_source("Mobile App");
+                                nsetrans.setRegister_source("Mobile App");
                             }else {
-                                nsetrans1.setRegister_source("Website");
+                                nsetrans.setRegister_source("Website");
                             }
-                            nsetrans1.setBroker_code(user_broker_code);
-                            nsetrans1.setEuin_number(euin);
-                            nsetrans1.setCc_received("");
-                            nsetrans1.setFund_trans_to_amc("");
-                            nsetrans1.setRefund_status("");
-                            nsetrans1.setRefund_amount("");
-                            nseTransactionService.save(nsetrans1);
 
-                            //Joint Holder FATCA start here
-                            if(holding_nature.equalsIgnoreCase("JO") || holding_nature.equalsIgnoreCase("AS") || holding_nature.equalsIgnoreCase("ES"))
+                            nsetrans.setBroker_code(user_broker_code);
+                            nsetrans.setEuin_number(euin);
+                            nsetrans.setCc_received("");
+                            nsetrans.setFund_trans_to_amc("");
+                            nsetrans.setRefund_status("");
+                            nsetrans.setRefund_amount("");
+                            nseTransactionService.save(nsetrans);
+
+                            if ("REG_FAILED".equalsIgnoreCase(reg_status))
                             {
-                                String joint_name = "";
-                                String joint_pan = "";
-                                String joint_email = "";
-                                String joint1_dob = "";
-                                String joint_place_birth = "";
-                                String joint_country_birth_code = "";
-                                String joint_occupation_code = "";
-                                String joint_annual_income_code = "";
-                                String joint_source_wealth_code = "";
-                                String joint_political_code = "";
-                                String joint_address_type_code = "";
+                                return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
+                            }
 
-                                joint_name = userDto.getJoint_holder_name1();
-                                joint_pan = userDto.getJoint_holder_pan1();
-                                joint_email = userDto.getJoint_holder_email1();
-                                joint1_dob = userDto.getJoint_holder_dob1();
-                                joint_place_birth = userDto.getJoint_holder_place_of_birth1();
-                                joint_country_birth_code = userDto.getJoint_holder_country_birth_code1();
-                                joint_occupation_code = userDto.getJoint_holder_occupation_code1();
-                                joint_annual_income_code = userDto.getJoint_holder_annual_income_code1();
-                                joint_source_wealth_code = userDto.getJoint_holder_source_of_wealth_code1();
-                                joint_political_code = userDto.getJoint_holder_political_code1();
-                                joint_address_type_code = userDto.getJoint_holder_address_type_code1();
+                            String fatca_reg_id = "";
+                            String fatca_reg_status = "";
+                            String fatca_reg_remark = "";
 
-                                if(userDto.getJoint_holder_dob1() != null && !userDto.getJoint_holder_dob1().isEmpty())
+                            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                            {
+                                String data_src = "E";
+                                String nffe_catg = "";
+                                String id1_type = "C";
+                                String ubo_add1 = "";
+                                String ubo_add2 = "";
+                                String ubo_add3 = "";
+                                String ubo_city = "";
+                                String ubo_pin = "";
+                                String ubo_state = "";
+                                String ubo_cntry = "";
+                                String ubo_appl = "N";
+                                String ubo_count = "";
+                                String ubo_nation = "";
+                                String ubo_df = "N";
+                                String ubo_add_ty = "";
+                                String ubo_ctr = "";
+                                String ubo_tin = "";
+                                String ubo_id_ty = "";
+                                String ubo_cob = "";
+                                String ubo_dob = "";
+                                String ubo_gender = "";
+                                String ubo_fr_nam = "";
+                                String ubo_name = "";
+                                String ubo_pan = "";
+                                String ubo_occ = "";
+                                String ubo_occ_ty = "";
+                                String ubo_tel = "";
+                                String ubo_mobile = "";
+                                String ubo_code = "";
+                                String ubo_hol_pc = "";
+                                String tax_res1 = "IN";
+                                String corp_servs = "04";
+                                String ffi_drnfe = "NA";
+                                String giin_no = "NA";
+                                String giin_na = "NO";
+                                String ubo_email = "";
+                                String ubo_categ = "";
+
+                                if(client_occupation_code.equalsIgnoreCase("01"))
                                 {
-                                    Date dob = df0.parse(userDto.getJoint_holder_dob1());
-                                    joint1_dob = df1.format(dob);
+                                    client_occupation_type = "B";
                                 }
-
-                                String joint_occupation_type= "S";
-                                if(joint_occupation_code.equalsIgnoreCase("01"))
+                                else if(client_occupation_code.equalsIgnoreCase("02") || client_occupation_code.equalsIgnoreCase("03") || client_occupation_code.equalsIgnoreCase("04"))
                                 {
-                                    joint_occupation_type = "B";
-                                }
-                                else if (joint_occupation_code.equalsIgnoreCase("02") || joint_occupation_code.equalsIgnoreCase("03") || joint_occupation_code.equalsIgnoreCase("04"))
-                                {
-                                    joint_occupation_type = "S";
+                                    client_occupation_type = "S";
                                 }
                                 else
                                 {
-                                    joint_occupation_type = "O";
+                                    client_occupation_type = "O";
                                 }
 
-                                fatcaReqArray = new JSONArray();
-                                fatcaReqObject = new JSONObject();
+                                String pan = userDto.getPan();
+                                String panType = "";
 
-                                fatcaReqObject.put("pan_rp", userDto.getJoint_holder_pan1());
+                                if (pan != null && pan.length() >= 4) {
+                                    panType = pan.substring(3, 4).toUpperCase(Locale.ROOT);
+                                }
+
+                                if(!panType.isEmpty() && !panType.equalsIgnoreCase("P"))
+                                {
+                                    data_src = "P";
+                                    nffe_catg = "NA";
+                                    ubo_appl = "Y";
+                                    ubo_count = "1";
+                                    ubo_nation = "IN";
+                                    ubo_name = userDto.getName();
+                                    ubo_pan = userDto.getPan();
+
+                                    ubo_add1 = userDto.getStreet_1();
+                                    ubo_add2 = userDto.getStreet_2();
+
+                                    if(ubo_add2 == null || ubo_add2.isEmpty()){
+                                        ubo_add2 = "Street 2";
+                                    }
+                                    ubo_add3 = userDto.getStreet_3();
+                                    if(ubo_add3 == null || ubo_add3.isEmpty()){
+                                        ubo_add3 = "Street 3";
+                                    }
+
+                                    ubo_city = userDto.getCity();
+                                    ubo_state = userDto.getState_code();
+                                    ubo_pin = userDto.getPincode();
+                                    ubo_cntry = "IN";
+                                    ubo_add_ty = userDto.getAddress_type_code();
+                                    ubo_ctr = "IN";
+                                    ubo_tin = ubo_pan;
+                                    ubo_id_ty = "C";
+                                    ubo_cob = "IN";
+                                    ubo_dob = userDto.getDate_of_birth();
+                                    ubo_gender = userDto.getGender();
+                                    if(ubo_gender.isEmpty())
+                                    {
+                                        ubo_gender = "O";
+                                    }
+                                    ubo_fr_nam = userDto.getFather_name();
+                                    if(ubo_fr_nam.isEmpty()){
+                                        ubo_fr_nam = "Not Provided";
+                                    }
+                                    ubo_occ = userDto.getOccupation_code();
+                                    ubo_occ_ty = client_occupation_type;
+                                    ubo_mobile = userDto.getMobile();
+                                    ubo_email = userDto.getEmail();
+                                    ubo_hol_pc = "100";
+                                    ubo_code = "C14";
+                                    ubo_df = "Y";
+                                    ubo_categ = "UBO";
+                                }
+
+                                if(userDto.getDate_of_birth() != null && !userDto.getDate_of_birth().isEmpty())
+                                {
+                                    Date dob = df0.parse(userDto.getDate_of_birth());
+                                    client_date_of_birth = df1.format(dob);
+                                    ubo_dob = df1.format(dob);
+                                }
+
+                                JSONArray fatcaReqArray = new JSONArray();
+                                JSONObject fatcaReqObject = new JSONObject();
+
+                                Set<String> minorTaxCodeList = Set.of("02", "26", "28");
+                                if (minorTaxCodeList.contains(userDto.getTax_status_code())) {
+                                    fatcaReqObject.put("pan_rp", userDto.getGuard_pan());
+                                }else{
+                                    fatcaReqObject.put("pan_rp", userDto.getPan());
+                                }
                                 fatcaReqObject.put("pekrn", "");
-                                fatcaReqObject.put("inv_name", userDto.getJoint_holder_name1());
-                                fatcaReqObject.put("dob", joint1_dob);
+                                fatcaReqObject.put("inv_name", userDto.getName());
+                                fatcaReqObject.put("dob", client_date_of_birth);
                                 fatcaReqObject.put("fr_name", "");
                                 fatcaReqObject.put("sp_name", "");
                                 fatcaReqObject.put("tax_status", client_taxstatus);
                                 fatcaReqObject.put("data_src", data_src);
-                                fatcaReqObject.put("addr_type", joint_address_type_code);
-                                fatcaReqObject.put("po_bir_inc", joint_place_birth);
+                                fatcaReqObject.put("addr_type", userDto.getAddress_type_code());
+                                fatcaReqObject.put("po_bir_inc", userDto.getPlace_of_birth());
                                 fatcaReqObject.put("co_bir_inc", "IN");
                                 fatcaReqObject.put("tax_res1", tax_res1);
-                                fatcaReqObject.put("tpin1", joint_pan);
+
+                                if (minorTaxCodeList.contains(userDto.getTax_status_code())) {
+
+                                    fatcaReqObject.put("tpin1", userDto.getGuard_pan());
+                                }else{
+                                    fatcaReqObject.put("tpin1", userDto.getPan());
+                                }
                                 fatcaReqObject.put("id1_type", id1_type);
                                 fatcaReqObject.put("tax_res2", "");
                                 fatcaReqObject.put("tpin2", "");
@@ -864,32 +582,57 @@ public class NseOnboardingController {
                                 fatcaReqObject.put("tax_res4", "");
                                 fatcaReqObject.put("tpin4", "");
                                 fatcaReqObject.put("id4_type", "");
-                                fatcaReqObject.put("srce_wealt", joint_source_wealth_code);
-                                fatcaReqObject.put("corp_servs", "");
-                                fatcaReqObject.put("inc_slab", joint_annual_income_code);
-                                fatcaReqObject.put("net_worth", "");
-                                fatcaReqObject.put("nw_date", "");
-                                fatcaReqObject.put("pep_flag", joint_political_code);
-                                fatcaReqObject.put("occ_code", joint_occupation_code);
-                                fatcaReqObject.put("occ_type", joint_occupation_type);
-                                fatcaReqObject.put("exemp_code", "");
-                                fatcaReqObject.put("ffi_drnfe", "");
-                                fatcaReqObject.put("giin_no", "");
+                                fatcaReqObject.put("srce_wealt", userDto.getSource_of_wealth_code());
+                                fatcaReqObject.put("corp_servs", corp_servs);
+                                fatcaReqObject.put("inc_slab", userDto.getAnnual_income_code());
+                                fatcaReqObject.put("net_worth", userDto.getNetworth_amount());
+
+                                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                                SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy");
+                                String formattedDate ="";
+                                if(userDto.getNetworth_dob()!= null && !userDto.getNetworth_dob().isEmpty()){
+                                    formattedDate = sdf.format(sdf2.parse(userDto.getNetworth_dob()));
+                                }
+                                fatcaReqObject.put("nw_date", formattedDate);
+                                fatcaReqObject.put("pep_flag", userDto.getPolitical_code());
+                                fatcaReqObject.put("occ_code", userDto.getOccupation_code().trim());
+                                fatcaReqObject.put("occ_type", NseUtils.getOccupationTypeByCode(userDto.getOccupation_code().trim())); //OCC_TYPE M Character 1  S - Service; B - Business, O - Others;X - Not Categorized
+
+                                if (client_taxstatus.equalsIgnoreCase("01") || client_taxstatus.equalsIgnoreCase("02") ||
+                                        client_taxstatus.equalsIgnoreCase("24") || client_taxstatus.equalsIgnoreCase("21") ||
+                                        client_taxstatus.equalsIgnoreCase("61") || client_taxstatus.equalsIgnoreCase("62") ||
+                                        client_taxstatus.equalsIgnoreCase("26") || client_taxstatus.equalsIgnoreCase("28"))
+                                {
+                                    fatcaReqObject.put("exemp_code", "");
+                                    fatcaReqObject.put("sdf_flag", "");
+
+                                }else{
+                                    fatcaReqObject.put("exemp_code", "N");
+                                    fatcaReqObject.put("sdf_flag", "Y");
+                                }
+                                fatcaReqObject.put("ffi_drnfe", ffi_drnfe);
+                                fatcaReqObject.put("giin_no", giin_no);
                                 fatcaReqObject.put("spr_entity", "");
-                                fatcaReqObject.put("giin_na", "");
+                                fatcaReqObject.put("giin_na", giin_na);
                                 fatcaReqObject.put("giin_exemc", "");
-                                fatcaReqObject.put("nffe_catg", "");
+                                fatcaReqObject.put("nffe_catg", nffe_catg);
                                 fatcaReqObject.put("act_nfe_sc", "");
                                 fatcaReqObject.put("nature_bus", "");
                                 fatcaReqObject.put("rel_listed", "");
                                 fatcaReqObject.put("exch_name", "O");
                                 fatcaReqObject.put("ubo_appl", ubo_appl);
-                                fatcaReqObject.put("ubo_count", "");
-                                fatcaReqObject.put("sdf_flag", "");
+                                fatcaReqObject.put("ubo_count", ubo_count);
+                                //fatcaReqObject.put("sdf_flag", "");
                                 fatcaReqObject.put("ubo_df", ubo_df);
                                 fatcaReqObject.put("aadhaar_rp", "");
                                 fatcaReqObject.put("new_change", "");
-                                fatcaReqObject.put("log_name", joint_name);
+
+                                String logName = userDto.getName();
+                                if (logName != null && logName.length() > 30) {
+                                    logName = logName.substring(0, 25);
+                                }
+                                fatcaReqObject.put("log_name", logName);
+
                                 fatcaReqObject.put("ubo_exch", "");
                                 fatcaReqObject.put("ubo_isin", "");
                                 fatcaReqObject.put("ubo_rel_li", "");
@@ -897,60 +640,60 @@ public class NseOnboardingController {
                                 fatcaReqObject.put("npo_dcl", "N");
                                 fatcaReqObject.put("npo_rgno", "");
 
-                                uboReqArray = new JSONArray();
-                                uboReqObject = new JSONObject();
-                                uboReqObject.put("ubo_name", "");
-                                uboReqObject.put("ubo_pan", "");
-                                uboReqObject.put("ubo_nation", "");
-                                uboReqObject.put("ubo_add1", "");
-                                uboReqObject.put("ubo_add2", "");
-                                uboReqObject.put("ubo_add3", "");
-                                uboReqObject.put("ubo_city", "");
-                                uboReqObject.put("ubo_pin", "");
-                                uboReqObject.put("ubo_state", "");
-                                uboReqObject.put("ubo_cntry", "");
-                                uboReqObject.put("ubo_add_ty", "");
-                                uboReqObject.put("ubo_ctr", "");
-                                uboReqObject.put("ubo_tin", "");
-                                uboReqObject.put("ubo_id_ty", "");
-                                uboReqObject.put("ubo_cob", "");
-                                uboReqObject.put("ubo_dob", "");
-                                uboReqObject.put("ubo_gender", "");
-                                uboReqObject.put("ubo_fr_nam", "");
-                                uboReqObject.put("ubo_occ", "");
-                                uboReqObject.put("ubo_occ_ty", "");
-                                uboReqObject.put("ubo_tel", "");
-                                uboReqObject.put("ubo_mobile", "");
-                                uboReqObject.put("ubo_code", "");
-                                uboReqObject.put("ubo_hol_pc", "");
-                                uboReqObject.put("ubo_categ", "");
-                                uboReqObject.put("ubo_pep_fl", "");
-                                uboReqObject.put("ubo_email", "");
+                                JSONArray uboReqArray = new JSONArray();
+                                JSONObject uboReqObject = new JSONObject();
+
+                                uboReqObject.put("ubo_name", ubo_name);
+                                uboReqObject.put("ubo_pan", ubo_pan);
+                                uboReqObject.put("ubo_nation", ubo_nation);
+                                uboReqObject.put("ubo_add1", ubo_add1);
+                                uboReqObject.put("ubo_add2", ubo_add2);
+                                uboReqObject.put("ubo_add3", ubo_add3);
+                                uboReqObject.put("ubo_city", ubo_city);
+                                uboReqObject.put("ubo_pin", ubo_pin);
+                                uboReqObject.put("ubo_state", NseUtils.getFatcaCode(ubo_state));
+                                uboReqObject.put("ubo_cntry", ubo_cntry);
+                                uboReqObject.put("ubo_add_ty", ubo_add_ty);
+                                uboReqObject.put("ubo_ctr", ubo_ctr);
+                                uboReqObject.put("ubo_tin", ubo_tin);
+                                uboReqObject.put("ubo_id_ty", ubo_id_ty);
+                                uboReqObject.put("ubo_cob", ubo_cob);
+                                uboReqObject.put("ubo_dob", ubo_dob);
+                                uboReqObject.put("ubo_gender", ubo_gender);
+                                uboReqObject.put("ubo_fr_nam", ubo_fr_nam);
+                                uboReqObject.put("ubo_occ", ubo_occ);
+                                uboReqObject.put("ubo_occ_ty", ubo_occ_ty);
+                                uboReqObject.put("ubo_tel", ubo_tel);
+                                uboReqObject.put("ubo_mobile", ubo_mobile);
+                                uboReqObject.put("ubo_code", ubo_code);
+                                uboReqObject.put("ubo_hol_pc", ubo_hol_pc);
+                                uboReqObject.put("ubo_categ", ubo_categ);
+                                uboReqObject.put("ubo_pep_fl", userDto.getPolitical_code());
+                                uboReqObject.put("ubo_email", ubo_email);
                                 uboReqObject.put("ubo_smo_de", "");
                                 uboReqArray.put(uboReqObject);
 
                                 fatcaReqObject.put("ubo_details", uboReqArray);
                                 fatcaReqArray.put(fatcaReqObject);
 
-                                fatcaReqBody = new JSONObject();
+                                JSONObject fatcaReqBody = new JSONObject();
                                 fatcaReqBody.put("reg_details", fatcaReqArray);
-                                System.out.println("Joint Holder 1 fatcaReqBody = " + fatcaReqBody);
 
-                                fatcaEntity = new HttpEntity<>(fatcaReqBody.toString(), headers);
-                                fatcaRequestUrl = nseUrl+"/nsemfdesk/api/v2/registration/FATCA_COMMON";
+                                //System.out.println("fatcaReqArray = " + fatcaReqArray);
+                                //System.out.println("uboReqArray = " + uboReqArray);
+                                //System.out.println("fatcaReqBody = " + fatcaReqBody);
 
-                                fatcaResult = restTemplate.postForEntity(fatcaRequestUrl, fatcaEntity, String.class);
-                                fatcaStatusCode = fatcaResult.getStatusCode().toString();
-                                fatcaResponse = fatcaResult.getBody().toString();
-                                System.out.println("joint holder 1 fatcaStatusCode = " + fatcaStatusCode);
-                                System.out.println("joint holder 1 fatcaResponse = " + fatcaResponse);
+                                HttpEntity<String> fatcaEntity = new HttpEntity<>(fatcaReqBody.toString(), headers);
+                                String fatcaRequestUrl = nseUrl+"/nsemfdesk/api/v2/registration/FATCA_COMMON";
 
-                                fatcaObj = new JSONObject(fatcaResponse);
-                                fatcaArr = fatcaObj.getJSONArray("reg_details");
+                                ResponseEntity<String> fatcaResult = restTemplate.postForEntity(fatcaRequestUrl, fatcaEntity, String.class);
+                                String fatcaStatusCode = fatcaResult.getStatusCode().toString();
+                                String fatcaResponse = fatcaResult.getBody();
+                                System.out.println("primary holder fatcaStatusCode = " + fatcaStatusCode);
+                                System.out.println("primary holder fatcaResponse = " + fatcaResponse);
 
-                                fatca_reg_id = "";
-                                fatca_reg_status = "";
-                                fatca_reg_remark = "";
+                                JSONObject fatcaObj = new JSONObject(fatcaResponse);
+                                JSONArray fatcaArr = fatcaObj.getJSONArray("reg_details");
 
                                 for (int i = 0; i < fatcaArr.length(); i++)
                                 {
@@ -960,98 +703,98 @@ public class NseOnboardingController {
                                     fatca_reg_remark = regDetail.optString("reg_remark");
                                 }
 
-                                NseTransactions nsetrans2 = new NseTransactions();
-                                nsetrans2.setUrl(fatcaRequestUrl);
-                                nsetrans2.setNse_request(fatcaReqBody.toString());
-                                nsetrans2.setNse_response(fatcaResponse);
-                                nsetrans2.setReturn_msg(fatca_reg_status);
-                                nsetrans2.setService_return_code(fatcaStatusCode);
-                                nsetrans2.setService_msg(fatca_reg_status);
-                                nsetrans2.setReg_id(fatca_reg_id);
-                                nsetrans2.setPayment_link("");
-                                nsetrans2.setPan(userDto.getJoint_holder_pan1());
-                                nsetrans2.setName(userDto.getJoint_holder_name1());
-                                nsetrans2.setBranch(userDto.getBranch());
-                                nsetrans2.setRm_name(userDto.getRm_name());
-                                nsetrans2.setSubbroker_name(userDto.getSubbroker_name());
-                                nsetrans2.setClient_name(client_name);
-                                nsetrans2.setIin_number(userDto.getNse_iin_number());
-                                nsetrans2.setScheme_name("");
-                                nsetrans2.setScheme_code("");
-                                nsetrans2.setFolio_no("");
-                                nsetrans2.setAmount_units("");
-                                nsetrans2.setFrequency("");
-                                nsetrans2.setPeriod_day("");
-                                nsetrans2.setUmrn_no("");
-                                nsetrans2.setPurchase_type("");
-                                nsetrans2.setPayment_ref_no("");
-                                nsetrans2.setUnique_number("");
-                                nsetrans2.setAuto_trxn_no("");
-                                nsetrans2.setSip_reg_no("");
-                                nsetrans2.setPayment_mode("");
-                                nsetrans2.setTopup_amount(0.0);
-                                nsetrans2.setBank_acc_no("");
-                                nsetrans2.setTransaction_number("");
-                                nsetrans2.setApplication_number("");
-                                nsetrans2.setTo_scheme_code("");
-                                nsetrans2.setTo_scheme_name("");
-                                nsetrans2.setTransaction_type("Joint Holder1 Fatca Request");
-                                nsetrans2.setTransaction_status("");
-                                nsetrans2.setPayment_status("");
-                                nsetrans2.setActive_ceased_status("");
-                                nsetrans2.setRemarks(fatca_reg_remark);
-                                nsetrans2.setMandate_id("");
-                                nsetrans2.setMandate_status("");
-                                nsetrans2.setEmandate_auth_flag("");
-                                nsetrans2.setApp_received_flag("");
-                                nsetrans2.setTransaction_date(new Date());
-                                nsetrans2.setUser_id(userDto.getId());
+                                NseTransactions nsetrans1 = new NseTransactions();
+                                nsetrans1.setUrl(fatcaRequestUrl);
+                                nsetrans1.setNse_request(fatcaReqBody.toString());
+                                nsetrans1.setNse_response(fatcaResponse);
+                                nsetrans1.setReturn_msg(fatca_reg_status);
+                                nsetrans1.setService_return_code(fatcaStatusCode);
+                                nsetrans1.setService_msg(fatca_reg_status);
+                                nsetrans1.setReg_id(fatca_reg_id);
+                                nsetrans1.setPayment_link("");
+                                nsetrans1.setPan(userDto.getPan());
+                                nsetrans1.setName(userDto.getName());
+                                nsetrans1.setBranch(userDto.getBranch());
+                                nsetrans1.setRm_name(userDto.getRm_name());
+                                nsetrans1.setSubbroker_name(userDto.getSubbroker_name());
+                                nsetrans1.setClient_name(client_name);
+                                nsetrans1.setIin_number(userDto.getNse_iin_number());
+                                nsetrans1.setScheme_name("");
+                                nsetrans1.setScheme_code("");
+                                nsetrans1.setFolio_no("");
+                                nsetrans1.setAmount_units("");
+                                nsetrans1.setFrequency("");
+                                nsetrans1.setPeriod_day("");
+                                nsetrans1.setUmrn_no("");
+                                nsetrans1.setPurchase_type("");
+                                nsetrans1.setPayment_ref_no("");
+                                nsetrans1.setUnique_number("");
+                                nsetrans1.setAuto_trxn_no("");
+                                nsetrans1.setSip_reg_no("");
+                                nsetrans1.setPayment_mode("");
+                                nsetrans1.setTopup_amount(0.0);
+                                nsetrans1.setBank_acc_no("");
+                                nsetrans1.setTransaction_number("");
+                                nsetrans1.setApplication_number("");
+                                nsetrans1.setTo_scheme_code("");
+                                nsetrans1.setTo_scheme_name("");
+                                nsetrans1.setTransaction_type("Fatca Request");
+                                nsetrans1.setTransaction_status("");
+                                nsetrans1.setPayment_status("");
+                                nsetrans1.setActive_ceased_status("");
+                                nsetrans1.setRemarks(fatca_reg_remark);
+                                nsetrans1.setMandate_id("");
+                                nsetrans1.setMandate_status("");
+                                nsetrans1.setEmandate_auth_flag("");
+                                nsetrans1.setApp_received_flag("");
+                                nsetrans1.setTransaction_date(new Date());
+                                nsetrans1.setUser_id(userDto.getUser_id());
                                 if(source.equalsIgnoreCase("Mobile")){
                                     nsetrans1.setRegister_source("Mobile App");
                                 }else {
                                     nsetrans1.setRegister_source("Website");
                                 }
-                                nsetrans2.setBroker_code(user_broker_code);
-                                nsetrans2.setEuin_number(euin);
-                                nsetrans2.setCc_received("");
-                                nsetrans2.setFund_trans_to_amc("");
-                                nsetrans2.setRefund_status("");
-                                nsetrans2.setRefund_amount("");
-                                nseTransactionService.save(nsetrans2);
+                                nsetrans1.setBroker_code(user_broker_code);
+                                nsetrans1.setEuin_number(euin);
+                                nsetrans1.setCc_received("");
+                                nsetrans1.setFund_trans_to_amc("");
+                                nsetrans1.setRefund_status("");
+                                nsetrans1.setRefund_amount("");
+                                nseTransactionService.save(nsetrans1);
 
-                                if(userDto.getJoint_holder_name2() != null && StringHelper.isNotEmpty(userDto.getJoint_holder_name2()))
+                                //Joint Holder FATCA start here
+                                if(holding_nature.equalsIgnoreCase("JO") || holding_nature.equalsIgnoreCase("AS") || holding_nature.equalsIgnoreCase("ES"))
                                 {
-                                    joint_name = "";
-                                    joint_pan = "";
-                                    joint_email = "";
-                                    joint1_dob = "";
-                                    joint_place_birth = "";
-                                    joint_country_birth_code = "";
-                                    joint_occupation_code = "";
-                                    joint_annual_income_code = "";
-                                    joint_source_wealth_code = "";
-                                    joint_political_code = "";
-                                    joint_address_type_code = "";
+                                    String joint_name = "";
+                                    String joint_pan = "";
+                                    String joint1_dob = "";
+                                    String joint_place_birth = "";
+                                    //String joint_country_birth_code = "";
+                                    String joint_occupation_code = "";
+                                    String joint_annual_income_code = "";
+                                    String joint_source_wealth_code = "";
+                                    String joint_political_code = "";
+                                    String joint_address_type_code = "";
 
-                                    joint_name = userDto.getJoint_holder_name2();
-                                    joint_pan = userDto.getJoint_holder_pan2();
-                                    joint_email = userDto.getJoint_holder_email2();
-                                    joint1_dob = userDto.getJoint_holder_dob2();
-                                    joint_place_birth = userDto.getJoint_holder_place_of_birth2();
-                                    joint_country_birth_code = userDto.getJoint_holder_country_birth_code2();
-                                    joint_occupation_code = userDto.getJoint_holder_occupation_code2();
-                                    joint_annual_income_code = userDto.getJoint_holder_annual_income_code2();
-                                    joint_source_wealth_code = userDto.getJoint_holder_source_of_wealth_code2();
-                                    joint_political_code = userDto.getJoint_holder_political_code2();
-                                    joint_address_type_code = userDto.getJoint_holder_address_type_code2();
+                                    joint_name = userDto.getJoint_holder_name1();
+                                    joint_pan = userDto.getJoint_holder_pan1();
+                                    //joint_email = userDto.getJoint_holder_email1();
+                                    joint1_dob = userDto.getJoint_holder_dob1();
+                                    joint_place_birth = userDto.getJoint_holder_place_of_birth1();
+                                    //joint_country_birth_code = userDto.getJoint_holder_country_birth_code1();
+                                    joint_occupation_code = userDto.getJoint_holder_occupation_code1();
+                                    joint_annual_income_code = userDto.getJoint_holder_annual_income_code1();
+                                    joint_source_wealth_code = userDto.getJoint_holder_source_of_wealth_code1();
+                                    joint_political_code = userDto.getJoint_holder_political_code1();
+                                    joint_address_type_code = userDto.getJoint_holder_address_type_code1();
 
-                                    if(joint1_dob != null && !joint1_dob.isEmpty())
+                                    if(userDto.getJoint_holder_dob1() != null && !userDto.getJoint_holder_dob1().isEmpty())
                                     {
-                                        Date dob = df0.parse(joint1_dob);
+                                        Date dob = df0.parse(userDto.getJoint_holder_dob1());
                                         joint1_dob = df1.format(dob);
                                     }
 
-                                    joint_occupation_type = "S";
+                                    String joint_occupation_type= "S";
                                     if(joint_occupation_code.equalsIgnoreCase("01"))
                                     {
                                         joint_occupation_type = "B";
@@ -1067,9 +810,10 @@ public class NseOnboardingController {
 
                                     fatcaReqArray = new JSONArray();
                                     fatcaReqObject = new JSONObject();
-                                    fatcaReqObject.put("pan_rp", joint_pan);
+
+                                    fatcaReqObject.put("pan_rp", userDto.getJoint_holder_pan1());
                                     fatcaReqObject.put("pekrn", "");
-                                    fatcaReqObject.put("inv_name", joint_name);
+                                    fatcaReqObject.put("inv_name", userDto.getJoint_holder_name1());
                                     fatcaReqObject.put("dob", joint1_dob);
                                     fatcaReqObject.put("fr_name", "");
                                     fatcaReqObject.put("sp_name", "");
@@ -1115,6 +859,12 @@ public class NseOnboardingController {
                                     fatcaReqObject.put("ubo_df", ubo_df);
                                     fatcaReqObject.put("aadhaar_rp", "");
                                     fatcaReqObject.put("new_change", "");
+
+
+                                    if (joint_name != null && joint_name.length() > 30) {
+                                        joint_name = joint_name.substring(0, 25);
+                                    }
+
                                     fatcaReqObject.put("log_name", joint_name);
                                     fatcaReqObject.put("ubo_exch", "");
                                     fatcaReqObject.put("ubo_isin", "");
@@ -1160,17 +910,16 @@ public class NseOnboardingController {
 
                                     fatcaReqBody = new JSONObject();
                                     fatcaReqBody.put("reg_details", fatcaReqArray);
-
-                                    System.out.println("Joint Holder 2 fatcaReqBody = " + fatcaReqBody);
+                                    System.out.println("Joint Holder 1 fatcaReqBody = " + fatcaReqBody);
 
                                     fatcaEntity = new HttpEntity<>(fatcaReqBody.toString(), headers);
                                     fatcaRequestUrl = nseUrl+"/nsemfdesk/api/v2/registration/FATCA_COMMON";
 
                                     fatcaResult = restTemplate.postForEntity(fatcaRequestUrl, fatcaEntity, String.class);
                                     fatcaStatusCode = fatcaResult.getStatusCode().toString();
-                                    fatcaResponse = fatcaResult.getBody().toString();
-                                    System.out.println("joint holder 2 fatcaStatusCode = " + fatcaStatusCode);
-                                    System.out.println("joint holder 2 fatcaResponse = " + fatcaResponse);
+                                    fatcaResponse = fatcaResult.getBody();
+                                    System.out.println("joint holder 1 fatcaStatusCode = " + fatcaStatusCode);
+                                    System.out.println("joint holder 1 fatcaResponse = " + fatcaResponse);
 
                                     fatcaObj = new JSONObject(fatcaResponse);
                                     fatcaArr = fatcaObj.getJSONArray("reg_details");
@@ -1178,7 +927,6 @@ public class NseOnboardingController {
                                     fatca_reg_id = "";
                                     fatca_reg_status = "";
                                     fatca_reg_remark = "";
-
 
                                     for (int i = 0; i < fatcaArr.length(); i++)
                                     {
@@ -1188,124 +936,364 @@ public class NseOnboardingController {
                                         fatca_reg_remark = regDetail.optString("reg_remark");
                                     }
 
-                                    NseTransactions nsetrans3 = new NseTransactions();
-                                    nsetrans3.setUrl(fatcaRequestUrl);
-                                    nsetrans3.setNse_request(fatcaReqBody.toString());
-                                    nsetrans3.setNse_response(fatcaResponse);
-                                    nsetrans3.setReturn_msg(fatca_reg_status);
-                                    nsetrans3.setService_return_code(fatcaStatusCode);
-                                    nsetrans3.setService_msg(fatca_reg_status);
-                                    nsetrans3.setReg_id(fatca_reg_id);
-                                    nsetrans3.setPayment_link("");
-                                    nsetrans3.setPan(userDto.getJoint_holder_pan2());
-                                    nsetrans3.setName(userDto.getJoint_holder_name2());
-                                    nsetrans3.setBranch(userDto.getBranch());
-                                    nsetrans3.setRm_name(userDto.getRm_name());
-                                    nsetrans3.setSubbroker_name(userDto.getSubbroker_name());
-                                    nsetrans3.setClient_name(client_name);
-                                    nsetrans3.setIin_number(userDto.getNse_iin_number());
-                                    nsetrans3.setScheme_name("");
-                                    nsetrans3.setScheme_code("");
-                                    nsetrans3.setFolio_no("");
-                                    nsetrans3.setAmount_units("");
-                                    nsetrans3.setFrequency("");
-                                    nsetrans3.setPeriod_day("");
-                                    nsetrans3.setUmrn_no("");
-                                    nsetrans3.setPurchase_type("");
-                                    nsetrans3.setPayment_ref_no("");
-                                    nsetrans3.setUnique_number("");
-                                    nsetrans3.setAuto_trxn_no("");
-                                    nsetrans3.setSip_reg_no("");
-                                    nsetrans3.setPayment_mode("");
-                                    nsetrans3.setTopup_amount(0.0);
-                                    nsetrans3.setBank_acc_no("");
-                                    nsetrans3.setTransaction_number("");
-                                    nsetrans3.setApplication_number("");
-                                    nsetrans3.setTo_scheme_code("");
-                                    nsetrans3.setTo_scheme_name("");
-                                    nsetrans3.setTransaction_type("Joint Holder2 Fatca Request");
-                                    nsetrans3.setTransaction_status("");
-                                    nsetrans3.setPayment_status("");
-                                    nsetrans3.setActive_ceased_status("");
-                                    nsetrans3.setRemarks(fatca_reg_remark);
-                                    nsetrans3.setMandate_id("");
-                                    nsetrans3.setMandate_status("");
-                                    nsetrans3.setEmandate_auth_flag("");
-                                    nsetrans3.setApp_received_flag("");
-                                    nsetrans3.setTransaction_date(new Date());
-                                    nsetrans3.setUser_id(userDto.getId());
+                                    NseTransactions nsetrans2 = new NseTransactions();
+                                    nsetrans2.setUrl(fatcaRequestUrl);
+                                    nsetrans2.setNse_request(fatcaReqBody.toString());
+                                    nsetrans2.setNse_response(fatcaResponse);
+                                    nsetrans2.setReturn_msg(fatca_reg_status);
+                                    nsetrans2.setService_return_code(fatcaStatusCode);
+                                    nsetrans2.setService_msg(fatca_reg_status);
+                                    nsetrans2.setReg_id(fatca_reg_id);
+                                    nsetrans2.setPayment_link("");
+                                    nsetrans2.setPan(userDto.getJoint_holder_pan1());
+                                    nsetrans2.setName(userDto.getJoint_holder_name1());
+                                    nsetrans2.setBranch(userDto.getBranch());
+                                    nsetrans2.setRm_name(userDto.getRm_name());
+                                    nsetrans2.setSubbroker_name(userDto.getSubbroker_name());
+                                    nsetrans2.setClient_name(client_name);
+                                    nsetrans2.setIin_number(userDto.getNse_iin_number());
+                                    nsetrans2.setScheme_name("");
+                                    nsetrans2.setScheme_code("");
+                                    nsetrans2.setFolio_no("");
+                                    nsetrans2.setAmount_units("");
+                                    nsetrans2.setFrequency("");
+                                    nsetrans2.setPeriod_day("");
+                                    nsetrans2.setUmrn_no("");
+                                    nsetrans2.setPurchase_type("");
+                                    nsetrans2.setPayment_ref_no("");
+                                    nsetrans2.setUnique_number("");
+                                    nsetrans2.setAuto_trxn_no("");
+                                    nsetrans2.setSip_reg_no("");
+                                    nsetrans2.setPayment_mode("");
+                                    nsetrans2.setTopup_amount(0.0);
+                                    nsetrans2.setBank_acc_no("");
+                                    nsetrans2.setTransaction_number("");
+                                    nsetrans2.setApplication_number("");
+                                    nsetrans2.setTo_scheme_code("");
+                                    nsetrans2.setTo_scheme_name("");
+                                    nsetrans2.setTransaction_type("Joint Holder1 Fatca Request");
+                                    nsetrans2.setTransaction_status("");
+                                    nsetrans2.setPayment_status("");
+                                    nsetrans2.setActive_ceased_status("");
+                                    nsetrans2.setRemarks(fatca_reg_remark);
+                                    nsetrans2.setMandate_id("");
+                                    nsetrans2.setMandate_status("");
+                                    nsetrans2.setEmandate_auth_flag("");
+                                    nsetrans2.setApp_received_flag("");
+                                    nsetrans2.setTransaction_date(new Date());
+                                    nsetrans2.setUser_id(userDto.getUser_id());
                                     if(source.equalsIgnoreCase("Mobile")){
                                         nsetrans1.setRegister_source("Mobile App");
                                     }else {
                                         nsetrans1.setRegister_source("Website");
                                     }
-                                    nsetrans3.setBroker_code(user_broker_code);
-                                    nsetrans3.setEuin_number(euin);
-                                    nsetrans3.setCc_received("");
-                                    nsetrans3.setFund_trans_to_amc("");
-                                    nsetrans3.setRefund_status("");
-                                    nsetrans3.setRefund_amount("");
-                                    nseTransactionService.save(nsetrans3);
+                                    nsetrans2.setBroker_code(user_broker_code);
+                                    nsetrans2.setEuin_number(euin);
+                                    nsetrans2.setCc_received("");
+                                    nsetrans2.setFund_trans_to_amc("");
+                                    nsetrans2.setRefund_status("");
+                                    nsetrans2.setRefund_amount("");
+                                    nseTransactionService.save(nsetrans2);
 
-                                }
-                            }
-                        }
-
-                        System.out.println("fatca_reg_statuss = " + fatca_reg_status);
-                        if (reg_status.equalsIgnoreCase("REG_SUCCESS"))
-                        {
-                            if (fatca_reg_status.equalsIgnoreCase("REG_FAILED"))
-                            {
-                                return NseUtils.commonResponse("FATCA registration failed. Please contact your RM.", HttpStatus.BAD_REQUEST);
-                            } else
-                            {
-                                if("1".equals(multiple_reg))
-                                {
-                                    System.out.println("userDto = " + userDto);
-
-                                    UserBseNseDto existing = userServiceClient.getUserBseNseDetailsByIinNumberAndUserId(Integer.valueOf(userid),userDto.getNse_iin_number(),userDto.getClient_name(),token);
-
-                                    if(existing != null)
+                                    if(StringHelper.isNotEmpty(userDto.getJoint_holder_name2()))
                                     {
-                                        userDto.setNse_customer(1);
-                                        userDto.setBroker_code(user_broker_code);
-                                        userDto.setEuin(euin);
-                                        userDto.setNse_active(1);
-                                        userDto.setOnline_flag("NSE");
-                                        userDto.setId(Integer.parseInt(userid));
-                                        userDto.setClient_name(client_name);
-                                        userServiceClient.saveBseNseDetails(userDto, token);
-                                    }else
-                                    {
-                                        return NseUtils.commonResponse("User Not Found.", HttpStatus.BAD_REQUEST);
+                                        joint_name = "";
+                                        joint_pan = "";
+                                        //joint_email = "";
+                                        joint1_dob = "";
+                                        joint_place_birth = "";
+                                        //joint_country_birth_code = "";
+                                        joint_occupation_code = "";
+                                        joint_annual_income_code = "";
+                                        joint_source_wealth_code = "";
+                                        joint_political_code = "";
+                                        joint_address_type_code = "";
+
+                                        joint_name = userDto.getJoint_holder_name2();
+                                        joint_pan = userDto.getJoint_holder_pan2();
+                                        //joint_email = userDto.getJoint_holder_email2();
+                                        joint1_dob = userDto.getJoint_holder_dob2();
+                                        joint_place_birth = userDto.getJoint_holder_place_of_birth2();
+                                        //joint_country_birth_code = userDto.getJoint_holder_country_birth_code2();
+                                        joint_occupation_code = userDto.getJoint_holder_occupation_code2();
+                                        joint_annual_income_code = userDto.getJoint_holder_annual_income_code2();
+                                        joint_source_wealth_code = userDto.getJoint_holder_source_of_wealth_code2();
+                                        joint_political_code = userDto.getJoint_holder_political_code2();
+                                        joint_address_type_code = userDto.getJoint_holder_address_type_code2();
+
+                                        if(joint1_dob != null && !joint1_dob.isEmpty())
+                                        {
+                                            Date dob = df0.parse(joint1_dob);
+                                            joint1_dob = df1.format(dob);
+                                        }
+
+                                        joint_occupation_type = "S";
+                                        if(joint_occupation_code.equalsIgnoreCase("01"))
+                                        {
+                                            joint_occupation_type = "B";
+                                        }
+                                        else if (joint_occupation_code.equalsIgnoreCase("02") || joint_occupation_code.equalsIgnoreCase("03") || joint_occupation_code.equalsIgnoreCase("04"))
+                                        {
+                                            joint_occupation_type = "S";
+                                        }
+                                        else
+                                        {
+                                            joint_occupation_type = "O";
+                                        }
+
+                                        fatcaReqArray = new JSONArray();
+                                        fatcaReqObject = new JSONObject();
+                                        fatcaReqObject.put("pan_rp", joint_pan);
+                                        fatcaReqObject.put("pekrn", "");
+                                        fatcaReqObject.put("inv_name", joint_name);
+                                        fatcaReqObject.put("dob", joint1_dob);
+                                        fatcaReqObject.put("fr_name", "");
+                                        fatcaReqObject.put("sp_name", "");
+                                        fatcaReqObject.put("tax_status", client_taxstatus);
+                                        fatcaReqObject.put("data_src", data_src);
+                                        fatcaReqObject.put("addr_type", joint_address_type_code);
+                                        fatcaReqObject.put("po_bir_inc", joint_place_birth);
+                                        fatcaReqObject.put("co_bir_inc", "IN");
+                                        fatcaReqObject.put("tax_res1", tax_res1);
+                                        fatcaReqObject.put("tpin1", joint_pan);
+                                        fatcaReqObject.put("id1_type", id1_type);
+                                        fatcaReqObject.put("tax_res2", "");
+                                        fatcaReqObject.put("tpin2", "");
+                                        fatcaReqObject.put("id2_type", "");
+                                        fatcaReqObject.put("tax_res3", "");
+                                        fatcaReqObject.put("tpin3", "");
+                                        fatcaReqObject.put("id3_type", "");
+                                        fatcaReqObject.put("tax_res4", "");
+                                        fatcaReqObject.put("tpin4", "");
+                                        fatcaReqObject.put("id4_type", "");
+                                        fatcaReqObject.put("srce_wealt", joint_source_wealth_code);
+                                        fatcaReqObject.put("corp_servs", "");
+                                        fatcaReqObject.put("inc_slab", joint_annual_income_code);
+                                        fatcaReqObject.put("net_worth", "");
+                                        fatcaReqObject.put("nw_date", "");
+                                        fatcaReqObject.put("pep_flag", joint_political_code);
+                                        fatcaReqObject.put("occ_code", joint_occupation_code);
+                                        fatcaReqObject.put("occ_type", joint_occupation_type);
+                                        fatcaReqObject.put("exemp_code", "");
+                                        fatcaReqObject.put("ffi_drnfe", "");
+                                        fatcaReqObject.put("giin_no", "");
+                                        fatcaReqObject.put("spr_entity", "");
+                                        fatcaReqObject.put("giin_na", "");
+                                        fatcaReqObject.put("giin_exemc", "");
+                                        fatcaReqObject.put("nffe_catg", "");
+                                        fatcaReqObject.put("act_nfe_sc", "");
+                                        fatcaReqObject.put("nature_bus", "");
+                                        fatcaReqObject.put("rel_listed", "");
+                                        fatcaReqObject.put("exch_name", "O");
+                                        fatcaReqObject.put("ubo_appl", ubo_appl);
+                                        fatcaReqObject.put("ubo_count", "");
+                                        fatcaReqObject.put("sdf_flag", "");
+                                        fatcaReqObject.put("ubo_df", ubo_df);
+                                        fatcaReqObject.put("aadhaar_rp", "");
+                                        fatcaReqObject.put("new_change", "");
+
+                                        if (joint_name != null && joint_name.length() > 30) {
+                                            joint_name = joint_name.substring(0, 25);
+                                        }
+
+                                        fatcaReqObject.put("log_name", joint_name);
+                                        fatcaReqObject.put("ubo_exch", "");
+                                        fatcaReqObject.put("ubo_isin", "");
+                                        fatcaReqObject.put("ubo_rel_li", "");
+                                        fatcaReqObject.put("npo_form", "N");
+                                        fatcaReqObject.put("npo_dcl", "N");
+                                        fatcaReqObject.put("npo_rgno", "");
+
+                                        uboReqArray = new JSONArray();
+                                        uboReqObject = new JSONObject();
+                                        uboReqObject.put("ubo_name", "");
+                                        uboReqObject.put("ubo_pan", "");
+                                        uboReqObject.put("ubo_nation", "");
+                                        uboReqObject.put("ubo_add1", "");
+                                        uboReqObject.put("ubo_add2", "");
+                                        uboReqObject.put("ubo_add3", "");
+                                        uboReqObject.put("ubo_city", "");
+                                        uboReqObject.put("ubo_pin", "");
+                                        uboReqObject.put("ubo_state", "");
+                                        uboReqObject.put("ubo_cntry", "");
+                                        uboReqObject.put("ubo_add_ty", "");
+                                        uboReqObject.put("ubo_ctr", "");
+                                        uboReqObject.put("ubo_tin", "");
+                                        uboReqObject.put("ubo_id_ty", "");
+                                        uboReqObject.put("ubo_cob", "");
+                                        uboReqObject.put("ubo_dob", "");
+                                        uboReqObject.put("ubo_gender", "");
+                                        uboReqObject.put("ubo_fr_nam", "");
+                                        uboReqObject.put("ubo_occ", "");
+                                        uboReqObject.put("ubo_occ_ty", "");
+                                        uboReqObject.put("ubo_tel", "");
+                                        uboReqObject.put("ubo_mobile", "");
+                                        uboReqObject.put("ubo_code", "");
+                                        uboReqObject.put("ubo_hol_pc", "");
+                                        uboReqObject.put("ubo_categ", "");
+                                        uboReqObject.put("ubo_pep_fl", "");
+                                        uboReqObject.put("ubo_email", "");
+                                        uboReqObject.put("ubo_smo_de", "");
+                                        uboReqArray.put(uboReqObject);
+
+                                        fatcaReqObject.put("ubo_details", uboReqArray);
+                                        fatcaReqArray.put(fatcaReqObject);
+
+                                        fatcaReqBody = new JSONObject();
+                                        fatcaReqBody.put("reg_details", fatcaReqArray);
+
+                                        System.out.println("Joint Holder 2 fatcaReqBody = " + fatcaReqBody);
+
+                                        fatcaEntity = new HttpEntity<>(fatcaReqBody.toString(), headers);
+                                        fatcaRequestUrl = nseUrl+"/nsemfdesk/api/v2/registration/FATCA_COMMON";
+
+                                        fatcaResult = restTemplate.postForEntity(fatcaRequestUrl, fatcaEntity, String.class);
+                                        fatcaStatusCode = fatcaResult.getStatusCode().toString();
+                                        System.out.println("joint holder 2 fatcaStatusCode = " + fatcaStatusCode);
+                                        System.out.println("joint holder 2 fatcaResponse = " + fatcaResponse);
+
+                                        fatcaObj = new JSONObject(fatcaResponse);
+                                        fatcaArr = fatcaObj.getJSONArray("reg_details");
+
+                                        fatca_reg_id = "";
+                                        fatca_reg_status = "";
+                                        fatca_reg_remark = "";
+
+
+                                        for (int i = 0; i < fatcaArr.length(); i++)
+                                        {
+                                            JSONObject regDetail = fatcaArr.getJSONObject(i);
+                                            fatca_reg_id = regDetail.optString("reg_id");
+                                            fatca_reg_status = regDetail.optString("reg_status");
+                                            fatca_reg_remark = regDetail.optString("reg_remark");
+                                        }
+
+                                        NseTransactions nsetrans3 = new NseTransactions();
+                                        nsetrans3.setUrl(fatcaRequestUrl);
+                                        nsetrans3.setNse_request(fatcaReqBody.toString());
+                                        nsetrans3.setNse_response(fatcaResponse);
+                                        nsetrans3.setReturn_msg(fatca_reg_status);
+                                        nsetrans3.setService_return_code(fatcaStatusCode);
+                                        nsetrans3.setService_msg(fatca_reg_status);
+                                        nsetrans3.setReg_id(fatca_reg_id);
+                                        nsetrans3.setPayment_link("");
+                                        nsetrans3.setPan(userDto.getJoint_holder_pan2());
+                                        nsetrans3.setName(userDto.getJoint_holder_name2());
+                                        nsetrans3.setBranch(userDto.getBranch());
+                                        nsetrans3.setRm_name(userDto.getRm_name());
+                                        nsetrans3.setSubbroker_name(userDto.getSubbroker_name());
+                                        nsetrans3.setClient_name(client_name);
+                                        nsetrans3.setIin_number(userDto.getNse_iin_number());
+                                        nsetrans3.setScheme_name("");
+                                        nsetrans3.setScheme_code("");
+                                        nsetrans3.setFolio_no("");
+                                        nsetrans3.setAmount_units("");
+                                        nsetrans3.setFrequency("");
+                                        nsetrans3.setPeriod_day("");
+                                        nsetrans3.setUmrn_no("");
+                                        nsetrans3.setPurchase_type("");
+                                        nsetrans3.setPayment_ref_no("");
+                                        nsetrans3.setUnique_number("");
+                                        nsetrans3.setAuto_trxn_no("");
+                                        nsetrans3.setSip_reg_no("");
+                                        nsetrans3.setPayment_mode("");
+                                        nsetrans3.setTopup_amount(0.0);
+                                        nsetrans3.setBank_acc_no("");
+                                        nsetrans3.setTransaction_number("");
+                                        nsetrans3.setApplication_number("");
+                                        nsetrans3.setTo_scheme_code("");
+                                        nsetrans3.setTo_scheme_name("");
+                                        nsetrans3.setTransaction_type("Joint Holder2 Fatca Request");
+                                        nsetrans3.setTransaction_status("");
+                                        nsetrans3.setPayment_status("");
+                                        nsetrans3.setActive_ceased_status("");
+                                        nsetrans3.setRemarks(fatca_reg_remark);
+                                        nsetrans3.setMandate_id("");
+                                        nsetrans3.setMandate_status("");
+                                        nsetrans3.setEmandate_auth_flag("");
+                                        nsetrans3.setApp_received_flag("");
+                                        nsetrans3.setTransaction_date(new Date());
+                                        nsetrans3.setUser_id(userDto.getUser_id());
+                                        if(source.equalsIgnoreCase("Mobile")){
+                                            nsetrans1.setRegister_source("Mobile App");
+                                        }else {
+                                            nsetrans1.setRegister_source("Website");
+                                        }
+                                        nsetrans3.setBroker_code(user_broker_code);
+                                        nsetrans3.setEuin_number(euin);
+                                        nsetrans3.setCc_received("");
+                                        nsetrans3.setFund_trans_to_amc("");
+                                        nsetrans3.setRefund_status("");
+                                        nsetrans3.setRefund_amount("");
+                                        nseTransactionService.save(nsetrans3);
+
                                     }
-                                }else
+                                }
+
+                            }
+                            if (reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                            {
+                                if (fatca_reg_status.equalsIgnoreCase("REG_FAILED"))
+                                {
+                                    return NseUtils.commonResponse(fatca_reg_remark+ " FATCA registration failed. Please contact your RM.", HttpStatus.BAD_REQUEST);
+                                } else
                                 {
                                     userDto.setNse_customer(1);
+                                    userDto.setNse_iin_number(userDto.getNse_iin_number());
                                     userDto.setBroker_code(user_broker_code);
                                     userDto.setEuin(euin);
                                     userDto.setNse_active(1);
                                     userDto.setOnline_flag("NSE");
-                                    userDto.setId(Integer.parseInt(userid));
+                                    userDto.setUser_id(Integer.parseInt(userid));
                                     userDto.setClient_name(client_name);
-                                    userServiceClient.saveUserNseSuccessResponse(userDto, token);
-                                }
+                                    try {
+                                        userServiceClient.saveUserNseSuccessResponse(userDto, token);
+                                    }catch (FeignException e) {
+                                        String errorMessage = e.contentUTF8();
 
-                                if(source.equalsIgnoreCase("Mobile"))
-                                {
-                                    userServiceClient.saveUserRegStatus(token);
+                                        if (errorMessage == null || errorMessage.isEmpty()) {
+                                            errorMessage = "Unexpected error occurred.";
+                                        }
+                                        if (e.status() == 409)
+                                        {
+                                            return NseUtils.commonResponse("Duplicate entry for this user.", HttpStatus.CONFLICT);
+                                        } else if (e.status() == 400) {
+                                            return NseUtils.commonResponse(errorMessage, HttpStatus.BAD_REQUEST);
+                                        } else {
+                                            return NseUtils.commonResponse("Unexpected error from User Service: " + errorMessage,
+                                                    HttpStatus.INTERNAL_SERVER_ERROR);
+                                        }
+                                    }
+
+                                    if(source.equalsIgnoreCase("Mobile"))
+                                    {
+                                        userServiceClient.saveUserRegStatus(token);
+                                    }
+
+                                    return NseUtils.commonResponse("Registration successful", HttpStatus.OK);
                                 }
-                                return NseUtils.commonResponse("Registration successful", HttpStatus.OK);
+                            } else
+                            {
+                                return NseUtils.commonResponse(fatca_reg_remark, HttpStatus.BAD_REQUEST);
                             }
-                        } else
+                        }else
                         {
-                            return NseUtils.commonResponse(fatca_reg_remark, HttpStatus.BAD_REQUEST);
+                            System.out.println("responseBody = " + responseBody);
+
+                            String jsonPart = responseBody.substring(responseBody.indexOf("{"));
+
+                            JSONObject json = new JSONObject(jsonPart);
+
+                            String message = json.getString("message");
+
+                            return NseUtils.commonResponse(message, HttpStatus.BAD_REQUEST);
+
                         }
                     } catch (Exception ex)
                     {
                         System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                         ex.printStackTrace();
-                        return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+                        return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }
 
@@ -1321,9 +1309,10 @@ public class NseOnboardingController {
 
         } catch (Exception ex)
         {
+            //logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

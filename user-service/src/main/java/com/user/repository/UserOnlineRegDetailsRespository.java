@@ -17,6 +17,9 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
     @Query("SELECT u FROM UsersOnlineRegDetails u WHERE u.user_id = :userId")
     List<UsersOnlineRegDetails> findNseUserByUserId(@Param("userId") Integer userId);
 
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE id = :id", nativeQuery = true)
+    Optional<UsersOnlineRegDetails> findUSerByOnlineIdAndActive(@Param("id") Integer id);
+
     @Query(value = """
     SELECT *
     FROM users_online_reg_details

@@ -578,4 +578,22 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
     """, nativeQuery = true)
     List<NseOnlineSchemeMaster> findSchemesByAmcCodeAndStartDateWithSettlementCheckNew();
 
+    @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE amc_code like '%SIF%' AND div_reinvest_flag = 'Z' AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND switch_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
+    List<Object[]> getAllSwitchSchemesBySif();
+
+    @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE div_reinvest_flag = :option AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND switch_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
+    List<Object[]> getAllSwitchSchemesByOption(@Param("option") String option);
+
+    @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE amc_code IN (:amc_names) AND amc_code like '%SIF%' AND div_reinvest_flag = 'Z' AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND redemption_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
+    List<Object[]> getAllRedemptionSchemesBySifWithAmc(@Param("amc_names") List<String> amc_names);
+
+    @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE amc_code IN (:amc_names) AND div_reinvest_flag = :option AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND redemption_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
+    List<Object[]> getAllRedemptionSchemesByOptionWithAmc(@Param("option") String option, @Param("amc_names") List<String> amc_names);
+
+    @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE amc_code like '%SIF%' AND div_reinvest_flag = 'Z' AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND redemption_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
+    List<Object[]> getAllRedemptionSchemesBySif();
+
+    @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE div_reinvest_flag = :option AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND redemption_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
+    List<Object[]> getAllRedemptionSchemesByOption(@Param("option") String option);
+
 }

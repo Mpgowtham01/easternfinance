@@ -492,14 +492,14 @@ public class FeignClientUserController
     {
         try
         {
-            Optional<UsersOnlineRegDetails> onlineRegDetailsList = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(userDto.getId(), userDto.getClient_name());
-
+            Optional<UsersOnlineRegDetails> onlineRegDetailsList = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(userDto.getUser_id(), userDto.getClient_name());
+			System.out.println("onlineRegDetailsList = " + onlineRegDetailsList);
 			UsersOnlineRegDetails users = null;
 			if(onlineRegDetailsList.isPresent())
 			{
 				users = onlineRegDetailsList.get();
 
-                users.setId(userDto.getId());
+//                users.setId(userDto.getId());
                 users.setNse_customer(1);
                 users.setNse_iin_number(userDto.getNse_iin_number());
                 users.setBroker_code(userDto.getBroker_code());
@@ -2348,6 +2348,136 @@ public class FeignClientUserController
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getMobileAppUserDetailsByOnlineId")
+	public ResponseEntity<?> getMobileAppUserDetailsByOnlineId(@RequestParam Integer userId)
+	{
+		List<UsersOnlineRegDetails> useOptional = null;
+		UsersOnlineRegDetails userDetail = null;
+		List<UsersBankDetails> bankDetails = null;
+		UsersNomineeDetails nomineeDetails = null;
+		List<UsersMandateDetails> mandateDetails = null;
+		UsersNomineeDetails nominee = null;
+		UserDto userDto = null;
+		User user = null;
+		try
+		{
+			Optional<User> userOpt = userRepository.findUSerByIdAndActive(userId);
+
+			if (userOpt.isPresent())
+			{
+				user = userOpt.get();
+			}
+
+			if (user != null)
+			{
+				MymfboxOnboarding onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+
+				if (onboarding == null)
+				{
+					return UserUtils.errorResponse("Onboarding details not found.", HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+
+				Optional<UsersOnlineRegDetails> useDetailsOptional = userOnlineRegDetailsRespository.getUserRegDetailsByOnlineId(onboarding.getUser_id(), onboarding.getClient_name());
+
+				if(useDetailsOptional.isPresent())
+				{
+					userDetail = useDetailsOptional.get();
+				}
+			}
+
+			if (userDetail != null)
+			{
+				bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userId, userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userId, userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE").orElse(null);
+				mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				userDto = UserMapper.mapToUserDtoMapper(userDetail, bankDetails, mandateDetails, nomineeDetails);
+			} else
+			{
+				userDto = new UserDto();
+				userDto.setName(user.getName());
+				userDto.setPan(user.getPan());
+				userDto.setMobile(user.getMobile());
+				userDto.setEmail(user.getEmail());
+//				userDto.setAlter_email(user.getAlter_email());
+//				userDto.setAlter_mobile(user.getAlter_mobile());
+				userDto.setType_id(user.getType_id());
+				userDto.setBranch(user.getBranch());
+				userDto.setRm_name(user.getRm_name());
+				userDto.setSubbroker_name(user.getSubbroker_name());
+				userDto.setSuper_subbroker_name(user.getSuper_subbroker_name());
+				userDto.setPayout(user.getPayout());
+//				userDto.setLogin_status(user.getLogin_status());
+				userDto.setActive(user.getActive());
+				userDto.setEmail_active(user.getEmail_active());
+				userDto.setUser_password(user.getUserPassword());
+				userDto.setUser_pass(user.getUserPass());
+				userDto.setStreet_1(user.getStreet_1());
+				userDto.setStreet_2(user.getStreet_2());
+				userDto.setStreet_3(user.getStreet_3());
+				userDto.setCity(user.getCity());
+				userDto.setPincode(user.getPincode());
+				userDto.setState(user.getState());
+				userDto.setCountry(user.getCountry());
+				userDto.setFather_name(user.getFather_name());
+				userDto.setGender(user.getGender());
+				userDto.setMarital_status(user.getMarital_status());
+				userDto.setDate_of_birth(user.getDate_of_birth());
+				userDto.setAnniversary_date(user.getAnniversary_date());
+				userDto.setPhone_office(user.getPhone_office());
+				userDto.setPhone_residence(user.getPhone_residence());
+				userDto.setBroker_code(user.getBroker_code());
+				userDto.setClient_name(user.getClient_name());
+			}
+
+			if (userDto != null)
+			{
+				return ResponseEntity.ok(userDto);
+			} else
+			{
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "User not found"));
+			}
+		} catch (Exception ex)
+		{
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching user"));
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getUserByOnlineIdAndActive")
+	public ResponseEntity<?> getUserByOnlineIdAndActive(@RequestParam Integer onlineId, @RequestParam Integer userId) {
+		List<UsersOnlineRegDetails> useOptional = null;
+		UsersOnlineRegDetails userDetail = null;
+		List<UsersBankDetails> bankDetails = null;
+		UsersNomineeDetails nomineeDetails = null;
+		List<UsersMandateDetails> mandateDetails = null;
+		UsersNomineeDetails nominee = null;
+		UserDto userDto = null;
+		User user = null;
+		try
+		{
+			userDetail = userOnlineRegDetailsRespository.findUSerByOnlineIdAndActive(onlineId).orElse(null);
+
+			if (userDetail == null) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "user register not found!"));
+			}
+			System.out.println("userDetail = " + userDetail);
+			bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+			nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE").orElse(null);
+			mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+			System.out.println("bankDetails = " + bankDetails);
+			System.out.println("nomineeDetails = " + nomineeDetails);
+			System.out.println("mandateDetails = " + mandateDetails);
+			userDto = UserMapper.mapToUserDtoMapper(userDetail, bankDetails, mandateDetails, nomineeDetails);
+			System.out.println("userDto = " + userDto);
+			return ResponseEntity.ok(userDto);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching user"));
 		}
 	}
 

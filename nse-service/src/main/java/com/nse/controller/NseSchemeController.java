@@ -8421,4 +8421,160 @@ public class NseSchemeController {
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/getSwitchSchemeByOption")
+    public ResponseEntity<?> getSwitchSchemeByOption(@RequestParam String option)
+    {
+        try {
+            option = NseUtils.checkParem(option);
+
+            if(option.isEmpty())
+            {
+                return NseUtils.commonResponse("Please enter a Option", HttpStatus.BAD_REQUEST);
+            }
+            String optionString = "";
+            if(option.equalsIgnoreCase("growth"))
+            {
+                optionString = "Z";
+            }else if(option.equalsIgnoreCase("dividend payout"))
+            {
+                optionString = "N";
+            }else if(option.equalsIgnoreCase("dividend reinvestment"))
+            {
+                optionString = "Y";
+            }else if(option.equalsIgnoreCase("SIF"))
+            {
+                optionString = "SIF";
+            }
+
+            List<NewSchemePojo> schemeList = new ArrayList<>();
+            List<Object[]> filteredSchemes = null;
+
+            if(optionString.equalsIgnoreCase("SIF"))
+            {
+                filteredSchemes = nseOnlineSchemeMasterRepository.getAllSwitchSchemesBySif();
+            }else
+            {
+                filteredSchemes = nseOnlineSchemeMasterRepository.getAllSwitchSchemesByOption(optionString);
+            }
+
+            if (filteredSchemes != null && !filteredSchemes.isEmpty()) {
+                schemeList = filteredSchemes.stream().map(row -> {
+                            String schemeName = (String) row[0];
+                            String scheme = (String) row[1];
+                            String category = (String) row[2];
+                            String amc_code = (String) row[3];
+                            String amc_name = (String) row[4];
+                            String logo = amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(amc_code);
+                            return new NewSchemePojo(schemeName,scheme, category, amc_code, amc_name, "", logo);
+                        })
+                        .sorted(Comparator.comparing(NewSchemePojo::getScheme_name, String.CASE_INSENSITIVE_ORDER))
+                        .collect(Collectors.toList());
+            }
+
+            return ResponseEntity.ok(schemeList);
+
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getRedemptionSchemeByAmc")
+    public ResponseEntity<?> getRedemptionSchemeByAmc(@RequestHeader("Authorization") String token,@RequestParam String option)
+    {
+        try
+        {
+            option = NseUtils.checkParem(option);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+            if(option.isEmpty())
+            {
+                return NseUtils.commonResponse("Please enter a Option", HttpStatus.BAD_REQUEST);
+            }
+            String optionString = "";
+            if(option.equalsIgnoreCase("growth"))
+            {
+                optionString = "Z";
+            }else if(option.equalsIgnoreCase("dividend payout"))
+            {
+                optionString = "N";
+            }else if(option.equalsIgnoreCase("dividend reinvestment"))
+            {
+                optionString = "Y";
+            }else if(option.equalsIgnoreCase("SIF"))
+            {
+                optionString = "SIF";
+            }
+
+            List<NewSchemePojo> schemeList = new ArrayList<>();
+            List<Object[]> filteredSchemes = null;
+            List<String> amc_list = new ArrayList<String>();
+            BseNseKeyDto nsekey = null;
+
+            try {
+                nsekey = userServiceClient.getByClientName(client_name,token);
+            } catch (FeignException e) {
+                if (e.status() == 400) {
+                    return NseUtils.commonResponse("No record found for the given IIN Number and Client Name.", HttpStatus.BAD_REQUEST);
+                } else if (e.status() == 404) {
+                    return NseUtils.commonResponse("User not found.", HttpStatus.NOT_FOUND);
+                } else {
+                    return NseUtils.commonResponse("Downstream service error.", HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            }
+
+            if(nsekey != null)
+            {
+                String amc_string = nsekey.getAmc_names();
+
+                if(!amc_string.isEmpty())
+                {
+                    amc_list = new ArrayList<String>(Arrays.asList(amc_string.split(",")));
+                }
+            }
+
+            if(!amc_list.isEmpty())
+            {
+                if(optionString.equalsIgnoreCase("SIF"))
+                {
+                    filteredSchemes = nseOnlineSchemeMasterRepository.getAllRedemptionSchemesBySifWithAmc(amc_list);
+                }else
+                {
+                    filteredSchemes = nseOnlineSchemeMasterRepository.getAllRedemptionSchemesByOptionWithAmc(optionString,amc_list);
+                }
+            }else
+            {
+                if(optionString.equalsIgnoreCase("SIF"))
+                {
+                    filteredSchemes = nseOnlineSchemeMasterRepository.getAllRedemptionSchemesBySif();
+                }else
+                {
+                    filteredSchemes = nseOnlineSchemeMasterRepository.getAllRedemptionSchemesByOption(optionString);
+                }
+            }
+
+            if (filteredSchemes != null && !filteredSchemes.isEmpty())
+            {
+                schemeList = filteredSchemes.stream().map(row -> {
+                            String schemeName = (String) row[0];
+                            String scheme = (String) row[1];
+                            String category = (String) row[2];
+                            String amc_code = (String) row[3];
+                            String amc_name = (String) row[4];
+                            String logo = amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(amc_code);
+                            return new NewSchemePojo(schemeName,scheme, category, amc_code, amc_name, "", logo);
+                        })
+                        .sorted(Comparator.comparing(NewSchemePojo::getScheme_name, String.CASE_INSENSITIVE_ORDER))
+                        .collect(Collectors.toList());
+            }
+
+            return ResponseEntity.ok(schemeList);
+
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

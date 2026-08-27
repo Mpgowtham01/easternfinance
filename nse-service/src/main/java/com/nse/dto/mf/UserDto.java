@@ -120,6 +120,7 @@ public class UserDto {
 
     private String number_of_nominee = "";
     private String nominee_soa = "";
+    private String nominee_opt = "";
     private String nominee1_type = "";
     private String nominee1_name = "";
     private String nominee1_dob = "";

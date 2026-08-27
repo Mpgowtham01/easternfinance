@@ -10,6 +10,7 @@ import com.nse.pojo.CommonPojo;
 import com.nse.repository.*;
 
 import com.nse.response.CommonResponse;
+import com.nse.services.NsePincodeService;
 import com.nse.utils.NseUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -54,6 +55,8 @@ public class NseUtilsController {
 
     @Value("${jwt.secret-key}")
     private String secretKey;
+    @Autowired
+    private NsePincodeService nsePincodeService;
 
     public NseUtilsController(
             NseAccountTypeRepository accountTypeRepo,
@@ -772,6 +775,29 @@ public class NseUtilsController {
         {
             ex.printStackTrace();
             return NseUtils.commonResponse("Something went wrong, We have taken note of the issue. Be rest assured we will fix it as soon as possible", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getCityStateForPincode")
+    public ResponseEntity<?> getCityStateForPincode(@RequestHeader("Authorization") String token, @RequestParam String pinCode)
+    {
+        try
+        {
+            if(!TokenInterceptor.isValidToken(token, secretKey))
+            {
+                return NseUtils.commonResponse("token not valid or empty!", HttpStatus.UNAUTHORIZED);
+            }
+            pinCode = NseUtils.checkParem(pinCode);
+            if(pinCode.isEmpty()){
+                return NseUtils.commonResponse("pincode empty!", HttpStatus.BAD_REQUEST);
+            }
+            NsePincode pin = nsePincodeService.getPincodeDetails(pinCode).orElse(null);
+            return ResponseEntity.ok(pin);
+
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
