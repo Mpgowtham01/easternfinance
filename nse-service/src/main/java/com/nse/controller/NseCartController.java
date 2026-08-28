@@ -2629,4 +2629,67 @@ public class NseCartController {
         }
     }
 
+    @GetMapping("/getCartDetailById")
+    public ResponseEntity<?> getCartDetailById(
+            @RequestParam String cart_id,
+            @RequestHeader("Authorization") String token)
+    {
+        try
+        {
+
+            List<CartDto> cartList = cartService.getCartListById(Integer.valueOf(cart_id),token);
+
+            if(cartList == null || cartList.size() == 0)
+            {
+                return NseUtils.commonResponse("No Cart Found", HttpStatus.OK);
+            }
+
+            List<String> distinctInvestorCodes = cartList.stream().map(CartDto::getInvestor_code).distinct().collect(Collectors.toList());
+
+            List<CartPojo> cartPojoList = new ArrayList<>();
+
+            for (String investorCode : distinctInvestorCodes)
+            {
+                List<CartDto> filteredList = cartList.stream().filter(cart -> cart.getInvestor_code().equalsIgnoreCase(investorCode)).sorted(Comparator.comparingInt(CartDto::getId).reversed()).collect(Collectors.toList());
+
+                if(!filteredList.isEmpty())
+                {
+                    CartDto cart = filteredList.get(0);
+
+                    for (CartDto filtercart : filteredList)
+                    {
+                        filtercart.setScheme_logo(amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(filtercart.getScheme_name()));
+                        filtercart.setTo_scheme_logo(amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(filtercart.getTo_scheme_name()));
+                    }
+
+                    CartPojo cartPojo = new CartPojo();
+                    cartPojo.setInv_name(cart.getName());
+                    cartPojo.setTax_status(cart.getTax_status_desc());
+                    cartPojo.setTax_status_code(cart.getTax_status_code());
+                    cartPojo.setHolding_nature(cart.getHolding_nature_desc());
+                    cartPojo.setHolding_nature_code(cart.getHolding_nature_code());
+                    cartPojo.setBroker_code(cart.getBroker_code());
+                    cartPojo.setInvestor_code(cart.getInvestor_code());
+                    cartPojo.setLogo(vendorLogoPath +  NseUtils.getVendorImage(cart.getVendor()));
+                    cartPojo.setBse_nse_mfu_flag(cart.getVendor());
+                    cartPojo.setScheme_list(filteredList);
+                    cartPojoList.add(cartPojo);
+                }
+            }
+
+            CartResponse apiResponse = new CartResponse();
+            apiResponse.setStatus(200);
+            apiResponse.setStatus_msg("Success Cart Fetched Successfully.");
+            apiResponse.setMsg("Cart Fetched Successfully.");
+            apiResponse.setResult(cartPojoList);
+            return new ResponseEntity<CartResponse>(apiResponse,HttpStatus.OK);
+
+
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+            return NseUtils.commonResponse("Investor details not available.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

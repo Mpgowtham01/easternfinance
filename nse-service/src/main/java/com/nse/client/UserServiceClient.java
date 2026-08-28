@@ -491,7 +491,10 @@ public interface UserServiceClient {
     @GetMapping("/getMobileAppUserDetailsByOnlineId")
     UserDto getMobileAppUserDetailsByOnlineId(@RequestParam Integer userId, @RequestHeader("Authorization") String token);
 
-        @GetMapping("/getUserByOnlineIdAndActive")
+    @GetMapping("/getUserByOnlineIdAndActive")
     UserDto getUserByOnlineIdAndActive(@RequestParam Integer onlineId, @RequestParam Integer userId, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getActiveCartsById")
+    List<CartDto> getActiveCartsById(@RequestParam("cart_id") Integer cart_id, @RequestHeader("Authorization") String token);
 
 }

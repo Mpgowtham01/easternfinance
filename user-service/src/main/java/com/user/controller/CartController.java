@@ -336,4 +336,18 @@ public class CartController
         }
     }
 
+    @Hidden
+    @GetMapping("/getActiveCartsById")
+    public ResponseEntity<List<Cart>> getActiveCartsById(@RequestParam Integer cart_id)
+    {
+        try
+        {
+            List<Cart> list = cartService.getActiveCartsById(cart_id);
+            return ResponseEntity.ok(list);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 }

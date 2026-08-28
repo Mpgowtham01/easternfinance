@@ -2036,73 +2036,71 @@ public class NseAdminReportController
 
                 ResponseEntity<String> orderStatusresponse = restTemplate.postForEntity(orderStatus_url, entity, String.class);
                 System.out.println("orderStatusReportApi::Response Code: " + orderStatusresponse.getStatusCode());
-                System.out.println("orderStatusReportApi::Response Body: " + orderStatusresponse.getBody());
+                //System.out.println("orderStatusReportApi::Response Body: " + orderStatusresponse.getBody());
 
                 JSONObject jsonResponse = new JSONObject(orderStatusresponse.getBody());
                 String responseStatus = jsonResponse.optString("response_status");
                 String error_remark = jsonResponse.optString("error_remark");
 
-                NseTransactions nsetrans = new NseTransactions();
-                nsetrans.setUrl(orderStatus_url);
-                nsetrans.setNse_request(orderRequest.toString());
-                nsetrans.setNse_response(jsonResponse.toString());
-                nsetrans.setReturn_msg(responseStatus);
-                nsetrans.setService_return_code(responseStatus);
-                nsetrans.setService_msg(responseStatus);
-                nsetrans.setReg_id("");
-                nsetrans.setPayment_link("");
-                nsetrans.setPan("");
-                nsetrans.setName("");
-                nsetrans.setBranch(user.getBranch());
-                nsetrans.setRm_name(user.getRm_name());
-                nsetrans.setSubbroker_name(user.getSubbroker_name());
-                nsetrans.setClient_name(client_name);
-                nsetrans.setIin_number("");
-                nsetrans.setScheme_name("");
-                nsetrans.setScheme_code("");
-                nsetrans.setFolio_no("");
-                nsetrans.setAmount_units("");
-                nsetrans.setFrequency("");
-                nsetrans.setPeriod_day("");
-                nsetrans.setUmrn_no("");
-                nsetrans.setPurchase_type("");
-                nsetrans.setPayment_ref_no("");
-                nsetrans.setUnique_number("");
-                nsetrans.setAuto_trxn_no("");
-                nsetrans.setSip_reg_no("");
-                nsetrans.setPayment_mode("");
-                nsetrans.setTopup_amount(0.0);
-                nsetrans.setBank_acc_no("");
-                nsetrans.setTransaction_number("");
-                nsetrans.setApplication_number("");
-                nsetrans.setTo_scheme_code("");
-                nsetrans.setTo_scheme_name("");
-                nsetrans.setTransaction_type("Get Order Status Report");
-                nsetrans.setTransaction_status("");
-                nsetrans.setPayment_status("");
-                nsetrans.setActive_ceased_status("");
-                nsetrans.setRemarks(responseStatus);
-                nsetrans.setMandate_id("");
-                nsetrans.setMandate_status("");
-                nsetrans.setEmandate_auth_flag("");
-                nsetrans.setApp_received_flag("");
-                nsetrans.setTransaction_date(new Date());
-                nsetrans.setUser_id(Integer.parseInt(userid));
-                if (source.equalsIgnoreCase("Mobile")) {
-                    nsetrans.setRegister_source("Mobile App");
-                } else {
-                    nsetrans.setRegister_source("Website");
-                }
-
-                nsetrans.setBroker_code("");
-                nsetrans.setEuin_number("");
-                nsetrans.setCc_received("");
-                nsetrans.setFund_trans_to_amc("");
-                nsetrans.setRefund_status("");
-                nsetrans.setRefund_amount("");
-                nseTransactionService.save(nsetrans);
-
-                nseLogService.saveLog("Get Order Status Report", "Get Order Status Report", NseUtils.buildLogMessage("Get Order Status Report", user, request), NseUtils.getIpAddr(request), source, client_name, user);
+//                NseTransactions nsetrans = new NseTransactions();
+//                nsetrans.setUrl(orderStatus_url);
+//                nsetrans.setNse_request(orderRequest.toString());
+//                nsetrans.setNse_response(jsonResponse.toString());
+//                nsetrans.setReturn_msg(responseStatus);
+//                nsetrans.setService_return_code(responseStatus);
+//                nsetrans.setService_msg(responseStatus);
+//                nsetrans.setReg_id("");
+//                nsetrans.setPayment_link("");
+//                nsetrans.setPan("");
+//                nsetrans.setName("");
+//                nsetrans.setBranch(user.getBranch());
+//                nsetrans.setRm_name(user.getRm_name());
+//                nsetrans.setSubbroker_name(user.getSubbroker_name());
+//                nsetrans.setClient_name(client_name);
+//                nsetrans.setIin_number("");
+//                nsetrans.setScheme_name("");
+//                nsetrans.setScheme_code("");
+//                nsetrans.setFolio_no("");
+//                nsetrans.setAmount_units("");
+//                nsetrans.setFrequency("");
+//                nsetrans.setPeriod_day("");
+//                nsetrans.setUmrn_no("");
+//                nsetrans.setPurchase_type("");
+//                nsetrans.setPayment_ref_no("");
+//                nsetrans.setUnique_number("");
+//                nsetrans.setAuto_trxn_no("");
+//                nsetrans.setSip_reg_no("");
+//                nsetrans.setPayment_mode("");
+//                nsetrans.setTopup_amount(0.0);
+//                nsetrans.setBank_acc_no("");
+//                nsetrans.setTransaction_number("");
+//                nsetrans.setApplication_number("");
+//                nsetrans.setTo_scheme_code("");
+//                nsetrans.setTo_scheme_name("");
+//                nsetrans.setTransaction_type("Get Order Status Report");
+//                nsetrans.setTransaction_status("");
+//                nsetrans.setPayment_status("");
+//                nsetrans.setActive_ceased_status("");
+//                nsetrans.setRemarks(responseStatus);
+//                nsetrans.setMandate_id("");
+//                nsetrans.setMandate_status("");
+//                nsetrans.setEmandate_auth_flag("");
+//                nsetrans.setApp_received_flag("");
+//                nsetrans.setTransaction_date(new Date());
+//                nsetrans.setUser_id(Integer.parseInt(userid));
+//                if (source.equalsIgnoreCase("Mobile")) {
+//                    nsetrans.setRegister_source("Mobile App");
+//                } else {
+//                    nsetrans.setRegister_source("Website");
+//                }
+//
+//                nsetrans.setBroker_code("");
+//                nsetrans.setEuin_number("");
+//                nsetrans.setCc_received("");
+//                nsetrans.setFund_trans_to_amc("");
+//                nsetrans.setRefund_status("");
+//                nsetrans.setRefund_amount("");
+//                nseTransactionService.save(nsetrans);
 
                 String report_data_json = "[]";
 
@@ -2122,14 +2120,12 @@ public class NseAdminReportController
 
             }catch (Exception ex)
             {
-                logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
                 System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                 ex.printStackTrace();
                 return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } catch (Exception ex)
         {
-            logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
             return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);

@@ -208,4 +208,14 @@ public class CartService
         return cart;
     }
 
+    public List<Cart> getActiveCartsById(Integer cart_id) {
+        try {
+            return   cartRepository.findActiveCartsById(cart_id);
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
 }
