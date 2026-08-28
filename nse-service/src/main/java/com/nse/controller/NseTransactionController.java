@@ -8548,4 +8548,1213 @@ public class NseTransactionController {
         }
     }
 
+    @PostMapping("/v1/saveSip")
+    public ResponseEntity<?> v1saveSip(
+            HttpServletRequest request,
+            @RequestParam(required = false) String amc_code,
+            @RequestParam(required = false) String scheme_name,
+            @RequestParam(required = false) String scheme_code,
+            @RequestParam(required = false) String amount,
+            @RequestParam(required = false) String folio,
+            @RequestParam(required = false) String reinvest_tag,
+            @RequestParam(required = false) String frequency,
+            @RequestParam(required = false) String start_date,
+            @RequestParam(required = false) String end_date,
+            @RequestParam(required = false) String until_cancelled,
+            @RequestParam(required = false) String total_amount,
+            @RequestParam(required = false) String multiple_count,
+            @RequestParam(required = false) String iin_number,
+            @RequestParam(required = false) String umrn_code,
+            @RequestParam(required = false) String broker_code,
+            @RequestParam(required = false) String euin_code,
+            @RequestParam(required = false) String installment,
+            @RequestParam(required = false) String ach_mandate_id,
+            @RequestParam(required = false) String ach_from_date,
+            @RequestParam(required = false) String ach_to_date,
+            @RequestParam(required = false) String ach_amount,
+            @RequestParam(required = false) String bank_account_number,
+            @RequestParam(required = false) String ach_mandate_approved,
+            @RequestParam(required = false) String mandate_option,
+            @RequestParam(required = false) String first_payment_option,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String sip_stepup_start_date,
+            @RequestParam(required = false) String sip_stepup_required,
+            @RequestParam(required = false) String sip_stepup_end_date,
+            @RequestParam(required = false) String sip_stepup_frequency,
+            @RequestParam(required = false) String stepup_amount,
+            @RequestParam(required = false) String cartid,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
+            @RequestParam(required = false) String subbroker_arn,
+            @RequestParam(required = false) String subbroker_code,
+            @RequestParam(required = false) String subbroker_name,
+            @RequestHeader("Authorization") String token)
+    {
+
+        String ipAddr = "";
+        List<CartDto> cartList = null;
+        long currentTimeMillis = System.currentTimeMillis();
+        try
+        {
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            String user_id = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+
+            amc_code = NseUtils.checkParem(amc_code);
+            scheme_name = NseUtils.checkParem(scheme_name);
+            scheme_code = NseUtils.checkParem(scheme_code);
+            amount = NseUtils.checkParem(amount);
+            folio = NseUtils.checkParem(folio);
+            reinvest_tag = NseUtils.checkParem(reinvest_tag);
+            frequency = NseUtils.checkParem(frequency);
+            start_date = NseUtils.checkParem(start_date);
+            end_date = NseUtils.checkParem(end_date);
+            until_cancelled = NseUtils.checkParem(until_cancelled);
+            total_amount = NseUtils.checkParem(total_amount);
+            multiple_count = NseUtils.checkParem(multiple_count);
+            iin_number = NseUtils.checkParem(iin_number);
+            umrn_code = NseUtils.checkParem(umrn_code);
+//            payment_type = NseUtils.checkParem(payment_type);
+            broker_code = NseUtils.checkParem(broker_code);
+//            cheque_no = NseUtils.checkParem(cheque_no);
+//            cheque_date = NseUtils.checkParem(cheque_date);
+//            dd_charge = NseUtils.checkParem(dd_charge);
+            euin_code = NseUtils.checkParem(euin_code);
+//            sip_day = NseUtils.checkParem(sip_day);
+//            sip_first_date = NseUtils.checkParem(sip_first_date);
+//            sip_second_date = NseUtils.checkParem(sip_second_date);
+            installment = NseUtils.checkParem(installment);
+            ach_mandate_id = NseUtils.checkParem(ach_mandate_id);
+            ach_from_date = NseUtils.checkParem(ach_from_date);
+            ach_to_date = NseUtils.checkParem(ach_to_date);
+            ach_amount = NseUtils.checkParem(ach_amount);
+            bank_account_number = NseUtils.checkParem(bank_account_number);
+            ach_mandate_approved = NseUtils.checkParem(ach_mandate_approved);
+            mandate_option = NseUtils.checkParem(mandate_option);
+            first_payment_option = NseUtils.checkParem(first_payment_option);
+            source = NseUtils.checkParem(source);
+            sip_stepup_required = NseUtils.checkParem(sip_stepup_required);
+            sip_stepup_start_date = NseUtils.checkParem(sip_stepup_start_date);
+            sip_stepup_end_date = NseUtils.checkParem(sip_stepup_end_date);
+            sip_stepup_frequency = NseUtils.checkParem(sip_stepup_frequency);
+            stepup_amount = NseUtils.checkParem(stepup_amount);
+            cartid = NseUtils.checkParem(cartid);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
+            subbroker_arn = NseUtils.checkParem(subbroker_arn);
+            subbroker_code = NseUtils.checkParem(subbroker_code);
+            subbroker_name = NseUtils.checkParem(subbroker_name);
+
+            List<String> amc_code_array = new ArrayList<>();
+            List<String> scheme_name_array = new ArrayList<String>();
+            List<String> scheme_code_array = new ArrayList<String>();
+            List<String> amount_array = new ArrayList<String>();
+            List<String> folio_array = new ArrayList<String>();
+            List<String> start_date_array = new ArrayList<String>();
+            List<String> end_date_array = new ArrayList<String>();
+            List<String> until_cancelled_array = new ArrayList<String>();
+            List<String> reinvest_tag_array = new ArrayList<String>();
+            List<String> frequency_array = new ArrayList<String>();
+            List<String> sip_day_array = new ArrayList<String>();
+            List<String> sip_first_date_array = new ArrayList<String>();
+            List<String> sip_second_date_array = new ArrayList<String>();
+
+            List<String> cart_id_array = new ArrayList<String>();
+            List<String> trnx_type_array = new ArrayList<String>();
+            List<String> purchase_type_array = new ArrayList<String>();
+            List<String> sip_installment_array = new ArrayList<String>();
+            List<String> date_array = new ArrayList<String>();
+
+            List<String> sip_stepup_required_array = new ArrayList<>();
+            List<String> sip_stepup_start_date_array = new ArrayList<>();
+            List<String> sip_stepup_end_date_array = new ArrayList<>();
+            List<String> sip_stepup_frequency_array = new ArrayList<>();
+            List<String> stepup_amount_array = new ArrayList<>();
+            List<Boolean> first_order_flag_array = new ArrayList<>();
+            List<String> mandate_id_array = new ArrayList<>();
+
+            UserDto usersList = userServiceClient.getUserBseNseDetailsByIinNumbers(broker_code,client_name,iin_number,user_id,token);
+            Integer userid = usersList.getUser_id();
+            if(source.equalsIgnoreCase("Mobile"))
+            {
+                amc_code_array = new ArrayList<String>();
+                scheme_name_array = new ArrayList<String>();
+                scheme_code_array = new ArrayList<String>();
+                amount_array = new ArrayList<String>();
+                folio_array = new ArrayList<String>();
+                start_date_array = new ArrayList<String>();
+                end_date_array = new ArrayList<String>();
+                until_cancelled_array = new ArrayList<String>();
+                reinvest_tag_array = new ArrayList<String>();
+                frequency_array = new ArrayList<String>();
+                sip_day_array = new ArrayList<String>();
+                sip_first_date_array = new ArrayList<String>();
+                sip_second_date_array = new ArrayList<String>();
+                sip_installment_array = new ArrayList<String>();
+                cart_id_array = new ArrayList<String>();
+                trnx_type_array = new ArrayList<String>();
+                purchase_type_array = new ArrayList<String>();
+                date_array = new ArrayList<String>();
+
+                sip_stepup_required_array = new ArrayList<>();
+                sip_stepup_start_date_array = new ArrayList<>();
+                sip_stepup_end_date_array = new ArrayList<>();
+                sip_stepup_frequency_array = new ArrayList<>();
+                stepup_amount_array = new ArrayList<>();
+
+                try {
+                    cartList = userServiceClient.getCartDetailsByUserID(userid,"NSE",iin_number, "SIP Purchase",token);
+                } catch (FeignException e)
+                {
+                    if (e.status() == 400)
+                    {
+                        userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                        return NseUtils.commonResponse("No cart found", HttpStatus.BAD_REQUEST);
+                    }else
+                    {
+                        userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                        return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);
+                    }
+                }
+
+                if(cartList.isEmpty())
+                {
+                    userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                }
+
+                for (CartDto cart : cartList)
+                {
+                    cart_id_array.add(String.valueOf(cart.getId()));
+                    amc_code_array.add(cart.getScheme_company());
+                    scheme_name_array.add(cart.getScheme_name());
+                    scheme_code_array.add(cart.getScheme_product_code());
+                    amount_array.add(cart.getAmount());
+                    trnx_type_array.add(cart.getTrnx_type());
+                    purchase_type_array.add(cart.getTrnx_type());
+
+                    String startDateStr = cart.getStart_date();
+
+                    if(startDateStr != null && !startDateStr.isEmpty())
+                    {
+                        startDateStr = startDateStr.replaceAll("-","/");
+                    }
+
+                    start_date_array.add(startDateStr);
+
+                    frequency_array.add(cart.getFrequency());
+
+                    String until_cancelledStr = cart.getUntil_cancel().equals(true) ? "Y" : "N";
+
+                    if(!cart.getInstallment().isEmpty())
+                    {
+                        sip_installment_array.add(cart.getInstallment());
+                    }
+
+                    if(!cart.getFolio_no().isEmpty())
+                    {
+                        List<String> folio_arrayArr = new ArrayList<String>(Arrays.asList(cart.getFolio_no().split(",")));
+                        folio_array.addAll(folio_arrayArr);
+                    }
+                    if (cart.getEnd_date() != null && !cart.getEnd_date().isEmpty()) {
+                        LocalDate date = LocalDate.parse(cart.getEnd_date(), DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+                        String formattedEndDate = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                        end_date_array.add(formattedEndDate);
+                    } else {
+                        end_date_array.add("");
+                    }
+
+                    if(!until_cancelledStr.isEmpty())
+                    {
+                        until_cancelled_array.add(until_cancelledStr);
+                    }
+
+                    if(!reinvest_tag_array.isEmpty())
+                    {
+                        reinvest_tag_array.add(cart.getScheme_reinvest_tag());
+                    }
+
+                    if(!cart.getSip_date().isEmpty())
+                    {
+                        sip_day_array.add(cart.getSip_date());
+                    }
+
+                    if(!cart.getStart_date().isEmpty())
+                    {
+                        sip_day_array.add(cart.getStart_date());
+                    }
+
+                    if(!cart.getFirst_date().isEmpty())
+                    {
+                        sip_first_date_array.add(cart.getFirst_date());
+                    }
+
+                    if(!cart.getSecond_date().isEmpty())
+                    {
+                        sip_first_date_array.add(cart.getSecond_date());
+                    }
+
+                    if(cart.getFirst_order_flag() != null)
+                    {
+                        first_order_flag_array.add(cart.getFirst_order_flag());
+                    }else
+                    {
+                        first_order_flag_array.add(false);
+                    }
+
+                    if(!cart.getBank_mandate().isEmpty())
+                    {
+                        mandate_id_array.add(cart.getBank_mandate());
+                    }
+
+                    if(cart.getIs_step_up())
+                    {
+                        sip_stepup_required_array.add("Y");
+
+                        if(StringHelper.isNotEmpty(cart.getStep_up_start_date()))
+                        {
+                            sip_stepup_start_date_array.add(cart.getStep_up_start_date());
+                        }
+
+                        if(StringHelper.isNotEmpty(cart.getStep_up_end_date()))
+                        {
+                            sip_stepup_end_date_array.add(cart.getStep_up_end_date());
+                        }
+
+                        if(StringHelper.isNotEmpty(cart.getStep_up_frequency()))
+                        {
+                            sip_stepup_frequency_array.add(cart.getStep_up_frequency());
+                        }
+
+                        if(StringHelper.isNotEmpty(cart.getStep_up_amount()))
+                        {
+                            stepup_amount_array.add(cart.getStep_up_amount());
+                        }
+                    }
+                }
+            }else
+            {
+                if(!cartid.isEmpty())
+                {
+                    amc_code_array = new ArrayList<String>();
+                    scheme_name_array = new ArrayList<String>();
+                    scheme_code_array = new ArrayList<String>();
+                    amount_array = new ArrayList<String>();
+                    folio_array = new ArrayList<String>();
+                    start_date_array = new ArrayList<String>();
+                    end_date_array = new ArrayList<String>();
+                    until_cancelled_array = new ArrayList<String>();
+                    reinvest_tag_array = new ArrayList<String>();
+                    frequency_array = new ArrayList<String>();
+                    sip_day_array = new ArrayList<String>();
+                    sip_first_date_array = new ArrayList<String>();
+                    sip_second_date_array = new ArrayList<String>();
+                    sip_installment_array = new ArrayList<String>();
+                    cart_id_array = new ArrayList<String>();
+                    trnx_type_array = new ArrayList<String>();
+                    purchase_type_array = new ArrayList<String>();
+                    date_array = new ArrayList<String>();
+
+                    sip_stepup_required_array = new ArrayList<>();
+                    sip_stepup_start_date_array = new ArrayList<>();
+                    sip_stepup_end_date_array = new ArrayList<>();
+                    sip_stepup_frequency_array = new ArrayList<>();
+                    stepup_amount_array = new ArrayList<>();
+
+                    List<Integer> ids = Arrays.stream(cartid.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .map(Integer::parseInt)
+                            .collect(Collectors.toList());
+                    System.out.println("ids = " + ids);
+
+                    try {
+                        cartList = userServiceClient.getCartDetailsByIds(ids,token);
+                    } catch (FeignException e)
+                    {
+                        if (e.status() == 400)
+                        {
+                            userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                            return NseUtils.commonResponse("No cart found", HttpStatus.BAD_REQUEST);
+                        }else
+                        {
+                            userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                            return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);
+                        }
+                    }
+
+                    if(cartList.isEmpty())
+                    {
+                        userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    }
+
+                    for (CartDto cart : cartList)
+                    {
+                        cart_id_array.add(String.valueOf(cart.getId()));
+                        amc_code_array.add(cart.getScheme_company());
+                        scheme_name_array.add(cart.getScheme_name());
+                        scheme_code_array.add(cart.getScheme_product_code());
+                        amount_array.add(cart.getAmount());
+                        trnx_type_array.add(cart.getTrnx_type());
+                        purchase_type_array.add(cart.getTrnx_type());
+
+                        String startDateStr = cart.getStart_date();
+
+                        if(startDateStr != null && !startDateStr.isEmpty())
+                        {
+                            startDateStr = startDateStr.replaceAll("-","/");
+                        }
+
+                        start_date_array.add(startDateStr);
+                        frequency_array.add(cart.getFrequency());
+
+                        String until_cancelledStr = cart.getUntil_cancel().equals(true) ? "Y" : "N";
+
+                        if(!cart.getInstallment().isEmpty())
+                        {
+                            sip_installment_array.add(cart.getInstallment());
+                        }
+
+                        if(!cart.getFolio_no().isEmpty())
+                        {
+                            List<String> folio_arrayArr = new ArrayList<String>(Arrays.asList(cart.getFolio_no().split(",")));
+                            folio_array.addAll(folio_arrayArr);
+                        }
+
+                        if (cart.getEnd_date() != null && !cart.getEnd_date().isEmpty()) {
+                            LocalDate date = LocalDate.parse(cart.getEnd_date(), DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+                            String formattedEndDate = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                            end_date_array.add(formattedEndDate);
+                        } else {
+                            end_date_array.add("");
+                        }
+
+                        if(!until_cancelledStr.isEmpty())
+                        {
+                            until_cancelled_array.add(until_cancelledStr);
+                        }
+
+                        if(!reinvest_tag_array.isEmpty())
+                        {
+                            reinvest_tag_array.add(cart.getScheme_reinvest_tag());
+                        }
+
+                        if(!cart.getSip_date().isEmpty())
+                        {
+                            sip_day_array.add(cart.getSip_date());
+                        }
+
+                        if(!cart.getStart_date().isEmpty())
+                        {
+                            sip_day_array.add(cart.getStart_date());
+                        }
+
+                        if(!cart.getFirst_date().isEmpty())
+                        {
+                            sip_first_date_array.add(cart.getFirst_date());
+                        }
+
+                        if(!cart.getSecond_date().isEmpty())
+                        {
+                            sip_first_date_array.add(cart.getSecond_date());
+                        }
+                        if(cart.getFirst_order_flag() != null)
+                        {
+                            first_order_flag_array.add(cart.getFirst_order_flag());
+                        }else
+                        {
+                            first_order_flag_array.add(false);
+                        }
+
+                        if(!cart.getBank_mandate().isEmpty())
+                        {
+                            mandate_id_array.add(cart.getBank_mandate());
+                        }
+
+                        if(cart.getIs_step_up())
+                        {
+                            sip_stepup_required_array.add("Y");
+
+                            if(StringHelper.isNotEmpty(cart.getStep_up_start_date()))
+                            {
+                                sip_stepup_start_date_array.add(cart.getStep_up_start_date());
+                            }
+
+                            if(StringHelper.isNotEmpty(cart.getStep_up_end_date()))
+                            {
+                                sip_stepup_end_date_array.add(cart.getStep_up_end_date());
+                            }
+
+                            if(StringHelper.isNotEmpty(cart.getStep_up_frequency()))
+                            {
+                                sip_stepup_frequency_array.add(cart.getStep_up_frequency());
+                            }
+
+                            if(StringHelper.isNotEmpty(cart.getStep_up_amount()))
+                            {
+                                stepup_amount_array.add(cart.getStep_up_amount());
+                            }
+                        }
+                    }
+                }else
+                {
+                    amc_code_array = new ArrayList<String>(Arrays.asList(amc_code.split(",")));
+                    scheme_name_array = new ArrayList<String>(Arrays.asList(scheme_name.split(",")));
+                    scheme_code_array = new ArrayList<String>(Arrays.asList(scheme_code.split(",")));
+                    amount_array = new ArrayList<String>(Arrays.asList(amount.split(",")));
+                    folio_array = new ArrayList<String>();
+                    start_date_array = new ArrayList<String>(Arrays.asList(start_date.split(",")));
+                    end_date_array = new ArrayList<String>();
+                    until_cancelled_array = new ArrayList<String>();
+                    reinvest_tag_array = new ArrayList<String>();
+                    frequency_array = new ArrayList<String>(Arrays.asList(frequency.split(",")));
+                    sip_day_array = new ArrayList<String>();
+                    sip_first_date_array = new ArrayList<String>();
+                    sip_second_date_array = new ArrayList<String>();
+
+                    sip_stepup_required_array = new ArrayList<>(Arrays.asList(sip_stepup_required.split(",")));
+                    sip_stepup_start_date_array = new ArrayList<>(Arrays.asList(sip_stepup_start_date.split(",")));
+                    sip_stepup_end_date_array = new ArrayList<>(Arrays.asList(sip_stepup_end_date.split(",")));
+                    sip_stepup_frequency_array = new ArrayList<>(Arrays.asList(sip_stepup_frequency.split(",")));
+                    stepup_amount_array = new ArrayList<>(Arrays.asList(stepup_amount.split(",")));
+
+                    if(!folio.isEmpty())
+                    {
+                        folio_array = new ArrayList<String>(Arrays.asList(folio.split(",")));
+                    }
+
+                    if(!end_date.isEmpty())
+                    {
+                        end_date_array = new ArrayList<String>(Arrays.asList(end_date.split(",")));
+                    }
+
+                    if(!until_cancelled.isEmpty())
+                    {
+                        until_cancelled_array = new ArrayList<String>(Arrays.asList(until_cancelled.split(",")));
+                    }
+
+                    if(!reinvest_tag.isEmpty())
+                    {
+                        reinvest_tag_array = new ArrayList<String>(Arrays.asList(reinvest_tag.split(",")));
+                    }
+
+//                if(!sip_day.isEmpty())
+//                {
+//                    sip_day_array = new ArrayList<String>(Arrays.asList(sip_day.split(",")));
+//                }
+//
+//                if(!sip_first_date.isEmpty())
+//                {
+//                    sip_first_date_array = new ArrayList<String>(Arrays.asList(sip_first_date.split(",")));
+//                }
+//
+//                if(!sip_second_date.isEmpty())
+//                {
+//                    sip_second_date_array = new ArrayList<String>(Arrays.asList(sip_second_date.split(",")));
+//                }
+
+                    if(!installment.isEmpty())
+                    {
+                        sip_installment_array = new ArrayList<String>(Arrays.asList(installment.split(",")));
+                    }
+                }
+            }
+
+            UserDto nse = null;
+
+            try {
+                nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name, iin_number,broker_code,token);
+            }catch (FeignException e)
+            {
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+
+            if(nse == null)
+            {
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+            }
+
+
+            String login_name = nse.getName();
+            String login_userid = String.valueOf(nse.getUser_id());
+
+            String appln_id = "";
+            String password = "";
+            String euin = "";
+
+            MfdArnDetailsDto arnDetails = null;
+
+            if(StringHelper.isEmpty(broker_code))
+            {
+                arnDetails = userServiceClient.getDefaultArnDetails(client_name,token);
+            }else
+            {
+                arnDetails = userServiceClient.getEuimAndBrokercode(client_name,broker_code,token);
+            }
+
+            if(arnDetails != null)
+            {
+                broker_code = arnDetails.getBroker_code();
+                euin = arnDetails.getEuin();
+            }
+
+            if(StringHelper.isNotEmpty(euin_code))
+            {
+                euin = euin_code;
+            }
+            if(StringHelper.isNotEmpty(euin))
+            {
+                euin = euin.split(",")[0];
+            }
+
+            UserDto user =null;
+
+            try {
+                user = userServiceClient.getUserById(userid, token);
+            } catch (FeignException e) {
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+
+            String sub_broker_code = "";
+            String sub_code = "";
+
+            if(StringHelper.isNotEmpty(subbroker_code))
+            {
+                sub_code = subbroker_code;
+            }
+
+            if(StringHelper.isNotEmpty(subbroker_arn))
+            {
+                sub_broker_code = subbroker_arn;
+            }
+
+            if(client_name.equalsIgnoreCase("nextfreedom"))
+            {
+                String sub_broker = user.getSubbroker_name();
+                String nextfreedom_euin = "";
+                if(sub_broker != null && !sub_broker.isEmpty())
+                {
+                    UserDto subBrokerDetails = userServiceClient.getByBrokerDetails(sub_broker,4,client_name,token);
+                    if(subBrokerDetails != null)
+                    {
+                        nextfreedom_euin = subBrokerDetails.getEuin();
+                        sub_broker_code = subBrokerDetails.getBroker_code();
+                        sub_broker_code = NseUtils.checkParem(sub_broker_code);
+                        nextfreedom_euin = NseUtils.checkParem(nextfreedom_euin);
+                    }
+                }
+
+                if(!nextfreedom_euin.isEmpty())
+                {
+                    euin = nextfreedom_euin;
+                }
+            }else if(client_name.equalsIgnoreCase("idealfinancial"))
+            {
+                String sub_broker = user.getSubbroker_name();
+
+                if (sub_broker != null && !sub_broker.isEmpty())
+                {
+                    UserDto subBrokerDetails = userServiceClient.getByBrokerDetails(sub_broker, 4, client_name, token);
+                    if (subBrokerDetails != null)
+                    {
+                        sub_code = subBrokerDetails.getEmp_code();
+                    }
+                }
+            }
+
+            if(broker_code.isEmpty())
+            {
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
+            }
+
+            NseOnlineAccess online_access = nseOnlineAccessRepository.findByClientNameAndBrokerCode(client_name, broker_code);
+
+            if(online_access == null)
+            {
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+            }
+
+            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+            String nse_iin = nse.getNse_iin_number();
+            String pan = "";
+            String name = "";
+            String selected_name = "";
+            String bank_code ="";
+            String umrn_number = "";
+            Integer otm_approved1 = 0;
+            Integer otm_approved2 = 0;
+            Integer otm_approved3 = 0;
+            String bank_holder_name = "";
+            String bank_name = "";
+            String client_accno = "";
+            String client_ifsccode = "";
+            String client_acc_type = "";
+            String client_bank_branch = "";
+
+            String mobile = "";
+            String email = "";
+
+            System.out.println("nse_iin = " + nse_iin);
+            System.out.println("iin_number = " + iin_number);
+
+            String acc1 = "";
+            String acc2 = "";
+            String acc3 = "";
+
+            pan = nse.getPan();
+            name = nse.getName();
+            selected_name = name + " (" + userid + ")";
+
+            mobile = nse.getMobile();
+            email= nse.getEmail();
+
+            //New code
+            UserMandateDetailsDto additional_mandate = null;
+            UsersBankDetailsDTO bank_details = null;
+            System.out.println("client_name = " + client_name);
+            System.out.println("iin_number = " + iin_number);
+            System.out.println("umrn_code = " + umrn_code);
+            System.out.println("broker_code = " + broker_code);
+            System.out.println("userid = " + userid);
+
+            System.out.println("additional_mandate = " + additional_mandate);
+
+            UserDto userDetails = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name,iin_number,broker_code,token);
+
+            System.out.println("bankdetails =  "+ bank_details);
+            System.out.println("ach_mandate_id " + mandate_id_array);
+            System.out.println("hello 1777");
+
+            if (mandate_id_array == null || mandate_id_array.isEmpty())
+            {
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "ACH MANDATE Code is empty. Please contact admin."));
+            }
+
+            System.out.println("aaaaa = " + client_name +   broker_code);
+
+            JSONArray regDetailsArray = new JSONArray();
+            JSONObject regObject = null;
+
+            for(int i=0; i<scheme_code_array.size(); i++)
+            {
+                String memberUniqueId = "SIP" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + UniqueIDProvider.generateUniquePin(3);
+
+                String start_date_str = start_date_array.get(i);
+
+                if(start_date_str != null)
+                {
+                    start_date_str = start_date_str.replace("-", "/");
+                }
+
+                regObject = new JSONObject();
+                regObject.put("amc_code", amc_code_array.get(i));
+                regObject.put("sch_code", scheme_code_array.get(i));
+                regObject.put("client_code", iin_number);
+                regObject.put("bank_ref_no", "");
+                regObject.put("internal_ref_no", "");
+                regObject.put("trans_mode", "P");
+                regObject.put("dp_txn_mode", "P");
+                regObject.put("start_date", start_date_str);
+                regObject.put("frequency_type", frequency_array.get(i));
+                regObject.put("frequency_allowed", "1");
+                regObject.put("status", "1");
+                regObject.put("member_code", nse_memberid);
+                if(folio_array!= null && folio_array.size()> i)
+                {
+                    if(!folio_array.get(i).equalsIgnoreCase("NEW") && !folio_array.get(i).equalsIgnoreCase("NEW FOLIO") && !folio_array.get(i).equalsIgnoreCase("0"))
+                    {
+                        regObject.put("folio_no",folio_array.get(i));
+                    }else
+                    {
+                        regObject.put("folio_no","");
+                    }
+
+                }else{
+                    regObject.put("folio_no", "");
+                }
+                regObject.put("sip_remarks", "");
+
+                if(sip_installment_array!= null && sip_installment_array.size()> i)
+                {
+                    if ("DAILY".equalsIgnoreCase(frequency_array.get(i)))
+                    {
+                        regObject.put("installment_no", "");
+                    }else
+                    {
+                        regObject.put("installment_no", sip_installment_array.get(i));
+                    }
+                }else{
+                    regObject.put("installment_no", "");
+                }
+
+                if ("DAILY".equalsIgnoreCase(frequency_array.get(i)))
+                {
+                    String endDate = end_date_array.get(i);
+
+                    if (endDate != null && !endDate.trim().isEmpty())
+                    {
+                        try
+                        {
+
+//                          LocalDate date = LocalDate.parse(endDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+//                          String formattedEndDate = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+                            regObject.put("end_date", endDate);
+//                          regObject.put("installment_amount", "");
+                        } catch (Exception e)
+                        {
+                            e.printStackTrace();
+                            regObject.put("end_date", "");
+//                            regObject.put("installment_amount", amount_array.get(i));
+                        }
+                    } else {
+                        regObject.put("end_date", "");
+//                        regObject.put("installment_amount", amount_array.get(i));
+                    }
+                } else {
+                    regObject.put("end_date", "");
+                }
+                regObject.put("installment_amount", amount_array.get(i));
+
+                regObject.put("convenience_fee", "0");
+                regObject.put("xsip_mandate_id", mandate_id_array.get(i));
+                if(!sub_code.isEmpty())
+                {
+                    regObject.put("sub_broker_code", sub_code);
+                }else{
+                    regObject.put("sub_broker_code", "");
+                }
+
+                regObject.put("euin_number", euin);
+                regObject.put("euin_declaration", "Y");
+                regObject.put("dpc_flag", "Y");
+                regObject.put("first_order_today", first_order_flag_array.get(i).equals(true) ? "Y" : "N");
+                regObject.put("isip_mandate", "");
+                regObject.put("sub_broker_arn", sub_broker_code);
+
+                regObject.put("primary_holder_mobile", mobile);
+                regObject.put("primary_holder_email", email);
+
+                if(sip_stepup_required_array.size() > i && StringHelper.isNotEmpty(sip_stepup_required_array.get(i)) && sip_stepup_required_array.get(i).trim().equalsIgnoreCase("Y")){
+                    regObject.put("step_up_required", sip_stepup_required_array.get(i));
+                    regObject.put("step_up_start_date", sip_stepup_start_date_array.get(i));
+                    regObject.put("step_up_end_date", sip_stepup_end_date_array.get(i));
+                    regObject.put("step_up_frequency", sip_stepup_frequency_array.get(i));
+                    regObject.put("step_up_amount", stepup_amount_array.get(i));
+                }else{
+                    regObject.put("step_up_required", "N");
+                    regObject.put("step_up_start_date", "");
+                    regObject.put("step_up_end_date", "");
+                    regObject.put("step_up_frequency", "");
+                    regObject.put("step_up_amount", "");
+                }
+
+                regObject.put("filler_1", "");
+                regObject.put("filler_2", "");
+                regObject.put("filler_3", "");
+                regObject.put("filler_4", "");
+                regObject.put("filler_5", "");
+                regObject.put("member_unique_id", memberUniqueId);
+                regDetailsArray.put(regObject);
+            }
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("reg_data", regDetailsArray);
+
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("memberId", nse_memberid);
+            headers.set("Authorization", "Basic "+base64Encoded);
+            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "en-US");
+            headers.set("Connection", "keep-alive");
+            headers.set("Referer", "");
+
+            System.out.println("requestBody: " + requestBody.toString());
+            HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
+
+            String xSipRegistrationServiceApi_url= NseApiUrls.xSipRegistrationServiceApi_url;
+
+            int successCount = 0;
+            int failureCount = 0;
+            List<String> failedSchemes = new ArrayList<>();
+            String lastSuccessRegId = "";
+
+            String reg_id = "";
+            String reg_status = "";
+            String reg_remark = "";
+
+            List<CartDto> master_cart_list = new ArrayList<>();
+            Map<String, String> resMap = new HashMap<>();
+            try
+            {
+                ResponseEntity<String> result = RestTemplateFactory.createRestTemplate().postForEntity(xSipRegistrationServiceApi_url, entity, String.class);
+                String status_code = result.getStatusCode().toString();
+                String responseBody = result.getBody();
+
+                System.out.println("status_code: " + status_code);
+                System.out.println("responseBody: " + responseBody);
+
+                JSONObject jsonObject = new JSONObject(responseBody);
+                JSONArray jsonRegArray = jsonObject.getJSONArray("reg_data");
+                System.out.println("scheme_code_array = " + scheme_code_array);
+                List<NseOnlineSchemeMaster> nseOnlineSchemeMasters = nseOnlineSchemeMasterRepository.getSchemeBySchemeCode(scheme_code_array);
+                System.out.println("nseOnlineSchemeMasters = " + nseOnlineSchemeMasters);
+                for (int i = 0; i < jsonRegArray.length(); i++)
+                {
+                    JSONObject regDetail = jsonRegArray.getJSONObject(i);
+                    reg_id = regDetail.optString("reg_id");
+                    reg_status = regDetail.optString("reg_status");
+                    reg_remark = regDetail.optString("reg_remark");
+
+                    System.out.println("reg_id: " + reg_id);
+                    System.out.println("reg_status: " + reg_status);
+                    System.out.println("reg_remark: " + reg_remark);
+
+                    // Extract values from regDetail JSONObject
+                    String res_amc_code              = NseUtils.checkParem(regDetail.optString("amc_code"));
+                    String res_sch_code              = NseUtils.checkParem(regDetail.optString("sch_code"));
+                    String res_client_code           = NseUtils.checkParem(regDetail.optString("client_code"));
+                    String res_bank_ref_no           = NseUtils.checkParem(regDetail.optString("bank_ref_no"));
+                    String res_trans_mode            = NseUtils.checkParem(regDetail.optString("trans_mode"));
+                    String res_dp_txn_mode           = NseUtils.checkParem(regDetail.optString("dp_txn_mode"));
+                    String res_start_date            = NseUtils.checkParem(regDetail.optString("start_date"));
+                    String res_frequency_type        = NseUtils.checkParem(regDetail.optString("frequency_type"));
+                    String res_frequency_allowed     = NseUtils.checkParem(regDetail.optString("frequency_allowed"));
+                    String res_installment_amount    = NseUtils.checkParem(regDetail.optString("installment_amount"));
+                    String res_status                = NseUtils.checkParem(regDetail.optString("status"));
+                    String res_member_code           = NseUtils.checkParem(regDetail.optString("member_code"));
+                    String res_folio_no              = NseUtils.checkParem(regDetail.optString("folio_no"));
+                    String res_sip_remarks           = NseUtils.checkParem(regDetail.optString("sip_remarks"));
+                    String res_installment_no        = NseUtils.checkParem(regDetail.optString("installment_no"));
+                    String res_convenience_fee       = NseUtils.checkParem(regDetail.optString("convenience_fee"));
+                    String res_xsip_mandate_id       = NseUtils.checkParem(regDetail.optString("xsip_mandate_id"));
+                    String res_sub_broker_code       = NseUtils.checkParem(regDetail.optString("sub_broker_code"));
+                    String res_euin_number           = NseUtils.checkParem(regDetail.optString("euin_number"));
+                    String res_euin_declaration      = NseUtils.checkParem(regDetail.optString("euin_declaration"));
+                    String res_dpc_flag              = NseUtils.checkParem(regDetail.optString("dpc_flag"));
+                    String res_first_order_today     = NseUtils.checkParem(regDetail.optString("first_order_today"));
+                    String res_isip_mandate          = NseUtils.checkParem(regDetail.optString("isip_mandate"));
+                    String res_sub_broker_arn        = NseUtils.checkParem(regDetail.optString("sub_broker_arn"));
+                    String res_end_date              = NseUtils.checkParem(regDetail.optString("end_date"));
+                    String res_primary_holder_mobile = NseUtils.checkParem(regDetail.optString("primary_holder_mobile"));
+                    String res_primary_holder_email  = NseUtils.checkParem(regDetail.optString("primary_holder_email"));
+                    String res_step_up_required      = NseUtils.checkParem(regDetail.optString("step_up_required"));
+                    String res_step_up_start_date    = NseUtils.checkParem(regDetail.optString("step_up_start_date"));
+                    String res_step_up_end_date      = NseUtils.checkParem(regDetail.optString("step_up_end_date"));
+                    String res_step_up_frequency     = NseUtils.checkParem(regDetail.optString("step_up_frequency"));
+                    String res_step_up_amout         = NseUtils.checkParem(regDetail.optString("step_up_amout"));
+                    String res_filler_1              = NseUtils.checkParem(regDetail.optString("filler_1"));
+                    String res_filler_2              = NseUtils.checkParem(regDetail.optString("filler_2"));
+                    String res_filler_3              = NseUtils.checkParem(regDetail.optString("filler_3"));
+                    String res_filler_4              = NseUtils.checkParem(regDetail.optString("filler_4"));
+                    String res_filler_5              = NseUtils.checkParem(regDetail.optString("filler_5"));
+                    String res_reg_id                = NseUtils.checkParem(regDetail.optString("reg_id"));
+                    String res_reg_status            = NseUtils.checkParem(regDetail.optString("reg_status"));
+                    String res_reg_remark            = NseUtils.checkParem(regDetail.optString("reg_remark"));
+                    String res_member_unique_id      = NseUtils.checkParem(regDetail.optString("member_unique_id"));
+
+
+                    // Print all values
+                    System.out.println("res_amc_code              : " + res_amc_code);
+                    System.out.println("res_sch_code              : " + res_sch_code);
+                    System.out.println("res_client_code           : " + res_client_code);
+                    System.out.println("res_bank_ref_no           : " + res_bank_ref_no);
+                    System.out.println("res_trans_mode            : " + res_trans_mode);
+                    System.out.println("res_dp_txn_mode           : " + res_dp_txn_mode);
+                    System.out.println("res_start_date            : " + res_start_date);
+                    System.out.println("res_frequency_type        : " + res_frequency_type);
+                    System.out.println("res_frequency_allowed     : " + res_frequency_allowed);
+                    System.out.println("res_installment_amount    : " + res_installment_amount);
+                    System.out.println("res_status                : " + res_status);
+                    System.out.println("res_member_code           : " + res_member_code);
+                    System.out.println("res_folio_no              : " + res_folio_no);
+                    System.out.println("res_sip_remarks           : " + res_sip_remarks);
+                    System.out.println("res_installment_no        : " + res_installment_no);
+                    System.out.println("res_convenience_fee       : " + res_convenience_fee);
+                    System.out.println("res_xsip_mandate_id       : " + res_xsip_mandate_id);
+                    System.out.println("res_sub_broker_code       : " + res_sub_broker_code);
+                    System.out.println("res_euin_number           : " + res_euin_number);
+                    System.out.println("res_euin_declaration      : " + res_euin_declaration);
+                    System.out.println("res_dpc_flag              : " + res_dpc_flag);
+                    System.out.println("res_first_order_today     : " + res_first_order_today);
+                    System.out.println("res_isip_mandate          : " + res_isip_mandate);
+                    System.out.println("res_sub_broker_arn        : " + res_sub_broker_arn);
+                    System.out.println("res_end_date              : " + res_end_date);
+                    System.out.println("res_primary_holder_mobile : " + res_primary_holder_mobile);
+                    System.out.println("res_primary_holder_email  : " + res_primary_holder_email);
+                    System.out.println("res_step_up_required      : " + res_step_up_required);
+                    System.out.println("res_step_up_start_date    : " + res_step_up_start_date);
+                    System.out.println("res_step_up_end_date      : " + res_step_up_end_date);
+                    System.out.println("res_step_up_frequency     : " + res_step_up_frequency);
+                    System.out.println("res_step_up_amout         : " + res_step_up_amout);
+                    System.out.println("res_filler_1              : " + res_filler_1);
+                    System.out.println("res_filler_2              : " + res_filler_2);
+                    System.out.println("res_filler_3              : " + res_filler_3);
+                    System.out.println("res_filler_4              : " + res_filler_4);
+                    System.out.println("res_filler_5              : " + res_filler_5);
+                    System.out.println("res_reg_id                : " + res_reg_id);
+                    System.out.println("res_reg_status            : " + res_reg_status);
+                    System.out.println("res_reg_remark            : " + res_reg_remark);
+                    System.out.println("res_member_unique_id      : " + res_member_unique_id);
+
+                    NseOnlineSchemeMaster nseOnlineSchemeMaster = nseOnlineSchemeMasters.stream().filter(obj -> obj.getSchemeCode().equalsIgnoreCase(res_sch_code)).findFirst().orElse(null);
+                    System.out.println("nseOnlineSchemeMaster = " + nseOnlineSchemeMaster);
+                    if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                    {
+                        resMap.put(nseOnlineSchemeMaster.getSchemeName(), "REG_SUCCESS");
+                    }else
+                    {
+                        resMap.put(nseOnlineSchemeMaster.getSchemeName(), reg_remark);
+                    }
+
+                    SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
+                    Date res_start_dateDt = inputFormat.parse(res_start_date);
+                    Date res_end_dateDt = null;
+
+                    if(StringHelper.isNotEmpty(res_end_date))
+                    {
+                        res_end_dateDt = inputFormat.parse(res_end_date);
+                    }
+
+                    NseTransactions nsetrans = new NseTransactions();
+                    nsetrans.setUrl(xSipRegistrationServiceApi_url);
+                    nsetrans.setNse_request(requestBody.toString());
+                    nsetrans.setNse_response(responseBody);
+                    nsetrans.setReg_id(res_reg_id);
+                    nsetrans.setPayment_link("");
+                    nsetrans.setPan(pan);
+                    nsetrans.setName(name);
+                    nsetrans.setBranch(user.getBranch());
+                    nsetrans.setRm_name(user.getRm_name());
+                    nsetrans.setSubbroker_name(user.getSubbroker_name());
+                    nsetrans.setClient_name(client_name);
+                    nsetrans.setIin_number(iin_number);
+                    nsetrans.setScheme_name(nseOnlineSchemeMaster.getSchemeName());
+                    nsetrans.setScheme_code(nseOnlineSchemeMaster.getSchemeCode());
+                    nsetrans.setFolio_no(res_folio_no);
+                    nsetrans.setAmount_units(res_installment_amount);
+                    nsetrans.setFrequency(res_frequency_type);
+                    nsetrans.setPeriod_day("");
+                    nsetrans.setUmrn_no(res_xsip_mandate_id);
+                    nsetrans.setPurchase_type("FRESH");
+                    nsetrans.setPayment_ref_no("");
+                    if(StringHelper.isNotEmpty(res_member_unique_id))
+                    {
+                        nsetrans.setUnique_number(res_member_unique_id);
+                    }
+                    nsetrans.setAuto_trxn_no("");
+                    nsetrans.setSip_reg_no(res_reg_id);
+                    nsetrans.setPayment_mode("");
+                    nsetrans.setTopup_amount(0.0);
+                    nsetrans.setBank_acc_no(bank_account_number);
+                    nsetrans.setTransaction_number(res_reg_id);
+                    nsetrans.setApplication_number("");
+                    nsetrans.setTo_scheme_code("");
+                    nsetrans.setTo_scheme_name("");
+                    nsetrans.setTransaction_type("SIP Purchase");
+                    nsetrans.setStart_date(res_start_dateDt);
+                    nsetrans.setEnd_date(res_end_dateDt);
+
+                    boolean isAllTrue = first_order_flag_array.stream().allMatch(Boolean::booleanValue);
+                    if (isAllTrue) {
+                        nsetrans.setFirst_order_today(1);
+                    } else {
+                        nsetrans.setFirst_order_today(0);
+                    }
+                    nsetrans.setReturn_msg(res_reg_status);
+                    nsetrans.setTransaction_status(res_reg_status);
+                    nsetrans.setPayment_status("PENDING");
+                    nsetrans.setActive_ceased_status("");
+                    nsetrans.setRemarks(res_reg_remark);
+                    nsetrans.setMandate_id(res_xsip_mandate_id);
+                    nsetrans.setMandate_status("");
+                    nsetrans.setEmandate_auth_flag("");
+                    nsetrans.setApp_received_flag("");
+                    nsetrans.setTransaction_date(new Date());
+                    nsetrans.setUser_id(userid);
+                    if(source.equalsIgnoreCase("Mobile"))
+                    {
+                        nsetrans.setRegister_source("Mobile App");
+                    }else
+                    {
+                        nsetrans.setRegister_source("Website");
+                    }
+                    nsetrans.setBroker_code(broker_code);
+                    nsetrans.setEuin_number(euin);
+                    nsetrans.setCc_received("");
+                    nsetrans.setFund_trans_to_amc("");
+                    nsetrans.setRefund_status("");
+                    nsetrans.setRefund_amount("");
+                    nsetrans.setIp_address(ip_address);
+                    nsetrans.setOrigin_user_id(origin_user_id);
+                    nsetrans.setOrigin_first_name(origin_first_name);
+                    nsetrans.setSubbroker_arn(subbroker_arn);
+                    nsetrans.setSubbroker_name(subbroker_name);
+                    nsetrans.setSubbroker_code(subbroker_code);
+                    nsetrans.setCart_id(cart_id_array.get(i));
+                    nseTransactionService.save(nsetrans);
+
+                    if(source.equalsIgnoreCase("Mobile"))
+                    {
+                        CartDto cart = cartList.stream().filter(schemeData -> schemeData.getScheme_product_code().equalsIgnoreCase(nseOnlineSchemeMaster.getSchemeCode())).findAny().orElse(null);
+
+                        if(cart != null)
+                        {
+                            cart.setPayment_type("");
+                            cart.setPayment_mode("");
+                            cart.setBank_name(bank_name);
+                            cart.setBank_account_number(client_accno);
+                            cart.setBank_ifsc(client_ifsccode);
+                            cart.setBroker_code(broker_code);
+                            cart.setEuin_code(euin);
+
+                            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                            {
+                                cart.setStatus("SUCCESS");
+                                cart.setActive(false);
+                                cart.setStatus_date(new Date());
+                                cart.setPayment_id(String.valueOf(currentTimeMillis));
+                            }
+
+                            master_cart_list.add(cart);
+                        }
+                    }
+
+                    if(!cartid.isEmpty())
+                    {
+                        CartDto cart = cartList.stream().filter(schemeData -> schemeData.getScheme_product_code().equalsIgnoreCase(nseOnlineSchemeMaster.getSchemeCode())).findAny().orElse(null);
+
+                        if(cart != null)
+                        {
+                            cart.setPayment_type("");
+                            cart.setPayment_mode("");
+                            cart.setBank_name(bank_name);
+                            cart.setBank_account_number(client_accno);
+                            cart.setBank_ifsc(client_ifsccode);
+                            cart.setBroker_code(broker_code);
+                            cart.setEuin_code(euin);
+
+                            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                            {
+                                cart.setStatus("SUCCESS");
+                                cart.setActive(false);
+                                cart.setStatus_date(new Date());
+                                cart.setPayment_id(String.valueOf(currentTimeMillis));
+                            }
+
+                            master_cart_list.add(cart);
+                        }
+                    }
+
+                    if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                    {
+                        successCount++;
+                        lastSuccessRegId = res_reg_id;
+                        resMap.put(nseOnlineSchemeMaster.getSchemeName(), "REG_SUCCESS");
+                    }
+                    else
+                    {
+                        failureCount++;
+                        failedSchemes.add(nseOnlineSchemeMaster.getSchemeName() + ": " + res_reg_remark);
+                        resMap.put(nseOnlineSchemeMaster.getSchemeName(), res_reg_remark);
+                    }
+                }
+
+                if(master_cart_list != null && !master_cart_list.isEmpty())
+                {
+                    userServiceClient.updateCartByCartId(master_cart_list, token);
+                }
+
+                ipAddr = NseUtils.getIpAddr(request);
+                if(ipAddr == null){ipAddr="";}
+
+                String investor = selected_name != null && StringHelper.isNotEmpty(selected_name) ? " for " + selected_name : "";
+                String logmsg = login_name+" did " +" Multiple SIP Purchase "+investor+". Details:";
+                logmsg += "AMC: "+amc_code+",";
+                logmsg += "reinvest_tag: "+reinvest_tag+",";
+                logmsg += "scheme: "+scheme_name+"["+scheme_code+"],";
+                logmsg += "reinvest_tag: "+reinvest_tag+",";
+                logmsg += "folio: "+folio+",";
+                logmsg += "amount: "+amount+",";
+                logmsg += "umrn_code: "+umrn_code+",";
+
+                NseLogModel log = new NseLogModel();
+                log.setUserid(Integer.parseInt(login_userid));
+                log.setUsername(login_name);
+                log.setMobile("");
+                log.setTitle("Lumpsum Purchase");
+                log.setDescription("Lumpsum Purchase");
+                log.setContent(logmsg);
+                log.setLogtime(new Date());
+                log.setIp(ipAddr);
+
+                if(source.equalsIgnoreCase("Mobile"))
+                {
+                    log.setSource("Mobile");
+                }else{
+                    log.setSource("WEB");
+                }
+
+                log.setClientName(client_name);
+                nseLogRepository.save(log);
+
+                if (successCount > 0 && failureCount > 0)
+                {
+                    String message = String.format("%d out of %d SIP transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
+                    message += "Failed transactions: " + String.join(", ", failedSchemes);
+                    userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                    return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
+                }
+                else if (successCount > 0)
+                {
+                    userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), "All SIP Orders successfully triggered! Last orderID: " + lastSuccessRegId, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
+                    return NseUtils.transactionResponse(HttpStatus.OK,"All SIP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                }
+                else
+                {
+                    userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                    return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
+                }
+
+            } catch (HttpClientErrorException | HttpServerErrorException ex) {
+
+                // For 4xx and 5xx responses
+                System.out.println("sipRegistrationServiceApi::Status Code: " + ex.getStatusCode());
+                System.out.println("sipRegistrationServiceApi::Response Body: " + ex.getResponseBodyAsString());
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
+            } catch (Exception ex) {
+
+                // Other exceptions (e.g., connection issues)
+                ex.printStackTrace();
+                userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+
+            userServiceClient.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), NseUtils.checkParem(source));
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
+        }
+    }
+
     }
