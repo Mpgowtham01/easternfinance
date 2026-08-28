@@ -2096,7 +2096,7 @@ public class NseTransactionController {
                 }
                 else
                 {
-                    return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
+                    return NseUtils.commonResponse1(reg_remark, HttpStatus.BAD_REQUEST,reg_remark);
                 }
 
             } catch (HttpClientErrorException | HttpServerErrorException ex) {

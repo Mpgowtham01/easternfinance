@@ -61,6 +61,12 @@ public class NseUtils
         CommonResponse commonResponse = new CommonResponse(status.value(), message, "");
         return new ResponseEntity<>(commonResponse, status);
     }
+
+    public static ResponseEntity<Object> commonResponse1(String message, HttpStatus status,String return_msg) {
+        // Use existing constructor with 3 args
+        CommonResponse commonResponse = new CommonResponse(status.value(), message, return_msg);
+        return new ResponseEntity<>(commonResponse, status);
+    }
     public static String trimOrEmpty(String value) {
         return value != null ? value.trim() : "";
     }
