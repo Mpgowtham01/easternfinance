@@ -131,4 +131,9 @@ public interface CartRepository extends JpaRepository<Cart, Integer>
             @Param("clientName") String clientName
     );
 
+    @Query("FROM Cart c WHERE c.id = :cart_id ORDER BY c.id DESC")
+    List<Cart> findActiveCartsById(
+            @Param("cart_id") Integer cart_id
+    );
+
 }

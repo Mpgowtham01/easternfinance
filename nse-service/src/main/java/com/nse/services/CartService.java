@@ -449,4 +449,44 @@ public class CartService {
         return cart;
     }
 
+    public List<CartDto> getCartListById(Integer cart_id, @RequestHeader("Authorization") String token)
+    {
+        List<CartDto> list = null;
+        try
+        {
+
+            list = userServiceClient.getActiveCartsById(cart_id,token);
+
+            if(list != null && list.size() > 0)
+            {
+                for (CartDto cart : list)
+                {
+                    String amc_name = cart.getScheme_company();
+
+                    if(amc_name == null){amc_name = "";}
+
+                    String logoName = amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(amc_name);
+                    String logo = logoName;
+
+                    cart.setScheme_logo(logo);;
+
+                    if(!cart.getTo_scheme_company().isEmpty())
+                    {
+                        logoName = amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(cart.getTo_scheme_company());
+                        logo = logoName;
+
+                        cart.setTo_scheme_logo(logo);;
+                    }
+                }
+            }
+
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+        }
+        return list;
+    }
+
 }
