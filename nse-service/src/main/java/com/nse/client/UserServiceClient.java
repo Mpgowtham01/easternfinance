@@ -497,4 +497,7 @@ public interface UserServiceClient {
     @GetMapping("/getActiveCartsById")
     List<CartDto> getActiveCartsById(@RequestParam("cart_id") Integer cart_id, @RequestHeader("Authorization") String token);
 
+    @PostMapping("/postMandateDetails")
+    ResponseEntity<String> postMandateDetails(@RequestBody UserMandateDetailsDto userMandate, @RequestHeader("Authorization") String token);
+
 }

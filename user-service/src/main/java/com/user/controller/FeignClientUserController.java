@@ -2481,4 +2481,57 @@ public class FeignClientUserController
 		}
 	}
 
+	@Hidden
+	@PostMapping("/postMandateDetails")
+	public ResponseEntity<?> postMandateDetails(@RequestBody UserMandateDetailsDto userMandate) {
+		try {
+			UsersMandateDetails entity = new UsersMandateDetails();
+			entity.setUser_id(userMandate.getUser_id());
+			entity.setOnline_id(userMandate.getOnline_id());
+			entity.setOnline_flag("NSE");
+			entity.setOnline_code(userMandate.getOnline_code() == null ? "" : userMandate.getOnline_code());
+			entity.setBroker_code(userMandate.getBroker_code() == null ? "" : userMandate.getBroker_code());
+			entity.setBank_account_number(userMandate.getBank_account_number());
+
+			// xsip_otm / emandate_otm are NOT NULL columns - Hibernate sends an explicit
+			// NULL for them on insert unless they are populated here.
+			entity.setXsip_otm("");
+			entity.setXsip_otm_flag(0);
+			entity.setXsip_otm_amount("");
+			entity.setXsip_otm_approved(0);
+			entity.setXsip_otm_rej_reason("");
+			entity.setEmandate_otm("");
+			entity.setEmandate_otm_flag(0);
+			entity.setEmandate_otm_amount("");
+			entity.setEmandate_otm_approved(0);
+			entity.setEmandate_otm_rej_reason("");
+
+			entity.setNse_ach_flag(1);
+			entity.setNse_ach(userMandate.getNse_ach() == null ? "" : userMandate.getNse_ach());
+			entity.setNse_ach_amount(userMandate.getNse_ach_amount());
+			entity.setNse_ach_approved(0);
+			entity.setNse_ach_rej_reason("");
+			entity.setNse_umrn_no("");
+			entity.setNse_ach_type("");
+			entity.setCreated_date(new Date());
+			entity.setNse_ach_start_date(userMandate.getNse_ach_start_date());
+			entity.setNse_ach_end_date(userMandate.getNse_ach_end_date());
+			entity.setNse_ach_created_date(new Date());
+			entity.setClient_name(userMandate.getClient_name() == null ? "" : userMandate.getClient_name());
+
+			// Save to DB
+			UsersMandateDetails saved = usersMandateDetailsRespository.save(entity);
+			// convert back to DTO if needed
+			UserMandateDetailsDto response = new UserMandateDetailsDto();
+			response.setClient_name(saved.getClient_name());
+			response.setUser_id(saved.getUser_id());
+
+			return ResponseEntity.ok(response);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("status", 500, "status_msg", "Error occurred while saving mandate details"));
+		}
+	}
+
 }

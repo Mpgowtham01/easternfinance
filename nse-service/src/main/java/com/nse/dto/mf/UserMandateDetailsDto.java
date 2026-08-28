@@ -11,6 +11,7 @@ public class UserMandateDetailsDto
     @Id
     private Integer id;
     private Integer user_id = 0;
+    private Integer online_id = 0;
     private String online_flag = "";
     private String online_code = "";
     private String bank_account_number = "";
@@ -33,17 +34,10 @@ public class UserMandateDetailsDto
     private String nse_ach = "";
     private String nse_ach_amount = "";
     private Integer nse_ach_approved = 0;
+    private Date nse_ach_start_date;
+    private Date nse_ach_end_date;
     private String nse_ach_rej_reason = "";
     private Date nse_ach_created_date;
-
-    private Integer mfu_mandate_flag = 0;
-    private String mfu_mandate = "";
-    private String mfu_mandate_amount = "";
-    private Integer mfu_mandate_approved = 0;
-    private String mfu_mandate_rej_reason = "";
-    private String mfu_mandate_mode = "";
-    private String mfu_mmrn_no = "";
-    private Date mfu_mandate_created_date;
 
     private String client_name = "";
     private String broker_code = "";

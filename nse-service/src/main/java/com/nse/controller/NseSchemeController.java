@@ -7252,14 +7252,6 @@ public class NseSchemeController {
         resp.setNse_ach_approved(m.getNse_ach_approved());
         resp.setNse_ach_rej_reason(m.getNse_ach_rej_reason());
 //        resp.setNse_ach_created_date(m.getNse_ach_created_date());
-
-        resp.setMfu_mandate_flag(m.getMfu_mandate_flag());
-        resp.setMfu_mandate(m.getMfu_mandate());
-        resp.setMfu_mandate_mode(m.getMfu_mandate_mode());
-        resp.setMfu_mmrn_no(m.getMfu_mmrn_no());
-        resp.setMfu_mandate_amount(m.getMfu_mandate_amount());
-        resp.setMfu_mandate_approved(m.getMfu_mandate_approved());
-        resp.setMfu_mandate_rej_reason(m.getMfu_mandate_rej_reason());
 //        resp.setMfu_mandate_created_date(m.getMfu_mandate_created_date());
 
         resp.setClient_name(m.getClient_name());

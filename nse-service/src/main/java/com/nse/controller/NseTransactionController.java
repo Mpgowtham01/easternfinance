@@ -43,6 +43,7 @@ import org.springframework.web.client.RestTemplate;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -5929,94 +5930,101 @@ public class NseTransactionController {
             @RequestParam(required = false) String euin_code,
             @RequestParam(required = false) String micr_code,
             @RequestParam(required = false) String source,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
             @RequestHeader("Authorization") String token)
     {
 
-        String ipAddr = "";
-        List<CartDto> cartList = null;
-        long currentTimeMillis = System.currentTimeMillis();
         String name = "";
         String pan = "";
-        String mobile = "";
         String client_name = "";
         try
         {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            System.out.println("User ID from token: " + userid);
 
             iin_number = NseUtils.checkParem(iin_number);
             ach_from_date = NseUtils.checkParem(ach_from_date);
             ach_to_date = NseUtils.checkParem(ach_to_date);
             amount = NseUtils.checkParem(amount);
             ifsc_code = NseUtils.checkParem(ifsc_code);
-            bank_code = NseUtils.checkParem(bank_code);
-            branch_name = NseUtils.checkParem(branch_name);
             account_number = NseUtils.checkParem(account_number);
-            account_holder_name = NseUtils.checkParem(account_holder_name);
             account_type = NseUtils.checkParem(account_type);
-            until_cancelled = NseUtils.checkParem(until_cancelled);
             mandate_type = NseUtils.checkParem(mandate_type);
             mandate_option = NseUtils.checkParem(mandate_option);
             broker_code = NseUtils.checkParem(broker_code);
             euin_code = NseUtils.checkParem(euin_code);
             micr_code = NseUtils.checkParem(micr_code);
             source = NseUtils.checkParem(source);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
 
-            if (mandate_type.isEmpty()) {mandate_type = "E";};
+            if (mandate_type.isEmpty()) {mandate_type = "E";}
             if (mandate_option.isEmpty()) {mandate_option = "NET";}
 
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            UserDto user =null;
+
+            try {
+                user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
 
             if (user == null)
             {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
             }
 
-            String appln_id = "";
-            String password = "";
             String euin = "";
-            String host = "";
             client_name = user.getClient_name();
 
             BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
             String broker_code1 = nsekey.getBrokerCode();
 
-            host = nsekey.getDomain_url();
-
             if(broker_code1 == null){broker_code1 = "";};
+            broker_code = broker_code1;
+
+            if(!euin_code.isEmpty())
+            {
+                euin = euin_code;
+            }else{
+                euin = nsekey.getEuin();
+            }
+
+            if(broker_code.isEmpty())
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
+            }
+
+            String nse_iin = null;
+            if(iin_number.isEmpty())
+            {
+                nse_iin = user.getNse_iin_number();
+            }else{
+                nse_iin = iin_number;
+            }
 
 
-
-                broker_code = broker_code1;
-                appln_id = nsekey.getNse_appln_id();
-                password = nsekey.getNse_password();
-                if (!euin_code.isEmpty()) {
-                    euin = euin_code;
-                } else {
-                    euin = nsekey.getEuin();
-                }
-
-            euin = euin.split(",")[0];
-
-            String nse_iin = user.getNse_iin_number();
-            String selected_name = "";
-            UserDto nse = null;
             if (!nse_iin.equalsIgnoreCase(iin_number))
             {
-                 nse = userServiceClient.getUserBseNseDetailsByIinnumber(client_name,iin_number,token);
-
+                UserDto nse = null;
+                try {
+                    nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name,iin_number,broker_code,token);
+                }catch (FeignException e)
+                {
+                    return FeignErrorHandler.handle(e, "User Service", "User not found");
+                }
                 if(nse == null)
                 {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
                 }
                 pan = nse.getPan();
                 name = nse.getName();
-                selected_name = name + " (" + userid + ")";
             } else
             {
                 pan = user.getPan();
                 name = user.getName();
-                selected_name = name + " (" + userid + ")";
             }
 
             SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");
@@ -6029,7 +6037,7 @@ public class NseTransactionController {
             ach_from_date = slashFormat.format(achFromDateObj);
 
             Date achToDateObj = null;
-            if (ach_to_date != null && !ach_to_date.isEmpty()) {
+            if (!ach_to_date.isEmpty()) {
                 achToDateObj = inputFormat.parse(ach_to_date);
                 ach_to_date = slashFormat.format(achToDateObj);
             }
@@ -6043,7 +6051,7 @@ public class NseTransactionController {
 
             if (processedByMember) {
                 try {
-                    if (ach_from_date != null && !ach_from_date.isBlank()) {
+                    if (!ach_from_date.isBlank()) {
                         LocalDate startDate = LocalDate.parse(ach_from_date, formatter);
                         if (!today.isAfter(startDate)) {
                             registrationDate = todayStr;
@@ -6055,6 +6063,8 @@ public class NseTransactionController {
                     e.printStackTrace();
                 }
             }
+
+            System.out.println("account_number = " + account_number);
 
             JSONArray mandateDetailsArray = new JSONArray();
             JSONObject mandateReg = new JSONObject();
@@ -6114,7 +6124,7 @@ public class NseTransactionController {
                 ResponseEntity<String> mandateResult = restTemplate.postForEntity(mandate_url, entity,
                         String.class);
                 String statusCode = mandateResult.getStatusCode().toString();
-                String responseBody = mandateResult.getBody().toString();
+                String responseBody = mandateResult.getBody();
 
                 System.out.println("statusCode = " + statusCode);
                 System.out.println("responseBody = " + responseBody);
@@ -6137,8 +6147,8 @@ public class NseTransactionController {
                 NseTransactions nsetrans = new NseTransactions();
                 nsetrans.setUrl(mandate_url);
                 nsetrans.setNse_request(requestBody.toString());
-                nsetrans.setNse_response(responseBody.toString());
-                nsetrans.setReturn_msg(reg_remark);
+                nsetrans.setNse_response(responseBody);
+                nsetrans.setReturn_msg(reg_status);
                 nsetrans.setService_return_code(statusCode);
                 nsetrans.setService_msg(reg_remark);
                 nsetrans.setReg_id(reg_id);
@@ -6153,7 +6163,7 @@ public class NseTransactionController {
                 nsetrans.setScheme_name("");
                 nsetrans.setScheme_code("");
                 nsetrans.setFolio_no("");
-                nsetrans.setAmount_units("");
+                nsetrans.setAmount_units(amount);
                 nsetrans.setFrequency("");
                 nsetrans.setPeriod_day("");
                 nsetrans.setUmrn_no("");
@@ -6162,10 +6172,10 @@ public class NseTransactionController {
                 nsetrans.setUnique_number("");
                 nsetrans.setAuto_trxn_no("");
                 nsetrans.setSip_reg_no("");
-                nsetrans.setPayment_mode("");
+                nsetrans.setPayment_mode(mandate_type);
                 nsetrans.setTopup_amount(0.0);
-                nsetrans.setBank_acc_no("");
-                nsetrans.setTransaction_number("");
+                nsetrans.setBank_acc_no(account_number);
+                nsetrans.setTransaction_number(reg_id);
                 nsetrans.setApplication_number("");
                 nsetrans.setTo_scheme_code("");
                 nsetrans.setTo_scheme_name("");
@@ -6174,7 +6184,7 @@ public class NseTransactionController {
                 nsetrans.setPayment_status("");
                 nsetrans.setActive_ceased_status("");
                 nsetrans.setRemarks(reg_remark);
-                nsetrans.setMandate_id("");
+                nsetrans.setMandate_id(reg_id);
                 nsetrans.setMandate_status("");
                 nsetrans.setEmandate_auth_flag("");
                 nsetrans.setApp_received_flag("");
@@ -6188,87 +6198,57 @@ public class NseTransactionController {
                 {
                     nsetrans.setRegister_source("Website");
                 }
-
                 nsetrans.setBroker_code(broker_code);
                 nsetrans.setEuin_number(euin);
                 nsetrans.setCc_received("");
                 nsetrans.setFund_trans_to_amc("");
                 nsetrans.setRefund_status("");
                 nsetrans.setRefund_amount("");
+
+                LocalDate localDate = LocalDate.parse(ach_from_date, formatter);
+                Date utilDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+                nsetrans.setStart_date(utilDate);
+
+                LocalDate localToDate = LocalDate.parse(ach_to_date, formatter);
+                Date utilToDate = Date.from(localToDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                nsetrans.setEnd_date(utilToDate);
                 nseTransactionService.save(nsetrans);
 
-                ipAddr = NseUtils.getIpAddr(request);
-                if(ipAddr == null){ipAddr="";}
-
-                if (reg_status.equalsIgnoreCase("REG_SUCCESS")) {
-
-                    if (!nse_iin.equalsIgnoreCase(iin_number)) {
-                        if (account_number.equalsIgnoreCase(nse.getBank_account_number1())) {
-                            nse.setNse_ach_flag1(1);
-                            nse.setNse_ach1(reg_id);
-                            nse.setNse_ach_amount1(amount);
-                            nse.setNse_ach_approved1(0);
-                            nse.setNse_ach_rej_reason1("");
-                            nse.setNse_ach_created_date1(new Date());
-                            //nse.setNse_ach_mode1(mandate_type);
-                            userServiceClient.saveBseNseDetails(nse,token);
-
-                        } else if (account_number.equalsIgnoreCase(nse.getBank_account_number2())) {
-                            nse.setNse_ach_flag2(1);
-                            nse.setNse_ach2(reg_id);
-                            nse.setNse_ach_amount2(amount);
-                            nse.setNse_ach_approved2(0);
-                            nse.setNse_ach_rej_reason2("");
-                            nse.setNse_ach_created_date2(new Date());
-                            //nse.setNse_ach_mode2(mandate_type);
-                            userServiceClient.saveBseNseDetails(nse,token);
-
-                        } else if (account_number.equalsIgnoreCase(nse.getBank_account_number3())) {
-                            nse.setNse_ach_flag3(1);
-                            nse.setNse_ach3(reg_id);
-                            nse.setNse_ach_amount3(amount);
-                            nse.setNse_ach_approved3(0);
-                            nse.setNse_ach_rej_reason3("");
-                            nse.setNse_ach_created_date3(new Date());
-                            //.setNse_ach_mode3(mandate_type);
-                            userServiceClient.saveBseNseDetails(nse, token);
-                        }
-                    } else {
-                        if (account_number.equalsIgnoreCase(user.getBank_account_number1())) {
-                            user.setNse_ach_flag1(1);
-                            user.setNse_ach1(reg_id);
-                            user.setNse_ach_amount1(amount);
-                            user.setNse_ach_approved1(0);
-                            user.setNse_ach_rej_reason1("");
-                            user.setNse_ach_created_date1(new Date());
-                            //user.setNse_ach_mode1(mandate_type);
-                            userServiceClient.saveUser(user, token);
-
-                        } else if (account_number.equalsIgnoreCase(user.getBank_account_number2())) {
-                            user.setNse_ach_flag2(1);
-                            user.setNse_ach2(reg_id);
-                            user.setNse_ach_amount2(amount);
-                            user.setNse_ach_approved2(0);
-                            user.setNse_ach_rej_reason2("");
-                            user.setNse_ach_created_date2(new Date());
-                            //user.setNse_ach_mode2(mandate_type);
-                            userServiceClient.saveUser(user, token);
-
-                        } else if (account_number.equalsIgnoreCase(user.getBank_account_number3())) {
-                            user.setNse_ach_flag3(1);
-                            user.setNse_ach3(reg_id);
-                            user.setNse_ach_amount3(amount);
-                            user.setNse_ach_approved3(0);
-                            user.setNse_ach_rej_reason3("");
-                            user.setNse_ach_created_date3(new Date());
-                            //user.setNse_ach_mode3(mandate_type);
-                            userServiceClient.saveUser(user, token);
-                        }
-                    }
-                }
                 if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                 {
-                    return NseUtils.transactionResponse(HttpStatus.OK, "Bank Mandate Registration done Successfully " + reg_id, new HashMap<>());
+                    UserMandateDetailsDto mandate = new UserMandateDetailsDto();
+                    mandate.setUser_id(Integer.parseInt(userid));
+                    mandate.setOnline_id(user.getId());
+                    mandate.setOnline_flag("NSE");
+                    mandate.setOnline_code(nse_iin);
+                    mandate.setBroker_code(user.getBroker_code());
+                    mandate.setBank_account_number(account_number);
+                    mandate.setNse_ach_flag(1);
+                    mandate.setNse_ach(reg_id);
+                    mandate.setNse_ach_amount(amount);
+                    mandate.setNse_ach_approved(0);
+
+                    mandate.setNse_ach_start_date(achFromDateObj);
+                    mandate.setNse_ach_end_date(achToDateObj);
+                    mandate.setNse_ach_rej_reason("");
+                    mandate.setNse_ach_created_date(new Date());
+                    mandate.setCreated_date(new Date());
+                    mandate.setClient_name(client_name);
+
+                    userServiceClient.postMandateDetails(mandate, token);
+                }
+
+                if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                {
+                    if("mobile".equalsIgnoreCase(source))
+                    {
+                        return NseUtils.transactionMobileResponse(HttpStatus.OK, "Congratulations! Bank Mandate Registration done Successfully. ACH MANDATE Confirmation link sent to register Email, Please verify the Confirmation link and complete the registration process. Thanks!" + reg_id, new HashMap<>());
+                    }else
+                    {
+                        return NseUtils.transactionResponse(HttpStatus.OK, "Congratulations! Bank Mandate Registration done Successfully. ACH MANDATE Confirmation link sent to register Email, Please verify the Confirmation link and complete the registration process. Thanks!" + reg_id, new HashMap<>());
+                    }
+
                 }else
                 {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), reg_remark));
@@ -6276,13 +6256,13 @@ public class NseTransactionController {
             } catch (Exception ex)
             {
                 ex.printStackTrace();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
     }
     @Operation(summary = "Save bank details", description = "Saves bank account details for a given investor based on the provided token.")
