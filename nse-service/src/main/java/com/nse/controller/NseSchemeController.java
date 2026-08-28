@@ -2060,7 +2060,7 @@ public class NseSchemeController {
             amc_code = amc_code.trim();
             sip_frequency = sip_frequency.trim();
 
-            List<NseOnlineSipStpSwpMaster> nse= nseOnlineSipStpSwpMasterRepository.findByAmcCodeAndSchemeCodeAndFrequency(amc_code, scheme_code, sip_frequency);
+            List<NseOnlineSipStpSwpMaster> nse= nseOnlineSipStpSwpMasterRepository.findByAmcNameAndSchemeCodeAndFrequency(amc_code, scheme_code, sip_frequency);
             return ResponseEntity.ok(nse);
 
         } catch (Exception ex) {
