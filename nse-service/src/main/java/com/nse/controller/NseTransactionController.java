@@ -1,5 +1,6 @@
 package com.nse.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.nse.client.UserServiceClient;
 import com.nse.config.TokenInterceptor;
@@ -11,6 +12,7 @@ import com.nse.repository.NseLogRepository;
 import com.nse.repository.NseOnlineSchemeMasterRepository;
 import com.nse.repository.NseTransactionRepository;
 import com.nse.response.CommonResponse;
+import com.nse.response.PurchaseOrdersPaymentAPIResponse;
 import com.nse.response.StatusMessage;
 import com.nse.response.TransactionResponse;
 import com.nse.services.NseTransactionService;
@@ -8358,6 +8360,191 @@ public class NseTransactionController {
         {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
+        }
+    }
+
+    @PostMapping("/purchaseOrdersPaymentApi")
+    public ResponseEntity<?> purchaseOrdersPaymentApi(
+            HttpServletRequest request,
+            @RequestParam String broker_code,
+            @RequestParam String payment_mode,
+            @RequestParam String client_code,
+            @RequestParam String order_ids,
+            @RequestParam String bank_account_no,
+            @RequestParam String ifsc,
+            @RequestParam String vpa,
+            @RequestParam String callback_url,
+            @RequestParam String mandate_id,
+            @RequestParam String cheque_no,
+            @RequestParam String cheque_date,
+            @RequestParam String neft_rtgs_utr_no,
+            @RequestParam String source,
+            @RequestParam(required = false) String ip_address,
+            @RequestParam(required = false) String origin_user_id,
+            @RequestParam(required = false) String origin_first_name,
+            @RequestHeader("Authorization") String token) {
+
+        try {
+
+            String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            System.out.println("User ID from token: " + userid);
+
+            UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+
+            String client_name = users.getClient_name();
+
+            client_code = NseUtils.checkParem(client_code);
+            broker_code = NseUtils.checkParem(broker_code);
+            payment_mode = NseUtils.checkParem(payment_mode);
+            order_ids = NseUtils.checkParem(order_ids);
+            bank_account_no = NseUtils.checkParem(bank_account_no);
+            ifsc = NseUtils.checkParem(ifsc);
+            vpa = NseUtils.checkParem(vpa);
+            callback_url = NseUtils.checkParem(callback_url);
+            mandate_id = NseUtils.checkParem(mandate_id);
+            cheque_no = NseUtils.checkParem(cheque_no);
+            cheque_date = NseUtils.checkParem(cheque_date);
+            neft_rtgs_utr_no = NseUtils.checkParem(neft_rtgs_utr_no);
+            ip_address = NseUtils.checkParem(ip_address);
+            origin_user_id = NseUtils.checkParem(origin_user_id);
+            origin_first_name = NseUtils.checkParem(origin_first_name);
+
+            JSONObject purchaseOrdersPaymentRegObj = new JSONObject();
+            //MANDATE, CHEQUE, UPI, NETBANKING ,RTGS/NEFT
+            purchaseOrdersPaymentRegObj.put("client_code", client_code);
+            purchaseOrdersPaymentRegObj.put("payment_mode", payment_mode);
+            purchaseOrdersPaymentRegObj.put("order_ids", order_ids);
+            if(payment_mode.equalsIgnoreCase("MANDATE")){
+                purchaseOrdersPaymentRegObj.put("mandate_id", mandate_id);
+
+            }else if(payment_mode.equalsIgnoreCase("CHEQUE")){
+                purchaseOrdersPaymentRegObj.put("bank_account_no", bank_account_no);
+                purchaseOrdersPaymentRegObj.put("ifsc", ifsc);
+                purchaseOrdersPaymentRegObj.put("cheque_no", cheque_no);
+                purchaseOrdersPaymentRegObj.put("cheque_date", cheque_date); //DD/MM/YYYY. It must be between (T-90) to (T+3) calendar days
+
+            }else if(payment_mode.equalsIgnoreCase("UPI")){
+                purchaseOrdersPaymentRegObj.put("bank_account_no", bank_account_no);
+                purchaseOrdersPaymentRegObj.put("ifsc", ifsc);
+                purchaseOrdersPaymentRegObj.put("vpa", vpa);
+                purchaseOrdersPaymentRegObj.put("callback_url", callback_url);
+
+            }else if(payment_mode.equalsIgnoreCase("NETBANKING")){
+                purchaseOrdersPaymentRegObj.put("bank_account_no", bank_account_no);
+                purchaseOrdersPaymentRegObj.put("ifsc", ifsc);
+                purchaseOrdersPaymentRegObj.put("callback_url", callback_url);
+
+            }else if(payment_mode.equalsIgnoreCase("RTGS/NEFT") || payment_mode.equalsIgnoreCase("RTGS") || payment_mode.equalsIgnoreCase("NEFT")){
+                purchaseOrdersPaymentRegObj.put("neft_rtgs_utr_no", neft_rtgs_utr_no);
+            }else{
+                return NseUtils.commonResponse("Please select options between following! MANDATE, CHEQUE, UPI, NETBANKING, RTGS/NEFT", HttpStatus.BAD_REQUEST);
+            }
+
+            BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
+            if(online_access == null)
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+            }
+
+            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+            System.out.println("purchaseOrdersPaymentRegObj: " + purchaseOrdersPaymentRegObj);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("memberId", nse_memberid);
+            headers.set("Authorization", "Basic "+base64Encoded);
+            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "en-US");
+            headers.set("Connection", "keep-alive");
+            headers.set("Referer", "");
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+
+            HttpEntity<String> entity = new HttpEntity<>(purchaseOrdersPaymentRegObj.toString(), headers);
+            String purchase_payment_url= nseUrl+"/nsemfdesk/api/v2/payments/purchase_payment";
+
+            try {
+                ResponseEntity<String> ScanMandateResult = restTemplate.postForEntity(purchase_payment_url, entity, String.class);
+                String statusCode = ScanMandateResult.getStatusCode().toString();
+                String responseBody = ScanMandateResult.getBody();
+
+                System.out.println("statusCode = " + statusCode);
+                ObjectMapper mapper = new ObjectMapper();
+                PurchaseOrdersPaymentAPIResponse purchaseOrdersPaymentAPIResponse = mapper.readValue(responseBody, PurchaseOrdersPaymentAPIResponse.class);
+
+                NseTransactions nsetrans = new NseTransactions();
+                nsetrans.setUrl(purchase_payment_url);
+                nsetrans.setNse_request(purchaseOrdersPaymentRegObj.toString());
+                nsetrans.setNse_response(responseBody);
+                nsetrans.setReturn_msg(purchaseOrdersPaymentAPIResponse.getStatus());
+                nsetrans.setService_return_code(purchaseOrdersPaymentAPIResponse.getStatus());
+                nsetrans.setService_msg(purchaseOrdersPaymentAPIResponse.getRemark());
+                nsetrans.setReg_id("");
+                nsetrans.setPayment_link("");
+                nsetrans.setPan(users.getPan());
+                nsetrans.setName(users.getName());
+                nsetrans.setBranch(users.getBranch());
+                nsetrans.setRm_name(users.getRm_name());
+                nsetrans.setSubbroker_name(users.getSubbroker_name());
+                nsetrans.setClient_name(client_name);
+                nsetrans.setIin_number(client_code);
+                nsetrans.setScheme_name("");
+                nsetrans.setScheme_code("");
+                nsetrans.setFolio_no("");
+                nsetrans.setAmount_units("");
+                nsetrans.setFrequency("");
+                nsetrans.setPeriod_day("");
+                nsetrans.setUmrn_no("");
+                nsetrans.setPurchase_type("");
+                nsetrans.setPayment_ref_no("");
+                nsetrans.setUnique_number("");
+                nsetrans.setAuto_trxn_no("");
+                nsetrans.setSip_reg_no("");
+                nsetrans.setPayment_mode("");
+                nsetrans.setTopup_amount(0.0);
+                nsetrans.setBank_acc_no("");
+                nsetrans.setTransaction_number("");
+                nsetrans.setApplication_number("");
+                nsetrans.setTo_scheme_code("");
+                nsetrans.setTo_scheme_name("");
+                nsetrans.setTransaction_type("Purchase orders payment");
+                nsetrans.setTransaction_status("");
+                nsetrans.setPayment_status("");
+                nsetrans.setActive_ceased_status("");
+                nsetrans.setRemarks(purchaseOrdersPaymentAPIResponse.getRemark());
+                nsetrans.setMandate_id("");
+                nsetrans.setMandate_status("");
+                nsetrans.setEmandate_auth_flag("");
+                nsetrans.setApp_received_flag("");
+                nsetrans.setTransaction_date(new Date());
+                nsetrans.setUser_id(Integer.parseInt(userid));
+                nsetrans.setRegister_source(source);
+                nsetrans.setBroker_code(broker_code);
+                nsetrans.setEuin_number(users.getEuin());
+                nsetrans.setCc_received("");
+                nsetrans.setFund_trans_to_amc("");
+                nsetrans.setRefund_status("");
+                nsetrans.setRefund_amount("");
+                nseTransactionRepository.save(nsetrans);
+
+                return ResponseEntity.ok(purchaseOrdersPaymentAPIResponse);
+
+            }catch(Exception ex)
+            {
+                ex.printStackTrace();
+                return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            }
+
+        }catch(Exception ex){
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
