@@ -744,16 +744,19 @@ public class FeignClientUserController
 			Optional<UsersOnlineRegDetails> detailsOptional = userOnlineRegDetailsRespository.findByAllFields(
 					userid, iin_number, client_name
 			);
-            System.out.println("detailsOptional = " + detailsOptional);
 
-			if (detailsOptional.isPresent())
+			if (!detailsOptional.isEmpty())
 			{
-				return ResponseEntity.ok(detailsOptional.get());
-			}
-			else
-			{
-				return ResponseEntity.status(HttpStatus.NOT_FOUND)
-						.body("No mandate details found for the given parameters.");
+				UsersOnlineRegDetails userDetail = detailsOptional.get();
+				List<UsersBankDetails> bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				Optional<UsersNomineeDetails> nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE");
+				List<UsersMandateDetails> mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+
+				UserDto userDto = UserMapper.mapToUserDtoMappers(userDetail, bankDetails, mandateDetails, nomineeDetails.isPresent() ? nomineeDetails.get() : null);
+
+				return ResponseEntity.ok(userDto);
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "No record found for the given IIN Number and Client Name."));
 			}
 		}
 		catch (Exception e)
