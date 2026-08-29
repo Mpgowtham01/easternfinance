@@ -2537,4 +2537,25 @@ public class FeignClientUserController
 		}
 	}
 
+	@Hidden
+	@GetMapping("/deleteByClientNameUserIdAndonlinecode")
+	public ResponseEntity<?> deleteByClientNameUserIdAndonlinecode(
+			@RequestParam String clientName,
+			@RequestParam String online_code,
+			@RequestParam String bank_account_number,
+			@RequestParam String online_flag,
+			@RequestParam String nse_ach,
+			@RequestParam Integer userId)
+	{
+		try {
+			int detailsOptional = usersMandateDetailsRespository.deleteByClientNameUserIdAndonlinecode(clientName, userId, online_code, bank_account_number, online_flag, nse_ach);
+
+			return ResponseEntity.ok(detailsOptional);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error retrieving user mandate details");
+		}
+	}
+
 }

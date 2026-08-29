@@ -10,6 +10,8 @@ import com.nse.pojo.CommonPojo;
 import com.nse.repository.*;
 
 import com.nse.response.CommonResponse;
+import com.nse.response.StatusMessage;
+import com.nse.response.TransactionCommonResponse;
 import com.nse.services.NsePincodeService;
 import com.nse.utils.NseUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -798,6 +800,35 @@ public class NseUtilsController {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getBankMandateTypes")
+    public ResponseEntity<?> getBankMandateTypes(@RequestHeader("Authorization") String token)
+    {
+        List<CommonPojo> masterList = new ArrayList<CommonPojo>();
+        CommonPojo pojo = null;
+        try
+        {
+            pojo = new CommonPojo();
+            pojo.setCode("P");
+            pojo.setDesc("Physical");
+            masterList.add(pojo);
+
+            pojo = new CommonPojo();
+            pojo.setCode("EMANDATE");
+            pojo.setDesc("E-Mandate");
+            masterList.add(pojo);
+
+            TransactionCommonResponse apiResponse = new TransactionCommonResponse();
+            apiResponse.setStatus(StatusMessage.SuccessCode);
+            apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+            apiResponse.setMsg(StatusMessage.SuccessMessage);
+            apiResponse.setList(masterList);
+            return  ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return NseUtils.commonResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 

@@ -4474,7 +4474,7 @@ public class NseTransactionController {
             {
                 String message = String.format("%d out of %d STP transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                 message += "Failed transactions: " + String.join(", ", failedSchemes);
-                return NseUtils.commonResponse(message,HttpStatus.BAD_REQUEST);
+                return NseUtils.commonResponse1(message,HttpStatus.BAD_REQUEST,message);
             }
             else if (successCount > 0)
             {
@@ -4485,7 +4485,7 @@ public class NseTransactionController {
                 String failureMessage = !failedSchemes.isEmpty() ? String.join(", ", failedSchemes)
                         : (StringHelper.isNotEmpty(reg_remark) ? reg_remark
                         : "STP registration failed. Please try again.");
-                return NseUtils.commonResponse(failureMessage, HttpStatus.BAD_REQUEST);
+                return NseUtils.commonResponse1(failureMessage, HttpStatus.BAD_REQUEST,failureMessage);
             }
 
         }
@@ -6802,11 +6802,7 @@ public class NseTransactionController {
 
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             System.out.println("User ID from token: " + userid);
-
-            UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
-
-            String client_name = users.getClient_name();
-
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
             iin_number = NseUtils.checkParem(iin_number);
             account_number = NseUtils.checkParem(account_number);
             umrn_no = NseUtils.checkParem(umrn_no);
@@ -6817,183 +6813,23 @@ public class NseTransactionController {
                 return NseUtils.commonResponse("All fields are mandatory" , HttpStatus.BAD_REQUEST);
             }
 
-            UserDto user =  userServiceClient.getUserDetailsByID( client_name, Integer.valueOf(userid),token);
-            String nse_iin = user.getNse_iin_number();
+            UserDto user = null;
+            try {
+                user =  userServiceClient.getUserByIdAndClientNameAndiinnumber(client_name, Integer.valueOf(userid),iin_number,token);
+            }catch (FeignException e)
+            {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+
             String nse_ach_id = "";
             String nse_ach_amount = "";
             int nse_ach_approved = 0;
             String selected_name = "";
 
-            if(!nse_iin.equalsIgnoreCase(iin_number))
-            {
-                UserBseNseDto nse = userServiceClient.getUserBseNseDetailsByIinNumber(client_name,iin_number,token );
-                String pan = nse.getPan();
-                String name = nse.getName();
-
-                selected_name = name + " PAN:" + pan + " (" + userid + ")";
-                String bank_account_number1 = nse.getBank_account_number1();
-                String bank_account_number2 = nse.getBank_account_number2();
-                String bank_account_number3 = nse.getBank_account_number3();
-                String ach1 = nse.getNse_ach1();
-                String ach2 = nse.getNse_ach2();
-                String ach3 = nse.getNse_ach3();
-                if(bank_account_number1 == null) {bank_account_number1 = "";}
-                if(bank_account_number2 == null) {bank_account_number2 = "";}
-                if(bank_account_number3 == null) {bank_account_number3 = "";}
-                if(ach1 == null) {ach1 = "";}
-                if(ach2 == null) {ach2 = "";}
-                if(ach3 == null) {ach3 = "";}
-
-                if(ach1.equalsIgnoreCase(umrn_no) && account_number.equalsIgnoreCase(bank_account_number1))
-                {
-                    nse_ach_id = nse.getNse_ach1();
-                    nse_ach_amount = nse.getNse_ach_amount1();
-                    nse_ach_approved = nse.getNse_ach_approved1();
-
-                    nse.setNse_ach_flag1(0);
-                    nse.setNse_ach1("");
-                    nse.setNse_ach_approved1(0);
-                    nse.setNse_ach_amount1("");
-                    nse.setNse_ach_rej_reason1("");
-                    nse.setNse_ach_created_date1(null);
-                    userServiceClient.saveUserBseNseDetail(nse,token);
-
-                }else if(ach2.equalsIgnoreCase(umrn_no) && account_number.equalsIgnoreCase(bank_account_number2))
-                {
-                    nse_ach_id = nse.getNse_ach2();
-                    nse_ach_amount = nse.getNse_ach_amount2();
-                    nse_ach_approved = nse.getNse_ach_approved2();
-
-                    nse.setNse_ach_flag2(0);
-                    nse.setNse_ach2("");
-                    nse.setNse_ach_approved2(0);
-                    nse.setNse_ach_amount2("");
-                    nse.setNse_ach_rej_reason2("");
-                    nse.setNse_ach_created_date2(null);
-                    userServiceClient.saveUserBseNseDetail(nse,token);
-
-                }else if(ach3.equalsIgnoreCase(umrn_no) && account_number.equalsIgnoreCase(bank_account_number3))
-                {
-                    nse_ach_id = nse.getNse_ach3();
-                    nse_ach_amount = nse.getNse_ach_amount3();
-                    nse_ach_approved = nse.getNse_ach_approved3();
-
-                    nse.setNse_ach_flag3(0);
-                    nse.setNse_ach3("");
-                    nse.setNse_ach_approved3(0);
-                    nse.setNse_ach_amount3("");
-                    nse.setNse_ach_rej_reason3("");
-                    nse.setNse_ach_created_date3(null);
-                    userServiceClient.saveUserBseNseDetail(nse,token);
-
-                }else {
-
-                }
-            }else{
-
-
-                String pan = user.getPan();
-                String name = user.getName();
-                selected_name = name + " PAN:" + pan + " (" + userid + ")";
-
-                String bank_account_number1 = user.getBank_account_number1();
-                String bank_account_number2 = user.getBank_account_number2();
-                String bank_account_number3 = user.getBank_account_number3();
-                String ach1 = user.getNse_ach1();
-                String ach2 = user.getNse_ach2();
-                String ach3 = user.getNse_ach3();
-                if(bank_account_number1 == null) {bank_account_number1 = "";}
-                if(bank_account_number2 == null) {bank_account_number2 = "";}
-                if(bank_account_number3 == null) {bank_account_number3 = "";}
-                if(ach1 == null) {ach1 = "";}
-                if(ach2 == null) {ach2 = "";}
-                if(ach3 == null) {ach3 = "";}
-
-                if(ach1.equalsIgnoreCase(umrn_no) && account_number.equalsIgnoreCase(bank_account_number1))
-                {
-                    nse_ach_id = user.getNse_ach1();
-                    nse_ach_amount = user.getNse_ach_amount1();
-                    nse_ach_approved = user.getNse_ach_approved1();
-
-                    user.setNse_ach_flag1(0);
-                    user.setNse_ach1("");
-                    user.setNse_ach_approved1(0);
-                    user.setNse_ach_amount1("");
-                    user.setNse_ach_rej_reason1("");
-                    user.setNse_ach_created_date1(null);
-                    userServiceClient.saveUser(user,token);
-
-                }else if(ach2.equalsIgnoreCase(umrn_no) && account_number.equalsIgnoreCase(bank_account_number2))
-                {
-                    nse_ach_id = user.getNse_ach2();
-                    nse_ach_amount = user.getNse_ach_amount2();
-                    nse_ach_approved = user.getNse_ach_approved2();
-
-                    user.setNse_ach_flag2(0);
-                    user.setNse_ach2("");
-                    user.setNse_ach_approved2(0);
-                    user.setNse_ach_amount2("");
-                    user.setNse_ach_rej_reason2("");
-                    user.setNse_ach_created_date2(null);
-                    userServiceClient.saveUser(user,token);
-
-                }else if(ach3.equalsIgnoreCase(umrn_no) && account_number.equalsIgnoreCase(bank_account_number3))
-                {
-                    nse_ach_id = user.getNse_ach3();
-                    nse_ach_amount = user.getNse_ach_amount3();
-                    nse_ach_approved = user.getNse_ach_approved3();
-
-                    user.setNse_ach_flag3(0);
-                    user.setNse_ach3("");
-                    user.setNse_ach_approved3(0);
-                    user.setNse_ach_amount3("");
-                    user.setNse_ach_rej_reason3("");
-                    user.setNse_ach_created_date3(null);
-                    userServiceClient.saveUser(user,token);
-
-                }else {
-
-                }
-            }
-//            String ipAddr = NseUtils.getIpAddr(request);
-//            if(ipAddr == null){ipAddr="";}
-//
-//            String investor = selected_name != null && StringHelper.isNotEmpty(selected_name) ? " for " + selected_name : "";
-//            String logmsg = users.getFirst_name() +" did NSE ACH Mandate Remove "+investor+". Details:";
-//            logmsg += "client_name: "+client_name+",";
-//            logmsg += "userid: "+userid+",";
-//            logmsg += "iin_number: "+iin_number+",";
-//            logmsg += "bank account number: "+account_number+",";
-//            logmsg += "umrn_no: "+umrn_no+",";
-//            logmsg += "nse_ach_amount: "+nse_ach_amount+",";
-//            logmsg += "nse_ach_approved: "+nse_ach_approved+",";
-//            logmsg += "nse_ach: "+nse_ach_id;
-//
-//            NseLogModel log = new NseLogModel();
-//            log.setUserid(users.getId());
-//            log.setUsername(users.getFirst_name());
-//            log.setMobile(users.getMobile());
-//            log.setTitle("NSE ACH Mandate Remove");
-//            log.setDescription("NSE ACH Mandate Remove");
-//            log.setContent(logmsg);
-//            log.setLogtime(new Date());
-//            log.setIp(ipAddr);
-//
-//            if(source.equalsIgnoreCase("Mobile"))
-//            {
-//                log.setSource("Mobile App");
-//            }else
-//            {
-//                log.setSource("Website");
-//            }
-//
-//            log.setClientName(client_name);
-//
-//            nseLogRepository.save(log);
-
+            int deleteByClientNameUserIdAndonlinecode = userServiceClient.deleteByClientNameUserIdAndonlinecode(client_name,user.getId(),account_number, Integer.valueOf(userid),"NSE",umrn_no,token);
+            System.out.println(deleteByClientNameUserIdAndonlinecode);
 
             return NseUtils.commonResponse("ACH Mandate deatails removed successfully.", HttpStatus.OK);
-
         } catch(Exception ex)
         {
             ex.printStackTrace();
@@ -7064,7 +6900,7 @@ public class NseTransactionController {
             UserBseNseDto nse = null;
 
             if (!nse_iin.equalsIgnoreCase(iin_number)) {
-                nse = userServiceClient.getUserBseNseDetailsByIinNumber(iin_number, client_name,token);
+                nse = userServiceClient.getUserBseNseDetailsByIinNumber(client_name, iin_number,token);
                 pan = nse.getPan();
                 name = nse.getName();
                 selected_name = name + " (" + userid + ")";

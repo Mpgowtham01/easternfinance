@@ -81,8 +81,6 @@ public class MandateMasterResponse
     private String bank_account_type = "";
     private String nse_ach = "";
     private String nse_ach_amount = "";
-    private Integer nse_ach_approved = 0;
-    private String nse_ach_rej_reason = "";
 
     private String xsip_otm_amount1 = "";
     private String xsip_otm_amount2 = "";

@@ -1,7 +1,9 @@
 package com.user.repository;
 
 import com.user.model.UsersMandateDetails;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -99,6 +101,18 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
             @Param("online_code") String online_code,
             @Param("online_flag") String online_flag,
             @Param("broker_code") String broker_code
+    );
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UsersMandateDetails u WHERE u.user_id = :userId AND u.client_name = :clientName AND u.online_id = :online_code AND u.bank_account_number = :bank_account_number AND u.online_flag = :online_flag AND u.nse_ach = :nse_ach")
+    int deleteByClientNameUserIdAndonlinecode(
+            @Param("clientName") String clientName,
+            @Param("userId") Integer userId,
+            @Param("online_code") String online_code,
+            @Param("bank_account_number") String bank_account_number,
+            @Param("online_flag") String online_flag,
+            @Param("nse_ach") String nse_ach
     );
 
 }

@@ -672,9 +672,10 @@ public class NseSchemeController {
 
     @Operation(
             summary = "Load Mandate Details",
-            description = "Retrieves mandate details for a specific client and bank account using IIN and Authorization token.\n\n" +
-                    "Performs validation and checks ACH approval status across multiple linked bank accounts.\n\n" +
-                    "Returns a list of mandate detail objects (`MandateMasterResponse`) or an error message."
+            description = "Retrieves mandate details for a specific client using IIN and Authorization token.\n\n" +
+                    "`bank_account_number` is optional - when it is not passed, every mandate registered against the IIN is returned.\n\n" +
+                    "Both approved and not-yet-approved mandates are returned; use `mandate_approved` / `mandate_status` to tell them apart.\n\n" +
+                    "Returns a list of mandate detail objects (`MandateDetailsPojo`) or an error message."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -684,22 +685,30 @@ public class NseSchemeController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             array = @ArraySchema(
                                     schema = @Schema(
-                                            implementation = MandateMasterResponse.class,
+                                            implementation = MandateDetailsPojo.class,
                                             example = """
                     [
                         {
-                            "bank_name": "HDFC Bank",
-                            "bank_account_number": "XXXXXXXX1234",
-                            "bank_account_type": "Savings",
-                            "nse_ach": "Approved",
-                            "nse_ach_amount": 100000.00
-                        },
-                        {
-                            "bank_name": "ICICI Bank",
-                            "bank_account_number": "XXXXXXXX5678",
-                            "bank_account_type": "Current",
-                            "nse_ach": "Approved",
-                            "nse_ach_amount": 200000.00
+                            "bank_name": "HDFC BANK",
+                            "bank_account_holder_name": "SOMNATH ACHARJEE",
+                            "bank_account_number": "501002451",
+                            "bank_ifsc_code": "HDFC0002850",
+                            "bank_code": "",
+                            "bank_micr_code": "",
+                            "bank_branch": "JAYNAGAR THREE, BANGALORE",
+                            "mandate_type": "ACH Mandate",
+                            "mandate_flag": 1,
+                            "mandate_id": "2026082812807",
+                            "mandate_amount": "10015",
+                            "mandate_approved": 1,
+                            "default_bank": "N",
+                            "mmrn_number": "",
+                            "mandate_mode": "",
+                            "mandate_status": "Approved",
+                            "mandate_desc": "Mandate generated & approved.",
+                            "mandate_date": "28-Aug-2026",
+                            "account_type": "SB",
+                            "mandate_end_date": "27-Aug-2066"
                         }
                     ]
                     """
@@ -746,22 +755,38 @@ public class NseSchemeController {
 
             String[] accounts;
             String[] bank_names;
+            String[] bank_codes;
+            String[] bank_branches;
+            String[] holder_names;
+            String[] ifsc_codes;
+            String[] micr_codes;
             String[] account_types;
+            String[] default_banks;
+            Integer[] ach_flags;
             String[] ach_numbers;
             String[] ach_amounts;
             Integer[] ach_approved;
             String[] ach_rej_reasons;
+            Date[] ach_created_dates;
             String broker_code;
 
             if (NseUtils.trimOrEmpty(user.getNse_iin_number()).equalsIgnoreCase(nse_iin_num))
             {
                 accounts = new String[]{user.getBank_account_number1(), user.getBank_account_number2(), user.getBank_account_number3()};
                 bank_names = new String[]{user.getBank_name1(), user.getBank_name2(), user.getBank_name3()};
+                bank_codes = new String[]{user.getBank_code1(), user.getBank_code2(), user.getBank_code3()};
+                bank_branches = new String[]{user.getBank_branch1(), user.getBank_branch2(), user.getBank_branch3()};
+                holder_names = new String[]{user.getBank_account_holder_name1(), user.getBank_account_holder_name2(), user.getBank_account_holder_name3()};
+                ifsc_codes = new String[]{user.getBank_ifsc_code1(), user.getBank_ifsc_code2(), user.getBank_ifsc_code3()};
+                micr_codes = new String[]{user.getBank_micr_code1(), user.getBank_micr_code2(), user.getBank_micr_code3()};
                 account_types = new String[]{user.getBank_account_type1(), user.getBank_account_type2(), user.getBank_account_type3()};
+                default_banks = new String[]{user.getDefault_bank1(), user.getDefault_bank2(), user.getDefault_bank3()};
+                ach_flags = new Integer[]{user.getNse_ach_flag1(), user.getNse_ach_flag2(), user.getNse_ach_flag3()};
                 ach_numbers = new String[]{user.getNse_ach1(), user.getNse_ach2(), user.getNse_ach3()};
                 ach_amounts = new String[]{user.getNse_ach_amount1(), user.getNse_ach_amount2(), user.getNse_ach_amount3()};
                 ach_approved = new Integer[]{user.getNse_ach_approved1(), user.getNse_ach_approved2(), user.getNse_ach_approved3()};
                 ach_rej_reasons = new String[]{user.getNse_ach_rej_reason1(), user.getNse_ach_rej_reason2(), user.getNse_ach_rej_reason3()};
+                ach_created_dates = new Date[]{user.getNse_ach_created_date1(), user.getNse_ach_created_date2(), user.getNse_ach_created_date3()};
                 broker_code = user.getBroker_code();
             }
             else
@@ -778,20 +803,30 @@ public class NseSchemeController {
 
                 if (nse == null || nse.getNse_active() == null || nse.getNse_active() != 1)
                 {
-                    return ResponseEntity.ok(new ArrayList<MandateMasterResponse>());
+                    return ResponseEntity.ok(new ArrayList<MandateDetailsPojo>());
                 }
 
                 accounts = new String[]{nse.getBank_account_number1(), nse.getBank_account_number2(), nse.getBank_account_number3()};
                 bank_names = new String[]{nse.getBank_name1(), nse.getBank_name2(), nse.getBank_name3()};
+                bank_codes = new String[]{nse.getBank_code1(), nse.getBank_code2(), nse.getBank_code3()};
+                bank_branches = new String[]{nse.getBank_branch1(), nse.getBank_branch2(), nse.getBank_branch3()};
+                holder_names = new String[]{nse.getBank_account_holder_name1(), nse.getBank_account_holder_name2(), nse.getBank_account_holder_name3()};
+                ifsc_codes = new String[]{nse.getBank_ifsc_code1(), nse.getBank_ifsc_code2(), nse.getBank_ifsc_code3()};
+                micr_codes = new String[]{nse.getBank_micr_code1(), nse.getBank_micr_code2(), nse.getBank_micr_code3()};
                 account_types = new String[]{nse.getBank_account_type1(), nse.getBank_account_type2(), nse.getBank_account_type3()};
+                default_banks = new String[]{nse.getDefault_bank1(), nse.getDefault_bank2(), nse.getDefault_bank3()};
+                ach_flags = new Integer[]{nse.getNse_ach_flag1(), nse.getNse_ach_flag2(), nse.getNse_ach_flag3()};
                 ach_numbers = new String[]{nse.getNse_ach1(), nse.getNse_ach2(), nse.getNse_ach3()};
                 ach_amounts = new String[]{nse.getNse_ach_amount1(), nse.getNse_ach_amount2(), nse.getNse_ach_amount3()};
                 ach_approved = new Integer[]{nse.getNse_ach_approved1(), nse.getNse_ach_approved2(), nse.getNse_ach_approved3()};
                 ach_rej_reasons = new String[]{nse.getNse_ach_rej_reason1(), nse.getNse_ach_rej_reason2(), nse.getNse_ach_rej_reason3()};
+                ach_created_dates = new Date[]{nse.getNse_ach_created_date1(), nse.getNse_ach_created_date2(), nse.getNse_ach_created_date3()};
                 broker_code = nse.getBroker_code();
             }
 
-            List<MandateMasterResponse> mandate_list = new ArrayList<>();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
+
+            List<MandateDetailsPojo> mandate_list = new ArrayList<>();
             Set<String> added_mandates = new HashSet<>();
 
             // mandates held on the registration record itself (bank 1 / 2 / 3)
@@ -815,14 +850,29 @@ public class NseSchemeController {
                 }
 
                 // approved and not-yet-approved (nse_ach_approved = 0) mandates are both returned
-                MandateMasterResponse mandate = new MandateMasterResponse();
+                Integer mandate_flag = ach_flags[i] == null ? 0 : ach_flags[i];
+                Integer mandate_approved = ach_approved[i] == null ? 0 : ach_approved[i];
+                String mandate_status = resolveNseMandateStatus(mandate_flag, ach, mandate_approved);
+                String default_bank = NseUtils.trimOrEmpty(default_banks[i]);
+
+                MandateDetailsPojo mandate = new MandateDetailsPojo();
                 mandate.setBank_name(NseUtils.trimOrEmpty(bank_names[i]));
+                mandate.setBank_account_holder_name(NseUtils.trimOrEmpty(holder_names[i]));
                 mandate.setBank_account_number(account);
-                mandate.setBank_account_type(NseUtils.trimOrEmpty(account_types[i]));
-                mandate.setNse_ach(ach);
-                mandate.setNse_ach_amount(NseUtils.trimOrEmpty(ach_amounts[i]));
-                mandate.setNse_ach_approved(ach_approved[i] == null ? 0 : ach_approved[i]);
-                mandate.setNse_ach_rej_reason(NseUtils.trimOrEmpty(ach_rej_reasons[i]));
+                mandate.setBank_ifsc_code(NseUtils.trimOrEmpty(ifsc_codes[i]));
+                mandate.setBank_code(NseUtils.trimOrEmpty(bank_codes[i]));
+                mandate.setBank_micr_code(NseUtils.trimOrEmpty(micr_codes[i]));
+                mandate.setBank_branch(NseUtils.trimOrEmpty(bank_branches[i]));
+                mandate.setAccount_type(NseUtils.trimOrEmpty(account_types[i]));
+                mandate.setDefault_bank(default_bank.isEmpty() ? "N" : default_bank);
+                mandate.setMandate_type("ACH Mandate");
+                mandate.setMandate_flag(mandate_flag);
+                mandate.setMandate_id(ach);
+                mandate.setMandate_amount(NseUtils.trimOrEmpty(ach_amounts[i]));
+                mandate.setMandate_approved(mandate_approved);
+                mandate.setMandate_status(mandate_status);
+                mandate.setMandate_desc(resolveNseMandateDesc(mandate_status, ach_rej_reasons[i]));
+                mandate.setMandate_date(ach_created_dates[i] == null ? "" : sdf.format(ach_created_dates[i]));
                 mandate_list.add(mandate);
             }
 
@@ -857,27 +907,42 @@ public class NseSchemeController {
                         continue;
                     }
 
-                    String bank_name = "";
-                    String account_type = "";
+                    // bank details of the mandate are taken from the matching bank of the registration record
+                    int bank_index = -1;
 
                     for (int i = 0; i < accounts.length; i++)
                     {
                         if (!account.isEmpty() && account.equalsIgnoreCase(NseUtils.trimOrEmpty(accounts[i])))
                         {
-                            bank_name = NseUtils.trimOrEmpty(bank_names[i]);
-                            account_type = NseUtils.trimOrEmpty(account_types[i]);
+                            bank_index = i;
                             break;
                         }
                     }
 
-                    MandateMasterResponse mandate = new MandateMasterResponse();
-                    mandate.setBank_name(bank_name);
+                    Integer mandate_flag = details.getNse_ach_flag() == null ? 0 : details.getNse_ach_flag();
+                    Integer mandate_approved = details.getNse_ach_approved() == null ? 0 : details.getNse_ach_approved();
+                    String mandate_status = resolveNseMandateStatus(mandate_flag, ach, mandate_approved);
+                    String default_bank = bank_index < 0 ? "" : NseUtils.trimOrEmpty(default_banks[bank_index]);
+
+                    MandateDetailsPojo mandate = new MandateDetailsPojo();
+                    mandate.setBank_name(bank_index < 0 ? "" : NseUtils.trimOrEmpty(bank_names[bank_index]));
+                    mandate.setBank_account_holder_name(bank_index < 0 ? "" : NseUtils.trimOrEmpty(holder_names[bank_index]));
                     mandate.setBank_account_number(account);
-                    mandate.setBank_account_type(account_type);
-                    mandate.setNse_ach(ach);
-                    mandate.setNse_ach_amount(NseUtils.trimOrEmpty(details.getNse_ach_amount()));
-                    mandate.setNse_ach_approved(details.getNse_ach_approved() == null ? 0 : details.getNse_ach_approved());
-                    mandate.setNse_ach_rej_reason(NseUtils.trimOrEmpty(details.getNse_ach_rej_reason()));
+                    mandate.setBank_ifsc_code(bank_index < 0 ? "" : NseUtils.trimOrEmpty(ifsc_codes[bank_index]));
+                    mandate.setBank_code(bank_index < 0 ? "" : NseUtils.trimOrEmpty(bank_codes[bank_index]));
+                    mandate.setBank_micr_code(bank_index < 0 ? "" : NseUtils.trimOrEmpty(micr_codes[bank_index]));
+                    mandate.setBank_branch(bank_index < 0 ? "" : NseUtils.trimOrEmpty(bank_branches[bank_index]));
+                    mandate.setAccount_type(bank_index < 0 ? "" : NseUtils.trimOrEmpty(account_types[bank_index]));
+                    mandate.setDefault_bank(default_bank.isEmpty() ? "N" : default_bank);
+                    mandate.setMandate_type("ACH Mandate");
+                    mandate.setMandate_flag(mandate_flag);
+                    mandate.setMandate_id(ach);
+                    mandate.setMandate_amount(NseUtils.trimOrEmpty(details.getNse_ach_amount()));
+                    mandate.setMandate_approved(mandate_approved);
+                    mandate.setMandate_status(mandate_status);
+                    mandate.setMandate_desc(resolveNseMandateDesc(mandate_status, details.getNse_ach_rej_reason()));
+                    mandate.setMandate_date(details.getNse_ach_created_date() == null ? "" : sdf.format(details.getNse_ach_created_date()));
+                    mandate.setMandate_end_date(details.getNse_ach_end_date() == null ? "" : sdf.format(details.getNse_ach_end_date()));
                     mandate_list.add(mandate);
                 }
             }
@@ -891,6 +956,46 @@ public class NseSchemeController {
             ex.printStackTrace();
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private String resolveNseMandateStatus(Integer mandate_flag, String mandate_id, Integer mandate_approved)
+    {
+        int flag = mandate_flag == null ? 0 : mandate_flag;
+        int approved = mandate_approved == null ? 0 : mandate_approved;
+        String id = NseUtils.trimOrEmpty(mandate_id);
+
+        if (flag == 0 && id.isEmpty() && approved == 0)
+        {
+            return "Generate";
+        }
+        if (approved == 1)
+        {
+            return "Approved";
+        }
+        return "Pending";
+    }
+
+    private String resolveNseMandateDesc(String mandate_status, String rej_reason)
+    {
+        String reason = NseUtils.trimOrEmpty(rej_reason);
+
+        if (!reason.isEmpty())
+        {
+            return reason;
+        }
+        if ("Generate".equals(mandate_status))
+        {
+            return "Mandate not generated.";
+        }
+        if ("Pending".equals(mandate_status))
+        {
+            return "Mandate generated & not approved.";
+        }
+        if ("Approved".equals(mandate_status))
+        {
+            return "Mandate generated & approved.";
+        }
+        return "";
     }
 
     @Operation(
@@ -8405,338 +8510,4 @@ public class NseSchemeController {
         }
     }
 
-
-    @GetMapping("/getBankMandateDetails")
-    public ResponseEntity<?> getBankMandateDetails(
-            @RequestParam String nse_iin_num,
-            @RequestParam String bank_account_number,
-            @RequestHeader("Authorization") String token)
-    {
-        String userid = "";
-        String client_name ="";
-
-        try
-        {
-            userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            System.out.println("userid = " + userid);
-            UserDto user =null;
-
-            try {
-                user = userServiceClient.getUserById(Integer.valueOf(userid), token);
-            } catch (FeignException e) {
-                return FeignErrorHandler.handle(e, "User Service", "User not found");
-            }
-            System.out.println("user = " + user);
-            client_name = user.getClient_name();
-
-            if (nse_iin_num == null)
-            {
-                nse_iin_num = "";
-            }
-            if (bank_account_number == null)
-            {
-                bank_account_number = "";
-            }
-
-            nse_iin_num = nse_iin_num.trim();
-            bank_account_number = bank_account_number.trim();
-
-            List<MandateMasterResponse> mandate_list = new ArrayList<>();
-
-            if (user.getNse_iin_number().equalsIgnoreCase(nse_iin_num))
-            {
-                String acc1 = user.getBank_account_number1();
-                String acc2 = user.getBank_account_number2();
-                String acc3 = user.getBank_account_number3();
-
-                System.out.println("acc1: " + acc1);
-                System.out.println("acc2: " + acc2);
-                System.out.println("acc3: " + acc3);
-
-                if (acc1 == null)
-                {
-                    acc1 = "";
-                }
-                if (acc2 == null)
-                {
-                    acc2 = "";
-                }
-                if (acc3 == null)
-                {
-                    acc3 = "";
-                }
-                if (acc1.equalsIgnoreCase(bank_account_number))
-                {
-
-                    Integer ach_approved1 = user.getNse_ach_approved1();
-
-                    if (ach_approved1.equals(1))
-                    {
-                        MandateMasterResponse mandate = new MandateMasterResponse();
-                        mandate.setBank_name(user.getBank_name1());
-                        mandate.setBank_account_number(user.getBank_account_number1());
-                        mandate.setBank_account_type(user.getBank_account_type1());
-                        mandate.setNse_ach(user.getNse_ach1());
-                        mandate.setNse_ach_amount(user.getNse_ach_amount1());
-                        mandate_list.add(mandate);
-
-                            /*
-                            String onlineFlag = "NSE";
-                            String onlineCode = user.getNse_iin_number();
-
-                            List<UserMandateDetailsDto> additional_mandate_list = null;
-
-                            try
-                            {
-                                additional_mandate_list = userServiceClient.getByAllFields(client_name,onlineFlag,onlineCode,bank_account_number, Integer.valueOf(userid),token);
-                            } catch (FeignException e)
-                            {
-                                if (e.status() == 400)
-                                {
-                                    return NseUtils.commonResponse("No mandate details found for the given parameters.", HttpStatus.BAD_REQUEST);
-                                }
-                            }
-
-                            assert additional_mandate_list != null;
-                            System.out.println("additional_mandate_list: size: " + additional_mandate_list.size());
-                            if (additional_mandate_list != null && !additional_mandate_list.isEmpty())
-                            {
-                                for (UserMandateDetailsDto userMandateDetailsDto : additional_mandate_list)
-                                {
-                                    mandate = new MandateMasterResponse();
-                                    mandate.setBank_name(user.getBank_name1());
-                                    mandate.setBank_account_number(user.getBank_account_number1());
-                                    mandate.setBank_account_type(user.getBank_account_type1());
-                                    mandate.setNse_ach(userMandateDetailsDto.getNse_ach());
-                                    mandate.setNse_ach_amount(userMandateDetailsDto.getNse_ach_amount());
-                                    mandate_list.add(mandate);
-                                }
-                            }*/
-                    }
-                    System.out.println("madate size: " + mandate_list.size());
-                } else if (acc2.equalsIgnoreCase(bank_account_number))
-                {
-                    System.out.println("CASE 2");
-
-                    Integer ach_approved2 = user.getNse_ach_approved2();
-
-                    System.out.println("ach_approved2 =  " + ach_approved2);
-
-                    if (ach_approved2.equals(1))
-                    {
-                        MandateMasterResponse mandate = new MandateMasterResponse();
-                        mandate.setBank_name(user.getBank_name2());
-                        mandate.setBank_account_number(user.getBank_account_number2());
-                        mandate.setBank_account_type(user.getBank_account_type2());
-                        mandate.setNse_ach(user.getNse_ach2());
-                        mandate.setNse_ach_amount(user.getNse_ach_amount2());
-                        mandate_list.add(mandate);
-
-                            /*
-                            List<UserMandateDetailsDto> additional_mandate_list = null;
-
-                            additional_mandate_list = userServiceClient.getByAllFields(client_name,onlineFlag,onlineCode,bank_account_number, Integer.valueOf(userid),token);
-
-                            if (additional_mandate_list != null && additional_mandate_list.size() > 0)
-                            {
-                                for (UserMandateDetailsDto userMandateDetailsDto : additional_mandate_list)
-                                {
-                                    mandate = new MandateMasterResponse();
-                                    mandate.setBank_name(user.getBank_name2());
-                                    mandate.setBank_account_number(user.getBank_account_number2());
-                                    mandate.setBank_account_type(user.getBank_account_type2());
-                                    mandate.setNse_ach(userMandateDetailsDto.getNse_ach());
-                                    mandate.setNse_ach_amount(userMandateDetailsDto.getNse_ach_amount());
-                                    mandate_list.add(mandate);
-                                }
-                            }*/
-                    }
-                } else
-                {
-                    System.out.println("CASE 3");
-                    Integer ach_approved3 = user.getNse_ach_approved3();
-
-                    System.out.println("ach_approved3 =  " + ach_approved3);
-
-                    if (ach_approved3.equals(1))
-                    {
-                        MandateMasterResponse mandate = new MandateMasterResponse();
-                        mandate.setBank_name(user.getBank_name3());
-                        mandate.setBank_account_number(user.getBank_account_number3());
-                        mandate.setBank_account_type(user.getBank_account_type3());
-                        mandate.setNse_ach(user.getNse_ach3());
-                        mandate.setNse_ach_amount(user.getNse_ach_amount3());
-                        mandate_list.add(mandate);
-                        //String onlineFlag = "NSE";
-                        //String onlineCode = user.getNse_iin_number();
-
-                            /*
-                            List<UserMandateDetailsDto> additional_mandate_list = null;
-
-                            additional_mandate_list = userServiceClient.getByAllFields(client_name,onlineFlag,onlineCode,bank_account_number, Integer.valueOf(userid),token);
-
-                            if (additional_mandate_list != null && additional_mandate_list.size() > 0)
-                            {
-                                for (UserMandateDetailsDto userMandateDetailsDto : additional_mandate_list)
-                                {
-                                    mandate = new MandateMasterResponse();
-                                    mandate.setBank_name(user.getBank_name3());
-                                    mandate.setBank_account_number(user.getBank_account_number3());
-                                    mandate.setBank_account_type(user.getBank_account_type3());
-                                    mandate.setNse_ach(userMandateDetailsDto.getNse_ach());
-                                    mandate.setNse_ach_amount(userMandateDetailsDto.getNse_ach_amount());
-                                    mandate_list.add(mandate);
-                                }
-                            }*/
-                    }
-                }
-            } else {
-                UserBseNseDto nse = null;
-
-                try
-                {
-                    nse = userServiceClient.getUserBseNseDetailsByIinNumberAndUserId(Integer.valueOf(userid), nse_iin_num, client_name,token);
-                }catch (FeignException e) {
-                    return FeignErrorHandler.handle(e, "User Service", "No record found for the given IIN Number and Client Name.");
-                }
-                System.out.println("nse  = " + nse);
-                if (nse != null && nse.getNse_active() == 1)
-                {
-                    String acc1 = nse.getBank_account_number1();
-                    String acc2 = nse.getBank_account_number2();
-                    String acc3 = nse.getBank_account_number3();
-                    if (acc1 == null)
-                    {
-                        acc1 = "";
-                    }
-                    if (acc2 == null)
-                    {
-                        acc2 = "";
-                    }
-                    if (acc3 == null) {
-                        acc3 = "";
-                    }
-
-                    if (acc1.equalsIgnoreCase(bank_account_number))
-                    {
-                        Integer ach_approved1 = nse.getNse_ach_approved1();
-                        if (ach_approved1 == 1)
-                        {
-                            MandateMasterResponse mandate = new MandateMasterResponse();
-                            mandate.setBank_name(nse.getBank_name1());
-                            mandate.setBank_account_number(nse.getBank_account_number1());
-                            mandate.setBank_account_type(nse.getBank_account_type1());
-                            mandate.setNse_ach(nse.getNse_ach1());
-                            mandate.setNse_ach_amount(nse.getNse_ach_amount1());
-                            mandate_list.add(mandate);
-
-                                /*
-                                String onlineFlag = "NSE";
-                                String onlineCode = user.getNse_iin_number();
-
-                                List<UserMandateDetailsDto> additional_mandate_list = null;
-
-
-                                additional_mandate_list = userServiceClient.getByAllFields(client_name,onlineFlag,onlineCode,bank_account_number, Integer.valueOf(userid),token);
-
-
-                                if (additional_mandate_list != null && additional_mandate_list.size() > 0)
-                                {
-                                    for (UserMandateDetailsDto userMandateDetailsDto : additional_mandate_list)
-                                    {
-                                        mandate = new MandateMasterResponse();
-                                        mandate.setBank_name(nse.getBank_name1());
-                                        mandate.setBank_account_number(nse.getBank_account_number1());
-                                        mandate.setBank_account_type(nse.getBank_account_type1());
-                                        mandate.setNse_ach(userMandateDetailsDto.getNse_ach());
-                                        mandate.setNse_ach_amount(userMandateDetailsDto.getNse_ach_amount());
-                                        mandate_list.add(mandate);
-                                    }
-                                }*/
-                        }
-                        System.out.println("mandate_list: " + mandate_list.size());
-                    } else if (acc2.equalsIgnoreCase(bank_account_number))
-                    {
-
-                        Integer ach_approved2 = nse.getNse_ach_approved2();
-                        if (ach_approved2 == 1) {
-                            MandateMasterResponse mandate = new MandateMasterResponse();
-                            mandate.setBank_name(nse.getBank_name2());
-                            mandate.setBank_account_number(nse.getBank_account_number2());
-                            mandate.setBank_account_type(nse.getBank_account_type2());
-                            mandate.setNse_ach(nse.getNse_ach2());
-                            mandate.setNse_ach_amount(nse.getNse_ach_amount2());
-                            mandate_list.add(mandate);
-
-                                /*
-                                String onlineFlag = "NSE";
-                                String onlineCode = user.getNse_iin_number();
-
-                                List<UserMandateDetailsDto> additional_mandate_list = null;
-
-                                    additional_mandate_list = userServiceClient.getByAllFields(client_name,onlineFlag,onlineCode,bank_account_number, Integer.valueOf(userid),token);
-
-
-                                if (additional_mandate_list != null && additional_mandate_list.size() > 0)
-                                {
-                                    for (UserMandateDetailsDto userMandateDetailsDto : additional_mandate_list)
-                                    {
-                                        mandate = new MandateMasterResponse();
-                                        mandate.setBank_name(nse.getBank_name2());
-                                        mandate.setBank_account_number(nse.getBank_account_number2());
-                                        mandate.setBank_account_type(nse.getBank_account_type2());
-                                        mandate.setNse_ach(userMandateDetailsDto.getNse_ach());
-                                        mandate.setNse_ach_amount(userMandateDetailsDto.getNse_ach_amount());
-                                        mandate_list.add(mandate);
-                                    }
-                                }*/
-                        }
-                    } else
-                    {
-                        Integer ach_approved3 = nse.getNse_ach_approved3();
-                        if (ach_approved3 == 1)
-                        {
-                            MandateMasterResponse mandate = new MandateMasterResponse();
-                            mandate.setBank_name(nse.getBank_name3());
-                            mandate.setBank_account_number(nse.getBank_account_number3());
-                            mandate.setBank_account_type(nse.getBank_account_type3());
-                            mandate.setNse_ach(nse.getNse_ach3());
-                            mandate.setNse_ach_amount(nse.getNse_ach_amount3());
-                            mandate_list.add(mandate);
-                                /*
-                                String onlineFlag = "NSE";
-                                String onlineCode = user.getNse_iin_number();
-
-                                List<UserMandateDetailsDto> additional_mandate_list = null;
-
-
-                                    additional_mandate_list = userServiceClient.getByAllFields(client_name,onlineFlag,onlineCode,bank_account_number, Integer.valueOf(userid),token);
-
-
-                                if (additional_mandate_list != null && additional_mandate_list.size() > 0)
-                                {
-                                    for (UserMandateDetailsDto userMandateDetailsDto : additional_mandate_list)
-                                    {
-                                        mandate = new MandateMasterResponse();
-                                        mandate.setBank_name(nse.getBank_name3());
-                                        mandate.setBank_account_number(nse.getBank_account_number3());
-                                        mandate.setBank_account_type(nse.getBank_account_type3());
-                                        mandate.setNse_ach(userMandateDetailsDto.getNse_ach());
-                                        mandate.setNse_ach_amount(userMandateDetailsDto.getNse_ach_amount());
-                                        mandate_list.add(mandate);
-                                    }
-                                }*/
-                        }
-                    }
-
-                }
-            }
-            return ResponseEntity.ok(mandate_list);
-
-        } catch (Exception ex) {
-            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
-            ex.printStackTrace();
-            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 }

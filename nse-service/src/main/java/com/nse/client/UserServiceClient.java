@@ -282,7 +282,7 @@ public interface UserServiceClient {
     String saveUser(@RequestBody UserDto userDto, @RequestHeader("Authorization") String token);
 
     @PostMapping("/saveUserBseNseDetail")
-    UserBseNseDto saveUserBseNseDetail(@RequestBody UserBseNseDto userBseNseDto, @RequestHeader("Authorization") String token);
+    String saveUserBseNseDetail(@RequestBody UserBseNseDto userBseNseDto, @RequestHeader("Authorization") String token);
 
     @PostMapping("/saveRegDetails")
     UsersNseRegReportDto saveRegDetails(@RequestParam UsersNseRegReportDto usersNseRegReportDto, @RequestHeader("Authorization") String token);
@@ -499,5 +499,16 @@ public interface UserServiceClient {
 
     @PostMapping("/postMandateDetails")
     ResponseEntity<String> postMandateDetails(@RequestBody UserMandateDetailsDto userMandate, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/deleteByClientNameUserIdAndonlinecode")
+    int deleteByClientNameUserIdAndonlinecode(
+            @RequestParam String clientName,
+            @RequestParam Integer online_code,
+            @RequestParam String bank_account_number,
+            @RequestParam Integer userId,
+            @RequestParam String online_flag,
+            @RequestParam String nse_ach,
+            @RequestHeader("Authorization") String token
+    );
 
 }
