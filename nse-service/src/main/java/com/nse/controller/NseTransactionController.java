@@ -3888,6 +3888,7 @@ public class NseTransactionController {
                     frequency_array.add(cart.getFrequency());
                     stp_day_array.add(cart.getSip_date());
                     installment_array.add(cart.getInstallment());
+                    first_order_flag_array.add(cart.getFirst_order_flag());
 
                     String[] parts = cart.getStart_date().split("-");
                     split_start_date = parts[0];
