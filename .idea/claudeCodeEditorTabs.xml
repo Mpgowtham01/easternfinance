@@ -1,23 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="5d8b1932-7dcf-4620-b78c-751e6e7daaca" />
+    <option name="activeSessionId" value="d1835993-e471-4f6e-94c2-7191852747bb" />
     <option name="openSessionIds">
       <list>
         <option value="98933a04-11fb-477c-b714-16ffb21df484" />
         <option value="5d8b1932-7dcf-4620-b78c-751e6e7daaca" />
+        <option value="d1835993-e471-4f6e-94c2-7191852747bb" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
         <entry key="5d8b1932-7dcf-4620-b78c-751e6e7daaca" value="/sessions/72daa3ef-a1cf-4fac-92ce-a5e658b9956f" />
         <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821" />
+        <entry key="d1835993-e471-4f6e-94c2-7191852747bb" value="/sessions/2a63ae47-00db-448c-8dd8-46624b0c2340" />
       </map>
     </option>
     <option name="sessionTitles">
       <map>
         <entry key="5d8b1932-7dcf-4620-b78c-751e6e7daaca" value="live swagger its not working why" />
         <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="localhost:61789/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821?workingDir=D%3A%2FGithub%2Feasternfinance&amp;panelId=98933a04-11fb-477c-b714-16ffb21df484&amp;theme=dark" />
+        <entry key="d1835993-e471-4f6e-94c2-7191852747bb" value="nse = UserBseNseDto(id=7198771, user_id=6555216," />
       </map>
     </option>
   </component>
