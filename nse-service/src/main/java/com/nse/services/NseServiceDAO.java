@@ -893,7 +893,7 @@ public class NseServiceDAO {
         return list;
     }
 
-    public void insertClientMasterData(JSONArray regDataArray, String broker_code, String client_name,Integer userid,String token) throws ParseException {
+    public void insertClientMasterData(JSONArray regDataArray, String broker_code, String client_name,String token) throws ParseException {
         try
         {
 

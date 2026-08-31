@@ -148,7 +148,7 @@ public class UserMapper
 
                 if (mandateDetailsList != null && !mandateDetailsList.isEmpty())
                 {
-                    UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate -> mandate.getBank_account_number().equalsIgnoreCase(bank1.getBank_account_number())).findFirst().orElse(null);
+                    UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate -> mandate.getBank_account_number() != null && mandate.getBank_account_number().equalsIgnoreCase(bank1.getBank_account_number())).findFirst().orElse(null);
 
                     if(userMandate != null)
                     {
@@ -193,7 +193,7 @@ public class UserMapper
 
                 if (mandateDetailsList != null && !mandateDetailsList.isEmpty())
                 {
-                    UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate -> mandate.getBank_account_number().equalsIgnoreCase(bank2.getBank_account_number())).findFirst().orElse(null);
+                    UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate -> mandate.getBank_account_number() != null && mandate.getBank_account_number().equalsIgnoreCase(bank2.getBank_account_number())).findFirst().orElse(null);
 
                     if(userMandate != null)
                     {
@@ -238,7 +238,7 @@ public class UserMapper
 
                 if (mandateDetailsList != null && !mandateDetailsList.isEmpty())
                 {
-                    UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate -> mandate.getBank_account_number().equalsIgnoreCase(bank3.getBank_account_number())).findFirst().orElse(null);
+                    UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate -> mandate.getBank_account_number() != null && mandate.getBank_account_number().equalsIgnoreCase(bank3.getBank_account_number())).findFirst().orElse(null);
 
                     if(userMandate != null)
                     {
@@ -713,7 +713,7 @@ public class UserMapper
         {
             if (mandateDetailsList.size() >= 1) {
                 String finalBankAcc1 = bankAcc1;
-                UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate-> mandate.getBank_account_number().equalsIgnoreCase(finalBankAcc1)).findFirst().orElse(new UsersMandateDetails());
+                UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate-> finalBankAcc1.equalsIgnoreCase(mandate.getBank_account_number())).findFirst().orElse(new UsersMandateDetails());
                 userDto.setXsip_otm_flag1(userMandate.getXsip_otm_flag());
                 userDto.setXsip_otm1(UserUtils.checkParem(userMandate.getXsip_otm()));
                 userDto.setXsip_otm_approved1(userMandate.getXsip_otm_approved());
@@ -739,7 +739,7 @@ public class UserMapper
 
             if (mandateDetailsList.size() >= 2) {
                 String finalBankAcc2 = bankAcc2;
-                UsersMandateDetails userMandate1 = mandateDetailsList.stream().filter(mandate-> mandate.getBank_account_number().equalsIgnoreCase(finalBankAcc2)).findFirst().orElse(new UsersMandateDetails());
+                UsersMandateDetails userMandate1 = mandateDetailsList.stream().filter(mandate-> finalBankAcc2.equalsIgnoreCase(mandate.getBank_account_number())).findFirst().orElse(new UsersMandateDetails());
                 userDto.setXsip_otm_flag2(userMandate1.getXsip_otm_flag());
                 userDto.setXsip_otm2(UserUtils.checkParem(userMandate1.getXsip_otm()));
                 userDto.setXsip_otm_approved2(userMandate1.getXsip_otm_approved());
@@ -765,7 +765,7 @@ public class UserMapper
 
             if (mandateDetailsList.size() >= 3) {
                 String finalBankAcc3 = bankAcc3;
-                UsersMandateDetails userMandate3 = mandateDetailsList.stream().filter(mandate-> mandate.getBank_account_number().equalsIgnoreCase(finalBankAcc3)).findFirst().orElse(new UsersMandateDetails());
+                UsersMandateDetails userMandate3 = mandateDetailsList.stream().filter(mandate-> finalBankAcc3.equalsIgnoreCase(mandate.getBank_account_number())).findFirst().orElse(new UsersMandateDetails());
                 userDto.setXsip_otm_flag3(userMandate3.getXsip_otm_flag());
                 userDto.setXsip_otm3(UserUtils.checkParem(userMandate3.getXsip_otm()));
                 userDto.setXsip_otm_approved3(userMandate3.getXsip_otm_approved());

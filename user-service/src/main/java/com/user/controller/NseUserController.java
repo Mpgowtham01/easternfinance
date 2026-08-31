@@ -6242,4 +6242,82 @@ public class NseUserController
             return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
         }
     }
+
+    @GetMapping("/getStpDays")
+    public ResponseEntity<?> getStpDays(@RequestHeader("Authorization") String token)
+    {
+        Optional<UsersOnlineRegDetails> user = null;
+        List<CommonPojo> masterList = new ArrayList<CommonPojo>();
+        CommonPojo pojo = null;
+        try
+        {
+            String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            if(StringHelper.isEmpty(client_name))
+            {
+                return UserUtils.getCommonResponse(StatusMessage.ClientNameInvalidMessage, StatusMessage.FailureCode);
+            }
+
+            if(StringHelper.isEmpty(user_id))
+            {
+                return UserUtils.getCommonResponse("Please provide the user id", StatusMessage.FailureCode);
+            }
+
+            user = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(Integer.parseInt(user_id), client_name);
+
+            if(user.isPresent())
+            {
+                BseNseKey bseNseKey = bseNseKeyRepository.findByClientName(client_name);
+
+                String vendors = UserUtils.checkParameter(bseNseKey.getNse_bse());
+
+                if(StringHelper.isNotEmpty(vendors))
+                {
+                    return UserUtils.getCommonResponse("Client Not Available", StatusMessage.FailureCode);
+                }
+
+                pojo = new CommonPojo();
+                pojo.setCode("02");
+                pojo.setDesc("Monday");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("03");
+                pojo.setDesc("Tuesday");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("04");
+                pojo.setDesc("Wednesday");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("05");
+                pojo.setDesc("Thursday");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("06");
+                pojo.setDesc("Friday");
+                masterList.add(pojo);
+
+                TransactionCommonResponse apiResponse = new TransactionCommonResponse();
+                apiResponse.setStatus(StatusMessage.SuccessCode);
+                apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+                apiResponse.setMsg(StatusMessage.SuccessMessage);
+                apiResponse.setList(masterList);
+                return new ResponseEntity<TransactionCommonResponse>(apiResponse, HttpStatus.OK);
+            }else
+            {
+                return UserUtils.getCommonResponse("User details not available.", StatusMessage.FailureCode);
+            }
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
+           return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
+        }
+
+    }
 }

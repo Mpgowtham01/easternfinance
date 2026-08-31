@@ -400,7 +400,7 @@ public class UserInfoController
             if (account_number != null && !account_number.isEmpty())
             {
                 mandate_list = mandate_list.stream()
-                        .filter(mandate -> mandate.getBank_account_number().equalsIgnoreCase(account_number))
+                        .filter(mandate -> account_number.equalsIgnoreCase(mandate.getBank_account_number()))
                         .collect(Collectors.toList());
             }
 

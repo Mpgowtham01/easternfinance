@@ -762,30 +762,14 @@ public class NseAdminReportController
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
         try
         {
+            client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
             from_date = NseUtils.checkParem(from_date);
             to_date = NseUtils.checkParem(to_date);
             client_code = NseUtils.checkParem(client_code);
             pan_no = NseUtils.checkParem(pan_no);
             broker_code = NseUtils.checkParem(broker_code);
 
-            userid = TokenInterceptor.extractAdminIdFromToken(token, secretKey);
-
-            System.out.println("userid -------- " + userid);
-
-            UserDto user =null;
-
-            try {
-                user = userServiceClient.getUserById(Integer.valueOf(userid), token);
-            } catch (FeignException e) {
-                return FeignErrorHandler.handle(e, "User Service", "User not found");
-            }
-
-            if (user == null)
-            {
-                return NseUtils.commonResponse("User not found, please try again", HttpStatus.BAD_REQUEST);
-            }
-
-            client_name = user.getClient_name();
             broker_code= NseUtils.checkParem(broker_code);
             client_name = NseUtils.checkParem(client_name);
             from_date = NseUtils.checkParem(from_date);
@@ -939,7 +923,7 @@ public class NseAdminReportController
                 }*/
                 // --- END NEW CALCULATION LOGIC ---
 
-                nseAmfiService.insertClientMasterData(regDataArray,broker_code,client_name, Integer.valueOf(userid),token);
+                nseAmfiService.insertClientMasterData(regDataArray,broker_code,client_name, token);
                 //String successMessage = String.format("Client Master Update **Initiated** for %d records. %s", recordCount, timeMessage);
                 return NseUtils.commonResponse("Client Master Updated Successfully", HttpStatus.OK);
 

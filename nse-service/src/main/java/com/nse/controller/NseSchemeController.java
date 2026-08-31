@@ -1653,19 +1653,33 @@ public class NseSchemeController {
             if (NseUtils.isUrlEncoded(scheme_name)) {
                 scheme_name = URLDecoder.decode(scheme_name, StandardCharsets.UTF_8);
             }
-
+            System.out.println("scheme_name 1786 = "+ scheme_name);
             List<NseOnlineSipStpSwpMaster> frequencies = nseOnlineSipStpSwpMasterRepository.findGroupedSipBySchemeAmfi(scheme_name);
 
-            for (NseOnlineSipStpSwpMaster item : frequencies) {
-                if ("DAILY".equalsIgnoreCase(item.getSip_frequency()) && (item.getSip_dates() == null || item.getSip_dates().trim().isEmpty())) {
-                    // Generate "1,2,3,...31" string
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 1; i <= 31; i++) {
-                        sb.append(i).append(",");
+            if(frequencies.size() > 0)
+            {
+                for (NseOnlineSipStpSwpMaster item : frequencies)
+                {
+                    if ("DAILY".equalsIgnoreCase(item.getSip_frequency()) && (item.getSip_dates() == null || item.getSip_dates().trim().isEmpty()))
+                    {
+                        // Generate "1,2,3,...31" string
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 1; i <= 31; i++) {
+                            sb.append(i).append(",");
+                        }
+                        // Remove trailing comma
+                        sb.setLength(sb.length() - 1);
+                        item.setSip_dates(sb.toString());
                     }
-                    // Remove trailing comma
-                    sb.setLength(sb.length() - 1);
-                    item.setSip_dates(sb.toString());
+                }
+
+                for (int i = 0; i < frequencies.size(); i++)
+                {
+                    if ("MONTHLY".equalsIgnoreCase(frequencies.get(i).getSip_frequency())) {
+                        NseOnlineSipStpSwpMaster monthly = frequencies.remove(i);
+                        frequencies.add(0, monthly);
+                        break;
+                    }
                 }
             }
 
@@ -1674,7 +1688,7 @@ public class NseSchemeController {
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
