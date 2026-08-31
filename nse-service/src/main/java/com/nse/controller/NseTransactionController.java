@@ -5194,7 +5194,7 @@ public class NseTransactionController {
                 String failureMessage = !failedSchemes.isEmpty() ? String.join(", ", failedSchemes)
                         : (StringHelper.isNotEmpty(reg_remark) ? reg_remark
                         : "SWP registration failed. Please try again.");
-                return NseUtils.commonResponse(failureMessage, HttpStatus.BAD_REQUEST);
+                return NseUtils.commonResponse1(failureMessage, HttpStatus.BAD_REQUEST,failureMessage);
             }
 
         }

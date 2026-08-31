@@ -6124,11 +6124,9 @@ public class NseUserController
     @GetMapping("/getSipDays")
     public ResponseEntity<?> getSipDays(@RequestHeader("Authorization") String token,@RequestParam String start_date,@RequestParam String bse_nse_mfu_flag)
     {
-        String ipAddr = "";
         Optional<UsersOnlineRegDetails> user = null;
         List<CommonPojo> masterList = new ArrayList<CommonPojo>();
         CommonPojo pojo = null;
-        Integer log_id = null;
         try
         {
             String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
@@ -6151,7 +6149,7 @@ public class NseUserController
 
             user = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(Integer.parseInt(user_id), client_name);
 
-            if(user != null)
+            if(user.isPresent())
             {
                 BseNseKey bseNseKey = bseNseKeyRepository.findByClientName(client_name);
 
