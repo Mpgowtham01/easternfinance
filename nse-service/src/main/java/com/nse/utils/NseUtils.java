@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -700,6 +701,32 @@ public class NseUtils
 
     }
 
+    public static final Map<String, String> relationMap = new HashMap<>();
+    static {
+        relationMap.put("AUNT", "01");
+        relationMap.put("BROTHER-IN-LAW", "02");
+        relationMap.put("BROTHER", "03");
+        relationMap.put("DAUGHTER", "04");
+        relationMap.put("DAUGHTER-IN-LAW", "05");
+        relationMap.put("FATHER", "06");
+        relationMap.put("FATHER-IN-LAW", "07");
+        relationMap.put("GRAND DAUGHTER", "08");
+        relationMap.put("GRAND FATHER", "09");
+        relationMap.put("GRAND MOTHER", "10");
+        relationMap.put("GRAND SON", "11");
+        relationMap.put("MOTHER-IN-LAW", "12");
+        relationMap.put("MOTHER", "13");
+        relationMap.put("NEPHEW", "14");
+        relationMap.put("NIECE", "15");
+        relationMap.put("SISTER", "16");
+        relationMap.put("SISTER-IN-LAW", "17");
+        relationMap.put("SON", "18");
+        relationMap.put("SON-IN-LAW", "19");
+        relationMap.put("SPOUSE", "20");
+        relationMap.put("UNCLE", "21");
+        relationMap.put("OTHERS", "22");
+    }
+
     public static String getCountrycode(String companyName) {
 
         HashMap<String, String> amc_name_map = new HashMap<String, String>();
@@ -1017,6 +1044,12 @@ public class NseUtils
 
         SimpleDateFormat outputDf = new SimpleDateFormat("dd/MM/yyyy");
         return outputDf.format(parsedDate);
+    }
+
+    public static String encryptPassword(String password)
+    {
+        String hashed = BCrypt.hashpw(password, BCrypt.gensalt(9));
+        return hashed;
     }
 
 

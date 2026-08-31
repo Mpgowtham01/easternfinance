@@ -13,10 +13,8 @@ import com.nse.response.CommonResponse;
 import com.nse.response.StatusMessage;
 import com.nse.response.SuccessResponse;
 import com.nse.services.*;
-import com.nse.utils.AESEncryptionUtilV2;
-import com.nse.utils.NseApiUrls;
-import com.nse.utils.NseUtils;
-import com.nse.utils.RestTemplateFactory;
+import com.nse.utils.*;
+import feign.FeignException;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -751,13 +749,12 @@ public class NseAdminReportController
     public ResponseEntity<?> clientMasterReportApi(
             HttpServletRequest request,
             @RequestHeader("Authorization") String token,
-            @RequestParam String from_date,
-            @RequestParam String to_date,
-            @RequestParam String client_code,
-            @RequestParam String broker_code,
-            @RequestParam String pan_no,
-            @RequestParam String source,
-            @RequestParam String option) throws Exception
+            @RequestParam(required = false) String from_date,
+            @RequestParam(required = false) String to_date,
+            @RequestParam(required = false) String client_code,
+            @RequestParam(required = false) String broker_code,
+            @RequestParam(required = false) String pan_no,
+            @RequestParam(required = false) String source)
     {
 
         String client_name = "";
@@ -769,13 +766,19 @@ public class NseAdminReportController
             to_date = NseUtils.checkParem(to_date);
             client_code = NseUtils.checkParem(client_code);
             pan_no = NseUtils.checkParem(pan_no);
-            option = NseUtils.checkParem(option);
-            source = NseUtils.checkParem(source);
             broker_code = NseUtils.checkParem(broker_code);
 
-            userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            userid = TokenInterceptor.extractAdminIdFromToken(token, secretKey);
 
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            System.out.println("userid -------- " + userid);
+
+            UserDto user =null;
+
+            try {
+                user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
 
             if (user == null)
             {
@@ -783,75 +786,79 @@ public class NseAdminReportController
             }
 
             client_name = user.getClient_name();
-
             broker_code= NseUtils.checkParem(broker_code);
             client_name = NseUtils.checkParem(client_name);
             from_date = NseUtils.checkParem(from_date);
             to_date = NseUtils.checkParem(to_date);
-            client_code = NseUtils.checkParem(client_code);
             pan_no = NseUtils.checkParem(pan_no);
-            option = NseUtils.checkParem(option);
 
             if(StringHelper.isEmpty(broker_code))
             {
                 return NseUtils.commonResponse("Broker code must be selected!", HttpStatus.BAD_REQUEST);
             }
 
-            if(option.equalsIgnoreCase("client code"))
+            if(from_date.isEmpty() && to_date.isEmpty())
             {
-                if (StringHelper.isEmpty(client_code))
-                {
-                    return NseUtils.commonResponse("Please provide client code!", HttpStatus.BAD_REQUEST);
-                }
-            }else if(option.equalsIgnoreCase("pan"))
+                Calendar cal = Calendar.getInstance();
+                Date today = cal.getTime();
+
+                cal = Calendar.getInstance();
+                cal.add(Calendar.DATE, -7);
+                Date fromDate = cal.getTime();
+
+                from_date = sdf.format(fromDate);
+                to_date = sdf.format(today);
+
+            }else
             {
-                if (StringHelper.isEmpty(pan_no))
-                {
-                    return NseUtils.commonResponse("Please provide pan number!", HttpStatus.BAD_REQUEST);
+                Date toDate = sdf.parse(to_date);
+                Date fromDate = sdf.parse(from_date);
+
+                if(toDate.before(fromDate)){
+                    return ResponseEntity.internalServerError().body("from_date cannot be future date.");
                 }
 
-            }else if(option.equalsIgnoreCase("date"))
-            {
-                if(from_date.isEmpty() && to_date.isEmpty())
+                long diffInMillis = toDate.getTime() - fromDate.getTime();
+
+                long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
+
+                if(diffInDays > 7)
                 {
-                    Calendar cal = Calendar.getInstance();
-                    Date today = cal.getTime();
-
-                    cal = Calendar.getInstance();
-                    cal.add(Calendar.DATE, -7);
-                    Date fromDate = cal.getTime();
-
-                    from_date = sdf.format(fromDate);
-                    to_date = sdf.format(today);
-
-                }else
-                {
-                    Date toDate = sdf.parse(to_date);
-                    Date fromDate = sdf.parse(from_date);
-
-                    if(toDate.before(fromDate)){
-                        return ResponseEntity.internalServerError().body("from_date cannot be future date.");
-                    }
-
-                    long diffInMillis = toDate.getTime() - fromDate.getTime();
-
-                    long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
-
-                    if(diffInDays > 7)
-                    {
-                        return NseUtils.commonResponse("FromDate and ToDate must be between & 7 days!", HttpStatus.BAD_REQUEST);
-                    }
-
-                    to_date = sdf.format(toDate);
-                    from_date = sdf.format(fromDate);
+                    return NseUtils.commonResponse("FromDate and ToDate must be between & 7 days!", HttpStatus.BAD_REQUEST);
                 }
+
+                to_date = sdf.format(toDate);
+                from_date = sdf.format(fromDate);
             }
 
             JSONObject requestDetails = new JSONObject();
-            requestDetails.put("client_code", client_code);
-            requestDetails.put("from_date", from_date);
-            requestDetails.put("to_date", to_date);
-            requestDetails.put("pan", pan_no);
+
+            if (!client_code.isEmpty())
+            {
+                requestDetails.put("client_code", client_code);
+                requestDetails.put("from_date", "");
+                requestDetails.put("to_date", "");
+                requestDetails.put("pan", "");
+            }
+            else if (!pan_no.isEmpty())
+            {
+                requestDetails.put("client_code", "");
+                requestDetails.put("from_date", "");
+                requestDetails.put("to_date", "");
+                requestDetails.put("pan", pan_no);
+            }
+            else if (!from_date.isEmpty() && !to_date.isEmpty()) {
+                requestDetails.put("client_code", "");
+                requestDetails.put("from_date", from_date);
+                requestDetails.put("to_date", to_date);
+                requestDetails.put("pan", "");
+            }
+            else {
+                requestDetails.put("client_code", "");
+                requestDetails.put("from_date", "");
+                requestDetails.put("to_date", "");
+                requestDetails.put("pan", "");
+            }
 
             BseNseOnlineAccessDto online_access = null;
 
@@ -879,113 +886,74 @@ public class NseAdminReportController
             headers.set("Accept-Language", "en-US");
             headers.set("Connection", "keep-alive");
             headers.set("Referer", "");
-
+            System.out.println("requestDetails" + requestDetails);
             HttpEntity<String> entity = new HttpEntity<>(requestDetails.toString(), headers);
 
             String clientMasterReportApi_url = NseApiUrls.clientMasterReport_url;
 
             try
             {
-
                 ResponseEntity<String> mandateResult = RestTemplateFactory.createRestTemplate().postForEntity(clientMasterReportApi_url, entity, String.class);
-                String responseBody = mandateResult.getBody().toString();
+                String responseBody = mandateResult.getBody();
 
                 JSONObject jsonObject = new JSONObject(responseBody);
                 JSONArray regDataArray = new JSONArray();
+                System.out.println("responseBody = " + responseBody + " at " + new Date());
 
                 String status = jsonObject.getString("response_status");
                 String error_remark = jsonObject.getString("error_remark");
-
+                if(!error_remark.trim().isEmpty()){
+                    return NseUtils.commonResponse(status+": "+ error_remark, HttpStatus.BAD_REQUEST);
+                }
                 if (jsonObject.has("report_data"))
                 {
                     regDataArray = jsonObject.getJSONArray("report_data");
                 }
+                System.out.println("regDataArray = " + regDataArray + " at " + new Date());
 
-                NseTransactions nsetrans = new NseTransactions();
-                nsetrans.setUrl(clientMasterReportApi_url);
-                nsetrans.setNse_request(requestDetails.toString());
-                nsetrans.setNse_response(mandateResult.getBody().toString());
-                nsetrans.setReturn_msg(error_remark);
-                nsetrans.setService_return_code(status);
-                nsetrans.setService_msg(error_remark);
-                nsetrans.setReg_id("");
-                nsetrans.setPayment_link("");
-                nsetrans.setPan("");
-                nsetrans.setName("");
-                nsetrans.setBranch(user.getBranch());
-                nsetrans.setRm_name(user.getRm_name());
-                nsetrans.setSubbroker_name(user.getSubbroker_name());
-                nsetrans.setClient_name(client_name);
-                nsetrans.setIin_number("");
-                nsetrans.setScheme_name("");
-                nsetrans.setScheme_code("");
-                nsetrans.setFolio_no("");
-                nsetrans.setAmount_units("");
-                nsetrans.setFrequency("");
-                nsetrans.setPeriod_day("");
-                nsetrans.setUmrn_no("");
-                nsetrans.setPurchase_type("");
-                nsetrans.setPayment_ref_no("");
-                nsetrans.setUnique_number("");
-                nsetrans.setAuto_trxn_no("");
-                nsetrans.setSip_reg_no("");
-                nsetrans.setPayment_mode("");
-                nsetrans.setTopup_amount(0.0);
-                nsetrans.setBank_acc_no("");
-                nsetrans.setTransaction_number("");
-                nsetrans.setApplication_number("");
-                nsetrans.setTo_scheme_code("");
-                nsetrans.setTo_scheme_name("");
-                nsetrans.setTransaction_type("Generate Client Master Report");
-                nsetrans.setTransaction_status("");
-                nsetrans.setPayment_status("");
-                nsetrans.setActive_ceased_status("");
-                nsetrans.setRemarks(error_remark);
-                nsetrans.setMandate_id("");
-                nsetrans.setMandate_status("");
-                nsetrans.setEmandate_auth_flag("");
-                nsetrans.setApp_received_flag("");
-                nsetrans.setTransaction_date(new Date());
-                nsetrans.setUser_id(Integer.parseInt(userid));
-                if(source.equalsIgnoreCase("Mobile"))
-                {
-                    nsetrans.setRegister_source("Mobile App");
-                }else {
-                    nsetrans.setRegister_source("Website");
-                }
 
-                nsetrans.setBroker_code("");
-                nsetrans.setEuin_number("");
-                nsetrans.setCc_received("");
-                nsetrans.setFund_trans_to_amc("");
-                nsetrans.setRefund_status("");
-                nsetrans.setRefund_amount("");
-                nseTransactionService.save(nsetrans);
+                // --- NEW CALCULATION LOGIC ---
+                /*final double TIME_PER_RECORD_MINUTES = 0.50;
 
-                nseLogService.saveLog("Generate Client Master Report", "Generate Client Master Report", NseUtils.buildLogMessage("Generate Client Master Report", user, request), NseUtils.getIpAddr(request), source, client_name, user);
+                int recordCount = regDataArray.length();
+                double estimatedTotalMinutes = recordCount * TIME_PER_RECORD_MINUTES;
+                int minutesToDisplay = (int) Math.ceil(estimatedTotalMinutes);
 
-                if (status.equalsIgnoreCase("0") || status.equalsIgnoreCase(""))
-                {
-                    return NseUtils.commonResponse(error_remark, HttpStatus.BAD_REQUEST);
-                }
+                String timeMessage;
+                if (recordCount == 0) {
+                    timeMessage = "The report was empty and the update is complete.";
+                } else if (minutesToDisplay < 60) {
+                    // Less than an hour: display only minutes
+                    timeMessage = String.format("Estimated completion time: **%d minutes**.", minutesToDisplay);
+                } else {
+                    // Longer jobs: convert to hours and minutes
+                    int hours = minutesToDisplay / 60;
+                    int remainingMinutes = minutesToDisplay % 60;
 
-                nseAmfiService.insertClientMasterData(regDataArray,broker_code,client_name,token);
+                    // Build the message string
+                    if (remainingMinutes > 0) {
+                        timeMessage = String.format("Estimated completion time: **%d hours and %d minutes**.", hours, remainingMinutes);
+                    } else {
+                        timeMessage = String.format("Estimated completion time: **%d hours**.", hours);
+                    }
+                }*/
+                // --- END NEW CALCULATION LOGIC ---
 
-                return NseUtils.commonResponse("Client Master Updated!", HttpStatus.OK);
+                nseAmfiService.insertClientMasterData(regDataArray,broker_code,client_name, Integer.valueOf(userid),token);
+                //String successMessage = String.format("Client Master Update **Initiated** for %d records. %s", recordCount, timeMessage);
+                return NseUtils.commonResponse("Client Master Updated Successfully", HttpStatus.OK);
 
             } catch (Exception ex)
             {
-                logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
                 System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                 ex.printStackTrace();
-                return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+                return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }catch (Exception ex)
         {
-            logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

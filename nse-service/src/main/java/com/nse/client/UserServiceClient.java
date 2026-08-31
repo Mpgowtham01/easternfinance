@@ -521,4 +521,30 @@ public interface UserServiceClient {
                             @RequestParam("accountNo") String accountNo,
                             @RequestHeader("Authorization") String token);
 
+    @GetMapping("/getUserDetailByUserIdAndIinNumberBrokerCode")
+    List<UserDto> getUserDetailByUserIdAndIinNumberBrokerCode(@RequestParam("clientName") String clientName,
+                                                              @RequestParam("IinNumber") String IinNumber,
+                                                              @RequestParam("broker_code") String broker_code,
+                                                              @RequestHeader("Authorization") String token);
+
+    @PostMapping("/updateUserDetails")
+    ResponseEntity<String>  updateUserDetails(@RequestBody UserDto userDto, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getUserByPanName")
+    List<UserDto> getUserByPanName(
+            @RequestParam("pan") String pan,
+            @RequestParam("name") String name,
+            @RequestParam("clientName") String client_name, @RequestHeader("Authorization") String token
+    );
+
+    @PostMapping("/saveUserDetail")
+    ResponseEntity<String>  saveUserDetail(@RequestBody UserDto userDto, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getUserByGuardPanName")
+    List<UserDto> getUserByGuardPanName(
+            @RequestParam("pan") String pan,
+            @RequestParam("name") String name,
+            @RequestParam("clientName") String client_name, @RequestHeader("Authorization") String token
+    );
+
 }

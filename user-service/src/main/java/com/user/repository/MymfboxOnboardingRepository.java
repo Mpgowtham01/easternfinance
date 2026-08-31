@@ -45,5 +45,8 @@ public interface MymfboxOnboardingRepository extends JpaRepository<MymfboxOnboar
             @Param("clientName") String clientName
     );
 
+    @Query("FROM MymfboxOnboarding where user_id=:user_id AND client_name = :client_name order by id desc")
+    List<MymfboxOnboarding> findMyMfboxList(@Param("user_id") Integer user_id, @Param("client_name") String client_name);
+
 
 }

@@ -15,10 +15,7 @@ import org.hibernate.internal.util.StringHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class CartService
@@ -216,6 +213,36 @@ public class CartService
             ex.printStackTrace();
             return Collections.emptyList();
         }
+    }
+
+    public Map<String, Integer> getCartCount(Integer user_id)
+    {
+        List<Object[]> objectList = null;
+        Map<String, Integer> purchaseCounts = new HashMap<>();
+        try
+        {
+            objectList = cartRepository.findActiveCartCount(user_id);
+
+            if(objectList != null && objectList.size() > 0)
+            {
+                Integer totalCount = 0;
+
+                for (Object[] result : objectList)
+                {
+                    String purchaseType = (String) result[0];
+                    Integer count = ((Number) result[1]).intValue();
+                    purchaseCounts.put(purchaseType, count);
+                    totalCount = totalCount + count;
+                }
+
+                purchaseCounts.put("Total Count", totalCount);
+            }
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
+        }
+        return purchaseCounts;
     }
 
 }

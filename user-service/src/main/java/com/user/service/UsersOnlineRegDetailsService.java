@@ -29,6 +29,8 @@ public class UsersOnlineRegDetailsService
         return userOnlineRegDetailsRepository.save(user);
     }
 
+
+
 //    public UsersOnlineRegDetails saveOrUpdatesUserOnlineReg(UsersOnlineRegDetails user) {
 //
 //        Optional<UsersOnlineRegDetails> existingOpt =
@@ -79,15 +81,15 @@ public class UsersOnlineRegDetailsService
 //
 //    }
 //
-//    public UsersBankDetails saveOrUpdateUserBank(UsersBankDetails user)
-//    {
-//        return userBankDetailsRepository.save(user);
-//    }
-//
-//    public UsersNomineeDetails saveOrUpdateUserNominee(UsersNomineeDetails user)
-//    {
-//        return userNomineeDetailsRepository.save(user);
-//    }
+    public UsersBankDetails saveOrUpdateUserBank(UsersBankDetails user)
+    {
+        return userBankDetailsRepository.save(user);
+    }
+
+    public UsersNomineeDetails saveOrUpdateUserNominee(UsersNomineeDetails user)
+    {
+        return userNomineeDetailsRepository.save(user);
+    }
 //
 //
 //    public List<String> getAllIINNumbersByClientNameAndUserId(String clientName, String userId) {

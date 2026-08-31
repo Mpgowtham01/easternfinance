@@ -112,6 +112,7 @@ public class UsersOnlineRegDetails
     private String joint_holder_email2;
     private String joint_holder_email_relation2;
     private String joint_holder_mobile2;
+//    private String joint_holder_mobile1_isdCode;
     private String joint_holder_mobile2_isd_code;
     private String joint_holder_mobile_relation2;
     private String joint_holder_place_of_birth2;

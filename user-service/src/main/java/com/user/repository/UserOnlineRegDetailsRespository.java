@@ -222,4 +222,18 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("brokerCode") String brokerCode,
             @Param("clientName") String clientName
     );
+
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE  nse_iin_number = :IinNumber AND client_name = :clientName  AND broker_code = :broker_code", nativeQuery = true)
+    List<UsersOnlineRegDetails> getUserDetailByUserIdAndIinNumberBrokerCode(@Param("clientName") String clientName, @Param("IinNumber") String IinNumber, @Param("broker_code") String broker_code);
+
+    @Query("FROM UsersOnlineRegDetails u " +
+            "WHERE u.nse_iin_number = :nseIinNumber " +
+            "AND u.broker_code = :brokerCode " +
+            "AND u.client_name = :clientName")
+    List<UsersOnlineRegDetails> findByUserIdAndNseClientCodeAndBrokerCodeAndClientName(
+            @Param("nseIinNumber") String nseIinNumber,
+            @Param("brokerCode") String brokerCode,
+            @Param("clientName") String clientName
+    );
+
 }

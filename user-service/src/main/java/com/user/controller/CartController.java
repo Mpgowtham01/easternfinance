@@ -1,12 +1,20 @@
 package com.user.controller;
 
+import com.user.config.TokenInterceptor;
 import com.user.model.Cart;
 import com.user.model.User;
+import com.user.model.UsersOnlineRegDetails;
+import com.user.pojo.CartCountPojo;
 import com.user.repository.BseNseKeyRepository;
+import com.user.repository.UserOnlineRegDetailsRespository;
 import com.user.repository.UserRepository;
+import com.user.response.CartCountResponse;
+import com.user.response.StatusMessage;
 import com.user.service.CartService;
+import com.user.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.hibernate.internal.util.StringHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -34,6 +42,9 @@ public class CartController
 
     @Value("${jwt.secret-key}")
     private String secretKey;
+
+    @Autowired
+    UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
 
 
     @Hidden
@@ -344,6 +355,80 @@ public class CartController
         {
             List<Cart> list = cartService.getActiveCartsById(cart_id);
             return ResponseEntity.ok(list);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/getCartCounts")
+    public ResponseEntity<?> getCartCounts(@RequestHeader("Authorization") String token)
+    {
+        Optional<UsersOnlineRegDetails> user = null;
+        Integer log_id = null;
+        try
+        {
+            String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            if(StringHelper.isEmpty(user_id))
+            {
+                return UserUtils.getCommonResponse("Please provide the user id", StatusMessage.FailureCode);
+            }
+
+            user = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(Integer.parseInt(user_id), client_name);
+
+            if(user.isPresent())
+            {
+                CartCountPojo pojo = new CartCountPojo();
+
+                Map<String, Integer> purchaseCounts = cartService.getCartCount(Integer.parseInt(user_id));
+
+                if(purchaseCounts != null && !purchaseCounts.isEmpty())
+                {
+                    for (Map.Entry<String, Integer> entry : purchaseCounts.entrySet())
+                    {
+                        String purchaseType = entry.getKey();
+                        Integer count = entry.getValue();
+
+                        if(count == null){count = 0;}
+
+                        if(purchaseType.equalsIgnoreCase("Lumpsum Purchase"))
+                        {
+                            pojo.setLumpsum_count(count);
+                        }else if(purchaseType.equalsIgnoreCase("SIP Purchase"))
+                        {
+                            pojo.setSip_count(count);
+                        }else if(purchaseType.equalsIgnoreCase("Redemption Purchase"))
+                        {
+                            pojo.setRedeem_count(count);
+                        }else if(purchaseType.equalsIgnoreCase("Switch Purchase"))
+                        {
+                            pojo.setSwitch_count(count);
+                        }else if(purchaseType.equalsIgnoreCase("STP Purchase"))
+                        {
+                            pojo.setStp_count(count);
+                        }else if(purchaseType.equalsIgnoreCase("SWP Purchase"))
+                        {
+                            pojo.setSwp_count(count);
+                        }else if(purchaseType.equalsIgnoreCase("Total Count"))
+                        {
+                            pojo.setTotal_count(count);
+                        }
+                    }
+                }
+
+                CartCountResponse apiResponse = new CartCountResponse();
+                apiResponse.setStatus(StatusMessage.SuccessCode);
+                apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+                apiResponse.setMsg(StatusMessage.SuccessMessage);
+                apiResponse.setResult(pojo);
+                return new ResponseEntity<CartCountResponse>(apiResponse, HttpStatus.OK);
+
+            }else
+            {
+                return UserUtils.getCommonResponse("User details not available.", StatusMessage.FailureCode);
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

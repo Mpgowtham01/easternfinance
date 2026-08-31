@@ -4,6 +4,8 @@ import com.user.config.TokenInterceptor;
 import com.user.dto.*;
 import com.user.mapper.*;
 import com.user.model.*;
+import com.user.pojo.CommonPojo;
+import com.user.pojo.UserRegStatusPojo;
 import com.user.repository.*;
 import com.user.response.*;
 import com.user.service.*;
@@ -33,6 +35,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.Timestamp;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
@@ -73,6 +76,9 @@ public class NseUserController
 
     @Value("${vendor.logo.url}")
     private String vendorLogoPath;
+
+    @Value("custom.server.url")
+    private String customServerUrl;
 
     @Autowired
     UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
@@ -5868,6 +5874,374 @@ public class NseUserController
         {
             logger.error("Error while saving personal information", ex);
             return UserUtils.errorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getUserRegStatus")
+    public ResponseEntity<?> getUserRegStatus(@RequestHeader("Authorization") String token)
+    {
+        Integer log_id = null;
+        try
+        {
+            String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            if(StringHelper.isEmpty(client_name))
+            {
+                return UserUtils.getCommonResponse(StatusMessage.ClientNameInvalidMessage, StatusMessage.FailureCode);
+            }
+
+            if(StringHelper.isEmpty(user_id))
+            {
+                return UserUtils.getCommonResponse("Please provide the User Id", StatusMessage.FailureCode);
+            }
+
+            Optional<UsersOnlineRegDetails> user = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(Integer.parseInt(user_id), client_name);
+
+            if(user.isPresent())
+            {
+                Boolean isKycComplaint = null;
+                Boolean showCard = false;
+                String status = "";
+                String title = "";
+                String description = "";
+                String button_text = "";
+                String call_back_url = "";
+
+                String host = customServerUrl;
+
+                System.out.println("CAME HERE 1");
+
+                Integer nse_customer = user.get().getNse_customer();
+                Integer bse_customer = 0;
+                Integer mfu_customer = 0;
+                Integer nse_active = user.get().getNse_active();
+                Integer bse_active = 0;
+                Integer mfu_active = 0;
+                String nse_iin_number = user.get().getNse_iin_number();
+                String bse_client_code = "";
+                String mfu_can_number = "";
+
+                if(nse_customer == null){nse_customer = 0;}
+                if(bse_customer == null){bse_customer = 0;}
+                if(mfu_customer == null){mfu_customer = 0;}
+                if(nse_active == null){nse_active = 0;}
+                if(bse_active == null){bse_active = 0;}
+                if(mfu_active == null){mfu_active = 0;}
+                if(nse_iin_number == null){nse_iin_number = "";}
+                if(bse_client_code == null){bse_client_code = "";}
+                if(mfu_can_number == null){mfu_can_number = "";}
+
+                MymfboxOnboarding onboarding = onboardingService.getOnboardingByUserId(user.get().getUser_id(), client_name);
+
+                if(onboarding == null && nse_customer.equals(0))
+                {
+                    onboarding = new MymfboxOnboarding();
+                    onboarding.setUser_id(user.get().getUser_id());
+                    onboarding.setStatus(0);
+                    onboarding.setClient_name(client_name);
+                    onboarding.setVendor("NSE");
+                    onboarding.setTax_status("");
+                    onboarding.setHolding_nature("");
+                    onboarding.setInv_category("");
+                    onboarding.setInvestor_info(false);
+                    onboarding.setPersonal_info(false);
+                    onboarding.setContact_info(false);
+                    onboarding.setNri_info(false);
+                    onboarding.setJoint_holder_info(false);
+                    onboarding.setNomiee_info(false);
+                    onboarding.setBank_info(false);
+                    onboarding.setSignature_info(false);
+                    onboarding.setHas_nominee(false);
+                    onboarding.setHas_nri(false);
+                    onboarding.setHas_joint_holder(false);
+                    onboarding.setIs_all_steps_completed(false);
+                    onboarding.setIs_registration_completed(false);
+                    onboarding.setIs_multiple_registration(false);
+                    onboarding.setNse_already_reg_diff_arn(false);
+
+                    onboardingService.saveOnboarding(onboarding);
+                }
+
+                Integer onboardingStatus = 0;
+
+                if(onboarding != null)
+                {
+                    onboardingStatus = onboarding.getStatus();
+                }
+
+                if(onboardingStatus == null){onboardingStatus = 0;}
+
+                if(nse_customer.equals(0) && bse_customer.equals(0) && mfu_customer.equals(0))
+                {
+                    showCard = true;
+                    status = "Open";
+                    title = "Open Mutual Fund Account";
+                    description = "Start investing by Opening an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
+                    button_text = "Open Now";
+                    call_back_url = "";
+
+                }else if(nse_customer.equals(1) && nse_active.equals(0) && nse_iin_number.isEmpty() && bse_customer.equals(0) && mfu_customer.equals(0))
+                {
+                    showCard = true;
+                    status = "Progress";
+                    title = "Continue Mutual Fund Account";
+                    description = "Continue to Open an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
+                    button_text = "Continue";
+                    call_back_url = "";
+                }else if(nse_customer.equals(0) && bse_customer.equals(1) && bse_active.equals(0) && bse_client_code.isEmpty() && mfu_customer.equals(0))
+                {
+                    showCard = true;
+                    status = "Progress";
+                    title = "Continue Mutual Fund Account";
+                    description = "Continue to Open an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
+                    button_text = "Continue";
+                    call_back_url = "";
+                }else if(nse_customer.equals(0) && bse_customer.equals(1) && bse_active.equals(0) && !bse_client_code.isEmpty() && onboarding != null && !onboarding.getIs_registration_completed() && mfu_customer.equals(0))
+                {
+                    showCard = true;
+                    status = "Progress";
+                    title = "Continue Mutual Fund Account";
+                    description = "Continue to Open an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
+                    button_text = "Continue";
+                    call_back_url = "";
+                }else if(nse_customer.equals(0) && bse_customer.equals(0) && mfu_customer.equals(1) && mfu_active.equals(0) && mfu_can_number.isEmpty())
+                {
+                    showCard = true;
+                    status = "Progress";
+                    title = "Continue Mutual Fund Account";
+                    description = "Continue to Open an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
+                    button_text = "Continue";
+                    call_back_url = "";
+                }else if(nse_customer.equals(1) && nse_active.equals(0) && !nse_iin_number.isEmpty() && bse_customer.equals(0) && mfu_customer.equals(0) && onboarding != null && onboarding.getIs_registration_completed())
+                {
+                    showCard = true;
+                    status = "Pending";
+                    title = "Pending Mutual Fund Account";
+                    description = "You have successfully done the online registration. Please complete the authentication through the email, and your account will be activated within 1 day.";
+                    button_text = "";
+                    call_back_url = "";
+
+                }else if(nse_customer.equals(1) && nse_active.equals(0) && !nse_iin_number.isEmpty() && bse_customer.equals(0) && mfu_customer.equals(0) && onboarding != null &&  !onboarding.getIs_registration_completed() && onboarding.getNse_already_reg_diff_arn())
+                {
+                    showCard = true;
+                    status = "Pending";
+                    title = "Pending Mutual Fund Account";
+                    description = "You have successfully done the online registration. Please complete the authentication through the email, and your account will be activated within 1 day.";
+                    button_text = "";
+                    call_back_url = "";
+
+                }else if(nse_customer.equals(0) && bse_customer.equals(1) && bse_active.equals(0) && !bse_client_code.isEmpty() && onboarding != null &&  onboarding.getIs_registration_completed() && mfu_customer.equals(0))
+                {
+                    showCard = true;
+                    status = "Pending";
+                    title = "Pending Mutual Fund Account";
+
+                    String tax_status = user.get().getTax_status_code();
+
+                    if(!tax_status.equalsIgnoreCase("01") && !tax_status.equalsIgnoreCase("02") && !tax_status.equalsIgnoreCase("21") && !tax_status.equalsIgnoreCase("24"))
+                    {
+                        description = "You have successfully done the online registration. Please complete the authentication through the email, and your account will be activated within 1 day.";
+                        button_text = "";
+                        call_back_url = "";
+                    }else
+                    {
+                        description = "Your mutual fund account has been successfully created, Please click here to activate your mutual fund account.";
+                        button_text = "Activate Account";
+                        call_back_url = host + "/onboard/uploadBseAOF?key="+""+"&user_id="+user.get().getId()+"&bse_nse_mfu_flag=BSE&multiple_reg=0&client_name="+client_name;
+                    }
+                }else if(nse_customer.equals(0) && bse_customer.equals(0) && mfu_customer.equals(1) && mfu_active.equals(0) && !mfu_can_number.isEmpty() && onboarding != null &&  onboarding.getIs_registration_completed())
+                {
+                    showCard = true;
+                    status = "Pending";
+                    title = "Pending Mutual Fund Account";
+                    description = "Your mutual fund account has been successfully created, Please click here to activate your mutual fund account.";
+                    button_text = "Activate Account";
+                    call_back_url = host + "/onboard/activateMfuCanNumber?key="+""+"&user_id="+user.get().getId()+"&bse_nse_mfu_flag=MFU&multiple_reg=0&client_name="+client_name;
+                }else if(nse_customer.equals(1) && nse_active.equals(1) && !nse_iin_number.isEmpty() && bse_customer.equals(0) && mfu_customer.equals(0))
+                {
+                    showCard = false;
+                    status = "Registered";
+                    title = "";
+                    description = ".";
+                    button_text = "";
+                    call_back_url = "";
+
+                }else if(nse_customer.equals(0) && bse_customer.equals(1) && bse_active.equals(1) && !bse_client_code.isEmpty() && mfu_customer.equals(0))
+                {
+                    showCard = false;
+                    status = "Registered";
+                    title = "";
+                    description = ".";
+                    button_text = "";
+                    call_back_url = "";
+                }else if(nse_customer.equals(0) && bse_customer.equals(0) && mfu_customer.equals(1) && mfu_active.equals(1) && !mfu_can_number.isEmpty())
+                {
+                    showCard = false;
+                    status = "Registered";
+                    title = "";
+                    description = ".";
+                    button_text = "";
+                    call_back_url = "";
+                }else
+                {
+                    showCard = false;
+                    status = "Registered";
+                    title = "";
+                    description = ".";
+                    button_text = "";
+                    call_back_url = "";
+                }
+
+
+                UserRegStatusPojo pojo = new UserRegStatusPojo();
+                pojo.setShowCard(showCard);
+                pojo.setStatus(status);
+                pojo.setTitle(title);
+                pojo.setDescription(description);
+                pojo.setButton_text(button_text);
+                pojo.setCall_back_url(call_back_url);
+
+                UserRegStatusResponse apiResponse = new UserRegStatusResponse();
+                apiResponse.setStatus(StatusMessage.SuccessCode);
+                apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+                apiResponse.setMsg(StatusMessage.SuccessMessage);
+                apiResponse.setResult(pojo);
+                return new ResponseEntity<UserRegStatusResponse>(apiResponse, HttpStatus.OK);
+
+            }else
+            {
+                return UserUtils.getCommonResponse("User details not available.", StatusMessage.FailureCode);
+            }
+
+        }catch(Exception ex)
+        {
+            logger.error("Error while saving personal information", ex);
+            return UserUtils.errorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getSipDays")
+    public ResponseEntity<?> getSipDays(@RequestHeader("Authorization") String token,@RequestParam String start_date,@RequestParam String bse_nse_mfu_flag)
+    {
+        String ipAddr = "";
+        Optional<UsersOnlineRegDetails> user = null;
+        List<CommonPojo> masterList = new ArrayList<CommonPojo>();
+        CommonPojo pojo = null;
+        Integer log_id = null;
+        try
+        {
+            String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            if(StringHelper.isEmpty(client_name))
+            {
+                return UserUtils.getCommonResponse(StatusMessage.ClientNameInvalidMessage, StatusMessage.FailureCode);
+            }
+
+            if(StringHelper.isEmpty(user_id))
+            {
+                return UserUtils.getCommonResponse("Please provide the user id", StatusMessage.FailureCode);
+            }
+
+            if(StringHelper.isEmpty(bse_nse_mfu_flag))
+            {
+                return UserUtils.getCommonResponse("Please provide the bse_nse_mfu_flag", StatusMessage.FailureCode);
+            }
+
+            user = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(Integer.parseInt(user_id), client_name);
+
+            if(user != null)
+            {
+                BseNseKey bseNseKey = bseNseKeyRepository.findByClientName(client_name);
+
+                String vendors = UserUtils.checkParameter(bseNseKey.getNse_bse());
+
+                if(StringHelper.isNotEmpty(vendors) && !vendors.contains(bse_nse_mfu_flag.toLowerCase()))
+                {
+                    return UserUtils.getCommonResponse("Client Not Available in "+bse_nse_mfu_flag.toUpperCase()+"", StatusMessage.FailureCode);
+                }
+
+                if(StringHelper.isEmpty(start_date))
+                {
+                    pojo = new CommonPojo();
+                    pojo.setCode("02");
+                    pojo.setDesc("Monday");
+                    masterList.add(pojo);
+
+                    pojo = new CommonPojo();
+                    pojo.setCode("03");
+                    pojo.setDesc("Tuesday");
+                    masterList.add(pojo);
+
+                    pojo = new CommonPojo();
+                    pojo.setCode("04");
+                    pojo.setDesc("Wednesday");
+                    masterList.add(pojo);
+
+                    pojo = new CommonPojo();
+                    pojo.setCode("05");
+                    pojo.setDesc("Thursday");
+                    masterList.add(pojo);
+
+                    pojo = new CommonPojo();
+                    pojo.setCode("06");
+                    pojo.setDesc("Friday");
+                    masterList.add(pojo);
+                }else
+                {
+                    LocalDate date = LocalDate.parse(start_date);
+                    DayOfWeek dayOfWeek = date.getDayOfWeek();
+
+
+                    if(String.valueOf(dayOfWeek).toLowerCase().equalsIgnoreCase("monday"))
+                    {
+                        pojo = new CommonPojo();
+                        pojo.setCode("02");
+                        pojo.setDesc("Monday");
+                        masterList.add(pojo);
+                    }else if(String.valueOf(dayOfWeek).toLowerCase().equalsIgnoreCase("tuesday"))
+                    {
+                        pojo = new CommonPojo();
+                        pojo.setCode("03");
+                        pojo.setDesc("Tuesday");
+                        masterList.add(pojo);
+                    }else if(String.valueOf(dayOfWeek).toLowerCase().equalsIgnoreCase("wednesday"))
+                    {
+                        pojo = new CommonPojo();
+                        pojo.setCode("04");
+                        pojo.setDesc("Wednesday");
+                        masterList.add(pojo);
+                    }else if(String.valueOf(dayOfWeek).toLowerCase().equalsIgnoreCase("thursday"))
+                    {
+                        pojo = new CommonPojo();
+                        pojo.setCode("05");
+                        pojo.setDesc("Thursday");
+                        masterList.add(pojo);
+                    }else if(String.valueOf(dayOfWeek).toLowerCase().equalsIgnoreCase("friday"))
+                    {
+                        pojo = new CommonPojo();
+                        pojo.setCode("06");
+                        pojo.setDesc("Friday");
+                        masterList.add(pojo);
+                    }
+                }
+
+                TransactionCommonResponse apiResponse = new TransactionCommonResponse();
+                apiResponse.setStatus(StatusMessage.SuccessCode);
+                apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+                apiResponse.setMsg(StatusMessage.SuccessMessage);
+                apiResponse.setList(masterList);
+                return new ResponseEntity<TransactionCommonResponse>(apiResponse, HttpStatus.OK);
+            }else
+            {
+                return UserUtils.getCommonResponse("User details not available.", StatusMessage.FailureCode);
+            }
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
+            return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
         }
     }
 }

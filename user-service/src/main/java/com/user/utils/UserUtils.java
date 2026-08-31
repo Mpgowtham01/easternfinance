@@ -377,4 +377,22 @@ public class UserUtils
 
         return euin;
     }
+
+    public static ResponseEntity<CommonResponse> getCommonResponse(String message, Integer status)
+    {
+        CommonResponse commonResponse = new CommonResponse();
+        if(status.equals(200))
+        {
+            commonResponse.setStatus(StatusMessage.SuccessCode);
+            commonResponse.setStatus_msg(StatusMessage.SuccessMessage);
+            commonResponse.setMsg(message);
+            return new ResponseEntity<CommonResponse>(commonResponse, HttpStatus.OK);
+        }else
+        {
+            commonResponse.setStatus(StatusMessage.FailureCode);
+            commonResponse.setStatus_msg(StatusMessage.FailureMessage);
+            commonResponse.setMsg(message);
+            return new ResponseEntity<CommonResponse>(commonResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
 }

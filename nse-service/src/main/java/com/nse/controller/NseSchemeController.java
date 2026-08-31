@@ -6711,27 +6711,7 @@ public class NseSchemeController {
         String client_name = "";
         try {
             userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-            UserDto users =null;
-
-            try
-            {
-                users = userServiceClient.getUserById(Integer.valueOf(userid), token);
-            } catch (FeignException e) {
-                return FeignErrorHandler.handle(e, "User Service", "User not found");
-            }
-            client_name = users.getClient_name();
-
-            UserDto user = null;
-            try {
-                user =  userServiceClient.getUserDetailsByID(client_name, Integer.valueOf(userid),token);
-            }catch (FeignException e)
-            {
-                return FeignErrorHandler.handle(e, "User Service", "User not found");
-            }
-
-            if (user == null) {
-                return NseUtils.commonResponse("User Details not available", HttpStatus.BAD_REQUEST);
-            }
+            client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
 
             String tax_status;
             String tax_status_code;
@@ -6750,7 +6730,7 @@ public class NseSchemeController {
 
             List<InvestorClientCodePojo> list = new ArrayList<InvestorClientCodePojo>();
             InvestorClientCodePojo code = null;
-
+            System.out.println("userid  = " + userid  +" clientNAme = " + client_name);
             List<UserDto> user_list = null;
             try {
                 user_list = userServiceClient.getUserByIdAndClientNameActiveNse(client_name, Integer.valueOf(userid), token);

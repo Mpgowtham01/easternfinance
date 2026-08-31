@@ -227,6 +227,28 @@ public class UserDto {
     private String default_bank3 = "N";
     private String bank_proof3 = "";
 
+    private String bank_name4 = "";
+    private String bank_branch4 = "";
+    private String bank_address4 = "";
+    private String bank_account_number4 = "";
+    private String bank_account_holder_name4 = "";
+    private String bank_account_type4 = "";
+    private String bank_ifsc_code4 = "";
+    private String bank_micr_code4 = "";
+    private String default_bank4 = "N";
+    private String bank_proof4 = "";
+
+    private String bank_name5 = "";
+    private String bank_branch5 = "";
+    private String bank_address5 = "";
+    private String bank_account_number5 = "";
+    private String bank_account_holder_name5 = "";
+    private String bank_account_type5 = "";
+    private String bank_ifsc_code5 = "";
+    private String bank_micr_code5 = "";
+    private String default_bank5 = "N";
+    private String bank_proof5 = "";
+
     private Integer xsip_otm_flag1 = 0;
     private String xsip_otm1 = "";
     private Integer xsip_otm_approved1 = 0;

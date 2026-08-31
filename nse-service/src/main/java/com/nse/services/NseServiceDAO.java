@@ -20,9 +20,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestHeader;
 
+import java.security.SecureRandom;
 import java.text.DecimalFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +44,8 @@ public class NseServiceDAO {
 
     @Autowired
     NseTransactionRepository nseTransactionRepository;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
 
     public List<String> getFolioNumberByAMCwithHoldings(String client_name, Integer user_id, String amc_name,
@@ -888,9 +893,10 @@ public class NseServiceDAO {
         return list;
     }
 
-    public void insertClientMasterData(JSONArray regDataArray, String broker_code, String client_name,String token) {
+    public void insertClientMasterData(JSONArray regDataArray, String broker_code, String client_name,Integer userid,String token) throws ParseException {
         try
         {
+
             String service_return_code = "";
             String service_msg = "";
 
@@ -957,7 +963,6 @@ public class NseServiceDAO {
             String bse_active = "0";
 
             String bank_name = "";
-            String bank_code = "";
             String bank_branch = "";
             String bank_address = "";
             String bank_address1 = "";
@@ -1009,22 +1014,47 @@ public class NseServiceDAO {
             String nominee1_relation = "";
             String nominee1_guard_name = "";
             String nominee1_guard_pan = "";
+            String nominee1_mobile = "";
+            String nominee1_email = "";
+            String nominee1_id_no = "";
+            String nominee1_country = "";
+
 
             String nominee2_type = "";
             String nominee2_name = "";
             String nominee2_dob = "";
+            String nominee2_address1 = "";
+            String nominee2_address2 = "";
+            String nominee2_address3 = "";
+            String nominee2_pincode = "";
+            String nominee2_city = "";
+            String nominee2_state = "";
             String nominee2_relation = "";
             String nominee2_percentage = "";
             String nominee2_guard_name = "";
             String nominee2_guard_pan = "";
+            String nominee2_mobile = "";
+            String nominee2_email = "";
+            String nominee2_id_no = "";
+            String nominee2_country = "";
 
             String nominee3_type = "";
             String nominee3_name = "";
             String nominee3_dob = "";
+            String nominee3_address1 = "";
+            String nominee3_address2 = "";
+            String nominee3_address3 = "";
+            String nominee3_pincode = "";
+            String nominee3_city = "";
+            String nominee3_state = "";
             String nominee3_relation = "";
             String nominee3_percentage = "";
             String nominee3_guard_name = "";
             String nominee3_guard_pan = "";
+            String nominee3_mobile = "";
+            String nominee3_email = "";
+            String nominee3_id_no = "";
+            String nominee3_country = "";
 
             String nse_customer = "1";
             String nse_active_user = "";
@@ -1045,6 +1075,9 @@ public class NseServiceDAO {
             String nom3type = "";
             String nom3_guard_rel = "";
             String nom3_pan = "";
+            String nominee1_id_type = "";
+            String nominee2_id_type = "";
+            String nominee3_id_type = "";
 
             String account_type_2 = "";
             String account_no_2 = "";
@@ -1078,17 +1111,18 @@ public class NseServiceDAO {
 
 
             try{
-
-                List<NseBank> bank_list = nseBankRepository.findAll();
-
                 BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
                 String default_branch = nsekey.getDefault_branch();
                 String default_rm = nsekey.getDefault_rm();
                 String broker_code1 = nsekey.getBrokerCode();
                 String euin1 = nsekey.getEuin();
 
+                System.out.println("regDataArray = " + regDataArray);
 
-                for (int i= 0; i<regDataArray.length(); i++) {
+                //for (int i= 0; i<3; i++)
+                for (int i= 0; i<regDataArray.length(); i++)
+                {
+                    System.out.println("1092");
                     title = "";
                     name = "";
                     pan = "";
@@ -1146,7 +1180,6 @@ public class NseServiceDAO {
                     bse_active = "0";
 
                     bank_name = "";
-                    bank_code = "";
                     bank_branch = "";
                     bank_address = "";
                     bank_address1 = "";
@@ -1232,9 +1265,8 @@ public class NseServiceDAO {
                     nom3type = "";
                     nom3_guard_rel = "";
                     nom3_pan = "";
-
                     JSONObject jsonObject = regDataArray.getJSONObject(i);
-
+                    System.out.println("jsonObject = " + jsonObject);
                     String member_code = jsonObject.getString("member_code");
                     String client_code = jsonObject.getString("client_code");
                     String primary_holder_first_name = jsonObject.getString("primary_holder_first_name");
@@ -1414,6 +1446,7 @@ public class NseServiceDAO {
                     String nominee_1_city = jsonObject.getString("nominee_1_city");
                     String nominee1_pin = jsonObject.getString("nominee1_pin");
                     String nominee_1_country = jsonObject.getString("nominee_1_country");
+
                     String nominee_2_name = jsonObject.getString("nominee_2_name");
                     String nominee_2_relationship = jsonObject.getString("nominee_2_relationship");
                     String nominee_2_applicable = jsonObject.getString("nominee_2_applicable");
@@ -1432,6 +1465,7 @@ public class NseServiceDAO {
                     String nominee_2_city = jsonObject.getString("nominee_2_city");
                     String nominee_2_pin = jsonObject.getString("nominee_2_pin");
                     String nominee_2_country = jsonObject.getString("nominee_2_country");
+
                     String nominee_3_name = jsonObject.getString("nominee_3_name");
                     String nominee_3_relationship = jsonObject.getString("nominee_3_relationship");
                     String nominee_3_applicable = jsonObject.getString("nominee_3_applicable");
@@ -1449,6 +1483,7 @@ public class NseServiceDAO {
                     String nominee_3_city = jsonObject.getString("nominee_3_city");
                     String nominee_3_pin = jsonObject.getString("nominee_3_pin");
                     String nominee_3_country = jsonObject.getString("nominee_3_country");
+
                     String nominee_names_registration_status_in_soa = jsonObject.getString("nominee_names_registration_status_in_soa");
 
                     String created_by = jsonObject.getString("created_by");
@@ -1456,39 +1491,38 @@ public class NseServiceDAO {
                     String last_modified_by = jsonObject.getString("last_modified_by");
 
                     String last_modified_at = jsonObject.getString("last_modified_at");
+                    if (tax_status.equalsIgnoreCase("ON BEHALF OF MINOR")) {
+                        primary_holder_pan = "";
+                    }
                     iin_number = client_code;
                     title = "";
                     List<String> nameParts = Arrays.asList(primary_holder_first_name, primary_holder_middle_name, primary_holder_last_name);
                     name = nameParts.stream().filter(part -> part != null && !part.trim().isEmpty()).collect(Collectors.joining(" "));
                     pan = primary_holder_pan;
                     mobile = indian_mobile_no;
-                    email = email;
                     subbroker_name = "";
                     street_1 = address_1; // need to clarify
                     street_2 = address_2; // need to clarify
                     street_3 = address_3; // need to clarify
-                    city = city;
-                    pincode = pincode;
-                    state = state;
                     state_code = "";
-                    country = country;
                     phone_office = office_phone;
                     phone_residence = resi_phone;
-
                     father_name = "";
-                    gender = gender;
                     date_of_birth = primary_holder_dob_incorporation;
                     marital_status = "";
                     place_of_birth = "";
-                    country_of_birth = "";
-                    country_birth_code = "";
-
+                    country_of_birth = country;
+                    if(country.equalsIgnoreCase("India"))
+                    {
+                        country_birth_code = "IN";
+                    }else{
+                        country_birth_code = "";
+                    }
                     source_of_wealth = "";
                     source_of_wealth_code = "";
                     annual_income = "";
                     annual_income_code = "";
                     occupation = "";
-                    occupation_code = occupation_code;
                     networth_amount = "";
                     networth_dob = "";
                     political = "";
@@ -1498,7 +1532,6 @@ public class NseServiceDAO {
 
                     pan_tax_status_code = tax_status;
                     pan_tax_status_desc = "";
-                    holding_nature = holding_nature;
                     holding_nature_desc = "";
 
                     List<String> guardNameParts = Arrays.asList(guardian_first_name, guardian_middle_name, guardian_last_name);
@@ -1506,7 +1539,27 @@ public class NseServiceDAO {
                     guard_pan = guardian_pan;
                     guard_dob = guardian_dob;
                     guard_mobile = "";
-                    guard_relationship = guardian_relationship;
+//                    <option value="">Select Guardian Relationship</option>
+//                        <option value="06">FATHER</option>
+//                        <option value="13">MOTHER</option>
+//                        <option value="23">COURT APPOINTED LEGAL GUARDIAN</option>
+                    String guard_relationship_code = "";
+
+                    if(guardian_relationship.equalsIgnoreCase("FATHER"))
+                    {
+                        guard_relationship_code = "06";
+                    }else if(guardian_relationship.equalsIgnoreCase("MOTHER"))
+                    {
+                        guard_relationship_code = "13";
+                    }else if(guardian_relationship.equalsIgnoreCase("COURT APPOINTED LEGAL GUARDIAN"))
+                    {
+                        guard_relationship_code = "23";
+                    }else
+                    {
+                        guard_relationship_code = guardian_relationship;
+                    }
+
+                    guard_relationship = guard_relationship_code;
 
                     email_verified = email_declaration_flag;
                     email_authcode = "";
@@ -1516,7 +1569,6 @@ public class NseServiceDAO {
                     bse_active = "0";
 
                     bank_name = bank_name_1;
-                    bank_code = "";
                     bank_branch = bank_branch_1;
                     bank_address = "";
                     bank_address1 = "";
@@ -1571,22 +1623,47 @@ public class NseServiceDAO {
                     nominee1_relation = nominee_1_relationship;
                     nominee1_guard_name = nominee_1_guardian;
                     nominee1_guard_pan = nominee_1_guardian_pan;
+                    nominee1_id_no = nominee_1_id_number;
+                    nominee1_mobile = nominee_1_mobile;
+                    nominee1_email = nominee_1_email;
+                    nominee1_country = nominee_1_country;
+                    nominee1_id_type = nominee_1_identity_type;
 
                     nominee2_type = nominee2_minor_flag;
                     nominee2_name = nominee_2_name;
                     nominee2_dob = nominee_2_dob;
+                    nominee2_address1 = nominee_2_address1;
+                    nominee2_address2 = nominee_2_address2;
+                    nominee2_address3 = nominee_2_address3;
+                    nominee2_pincode = nominee_2_pin;
+                    nominee2_city = nominee_2_city;
+                    nominee2_state = "";
                     nominee2_relation = nominee_2_relationship;
-                    nominee2_percentage = nominee1_applicable;
                     nominee2_guard_name = nominee2_guardian;
                     nominee2_guard_pan = nominee_2_guardian_pan;
+                    nominee2_id_no = nominee_2_id_number;
+                    nominee2_mobile = nominee_2_mobile;
+                    nominee2_email = nominee_2_email;
+                    nominee2_country = nominee_2_country;
+                    nominee2_id_type = nominee_2_identity_type;
 
                     nominee3_type = nominee_3_minor_flag;
                     nominee3_name = nominee_3_name;
                     nominee3_dob = nominee_3_dob;
+                    nominee3_address1 = nominee_3_address1;
+                    nominee3_address2 = nominee_3_address2;
+                    nominee3_address3 = nominee_3_address3;
+                    nominee3_pincode = nominee_3_pin;
+                    nominee3_city = nominee_3_city;
+                    nominee3_state = "";
                     nominee3_relation = nominee_3_relationship;
-                    nominee3_percentage = nominee1_applicable;
                     nominee3_guard_name = nominee_3_guardian;
                     nominee3_guard_pan = nominee_3_guardian_pan;
+                    nominee3_id_no = nominee_3_id_number;
+                    nominee3_mobile = nominee_3_mobile;
+                    nominee3_email = nominee_3_email;
+                    nominee3_country = nominee_3_country;
+                    nominee3_id_type = nominee_3_identity_type;
 
                     nse_customer = "1";
                     nse_active_user = "YES";
@@ -1676,955 +1753,496 @@ public class NseServiceDAO {
                         state_code = "";
                     }
 
-                    bank_code = bank_code.trim();
-                    String nse_bank_code = bank_code;
+                    holding_nature_desc = holding_nature;
 
-                    NseBank nseBank = bank_list.stream()
-                            .filter(x -> x.getBank_code().equalsIgnoreCase(nse_bank_code)).findAny()
-                            .orElse(null);
-                    if (nseBank != null) {
-                        bank_name = nseBank.getBank_name();
+                    if (holding_nature != null) {
+
+                        String holding = holding_nature.trim().toUpperCase(Locale.ROOT);
+
+                        if (holding.equals("SINGLE")) {
+
+                            holding_nature = "SI";
+
+                        } else if (holding.equals("JOINT")) {
+
+                            holding_nature = "JO";
+
+                        } else if (holding.equals("ANYONE / SURVIVOR")
+                                || holding.equals("ANYONE OR SURVIVOR")
+                                || holding.equals("ANYONE/SURVIVOR")) {
+
+                            holding_nature = "AS";
+                        }
                     }
 
-                    if(holding_nature.contentEquals("SINGLE")) {
+                    occupation = occupation_code;
 
-                        holding_nature_desc = holding_nature;
-                        holding_nature = "SI";
+                    if (occupation_code != null) {
 
-                    }else if(holding_nature.contentEquals("JOINT")){
-                        holding_nature_desc = holding_nature;
-                        holding_nature = "JO";
+                        String occ = occupation_code.trim().toUpperCase(Locale.ROOT);
 
-                    }else if(holding_nature.contains("ANYONE") ||holding_nature.contains("SURVIVOR")) {
-                        holding_nature_desc = holding_nature;
-                        holding_nature = "AS";
+                        if (occ.equals("BUSINESS")
+                                || occ.equals("BUSINESS MANUFACTURING")
+                                || occ.equals("BUSINESS TRADING")) {
+
+                            occupation_code = "01";
+
+                        } else if (occ.equals("SERVICES")
+                                || occ.equals("SERVICE")
+                                || occ.equals("SALARIED")
+                                || occ.equals("PRIVATE SECTOR SERVICE")
+                                || occ.equals("PUBLIC SECTOR")
+                                || occ.equals("PUBLIC SECTOR / GOVERNMENT SERVICE")
+                                || occ.equals("GOVERNMENT SERVICE")
+                                || occ.equals("GOVERNMENT SECTOR")
+                                || occ.equals("NON-GOVERNMENT SERVICE")
+                                || occ.equals("SOFTWARE ENGINEER")
+                                || occ.equals("MANAGER")) {
+
+                            occupation_code = "02";
+
+                        } else if (occ.equals("PROFESSIONAL")
+                                || occ.equals("CHARTERED ACCOUNTANT")
+                                || occ.equals("PROFESSION - ENGINEERING")
+                                || occ.equals("PROFESSION - FINANCE")
+                                || occ.equals("PROFESSION - LEGAL")
+                                || occ.equals("PROFESSION - MEDICINE")) {
+
+                            occupation_code = "03";
+
+                        } else if (occ.equals("AGRICULTURE")
+                                || occ.equals("AGRICULTURIST")) {
+
+                            occupation_code = "04";
+
+                        } else if (occ.equals("RETIRED")) {
+
+                            occupation_code = "05";
+
+                        } else if (occ.equals("HOUSEWIFE")
+                                || occ.equals("HOUSE WIFE")) {
+
+                            occupation_code = "06";
+
+                        } else if (occ.equals("STUDENT")) {
+
+                            occupation_code = "07";
+
+                        } else if (occ.equals("OTHERS")
+                                || occ.equals("NOT SPECIFIED")
+                                || occ.equals("NULL")) {
+
+                            occupation_code = "08";
+                        }
                     }
-
-                    if(occupation_code.contentEquals("BUSINESS")) {
-                        occupation = occupation_code;
-                        occupation_code = "01";
-                    }else if(occupation_code.contentEquals("SERVICES")) {
-                        occupation = occupation_code;
-                        occupation_code = "02";
-                    }else if(occupation_code.contentEquals("PROFESSIONAL")) {
-                        occupation = occupation_code;
-                        occupation_code = "03";
-                    }else if(occupation_code.contentEquals("AGRICULTURE")) {
-                        occupation = occupation_code;
-                        occupation_code = "04";
-                    }else if(occupation_code.contentEquals("RETIRED")) {
-                        occupation = occupation_code;
-                        occupation_code = "05";
-                    }else if(occupation_code.contentEquals("HOUSEWIFE")) {
-                        occupation = occupation_code;
-                        occupation_code = "06";
-                    }else if(occupation_code.contentEquals("STUDENT")) {
-                        occupation = occupation_code;
-                        occupation_code = "07";
-                    }else if(occupation_code.contentEquals("OTHERS")) {
-                        occupation = occupation_code;
-                        occupation_code = "08";
-                    }
-
 
                     pan_tax_status_desc = pan_tax_status_code;
                     pan_tax_status_code = NseUtils.getClientTaxStatusCode(pan_tax_status_code);
 
-                    if (!pan.isEmpty()) {
+                    UserDto obj = new UserDto();
+                    obj.setBroker_code(broker_code);
+                    obj.setEuin(euin);
+                    obj.setSalutation(title);
+                    obj.setName(name);
+                    obj.setPan(pan);
+                    obj.setDate_of_birth(date_of_birth);
+                    obj.setHolding_nature_code(holding_nature);
+                    obj.setHolding_nature(holding_nature_desc);
+                    obj.setOccupation_code(occupation_code);
+                    obj.setOccupation(occupation);
+                    obj.setFather_name(father_name);
+                    obj.setStreet_1(street_1);
+                    obj.setStreet_2(street_2);
+                    obj.setStreet_3(street_3);
+                    obj.setCity(city);
+                    obj.setState(state);
+                    obj.setState_code(state_code);
+                    obj.setPincode(pincode);
+                    obj.setCountry(country);
+                    obj.setMobile(mobile);
+                    obj.setEmail(email);
+                    obj.setGender(gender);
+                    System.out.println("Mobile declaration flag: " + mobile_declaration_flag + " Email declaration flag: " + email_declaration_flag);
+                    obj.setMobile_relation(getRelationCode(mobile_declaration_flag));
+                    obj.setEmail_relation(getRelationCode(email_declaration_flag));
+                    System.out.println("Place of birth: " + city);
+                    obj.setPlace_of_birth(city);
+                    obj.setCountry_of_birth(country_of_birth);
+                    obj.setCountry_birth_code(country_birth_code);
 
-                        List<UserDto> pan_list = userServiceClient.getUserDetailsByPanName(pan,name,client_name,token);
+                    obj.setNri_address1(nri_address1);
+                    obj.setNri_address2(nri_address2);
+                    obj.setNri_address3(nri_address3);
+                    obj.setNri_city(nri_city);
+                    obj.setNri_state(nri_state);
+                    obj.setNri_country(nri_country);
+                    obj.setNri_pincode(nri_pincode);
 
-                        if (pan_list.size() > 0) {
-
-                            List<UserDto> user_list = userServiceClient.getActiveUsersByPanName(pan,name,client_name,token);
-
-                            if (user_list.size() > 0) {
-
-                                UserDto obj2 = user_list.get(0);
-
-                                if(obj2.getNse_iin_number().equalsIgnoreCase(iin_number) && obj2.getBroker_code().equalsIgnoreCase(broker_code) && obj2.getName().equalsIgnoreCase(name)){
-                                    continue;
-                                }
-
-                                UserBseNseDto obj = new UserBseNseDto();
-                                obj.setUser_id(obj2.getId());
-                                obj.setBroker_code(broker_code);
-                                obj.setEuin(euin);
-                                obj.setSalutation(title);
-                                obj.setName(name);
-                                obj.setPan(pan);
-                                obj.setDate_of_birth(date_of_birth);
-                                obj.setHolding_nature_code(holding_nature);
-                                obj.setHolding_nature(holding_nature_desc);
-                                obj.setTax_status_code(pan_tax_status_code);
-                                obj.setTax_status(pan_tax_status_desc);
-                                obj.setOccupation_code(occupation_code);
-                                obj.setOccupation(occupation);
-                                obj.setFather_name(father_name);
-                                obj.setStreet_1(street_1);
-                                obj.setStreet_2(street_2);
-                                obj.setStreet_3(street_3);
-                                obj.setCity(city);
-                                obj.setState(state);
-                                obj.setState_code(state_code);
-                                obj.setPincode(pincode);
-                                obj.setCountry(country);
-                                obj.setMobile(mobile);
-                                obj.setEmail(email);
-                                obj.setGender(gender);
-                                obj.setPlace_of_birth(place_of_birth);
-                                obj.setCountry_of_birth(country_of_birth);
-                                obj.setCountry_birth_code(country_birth_code);
-
-                                obj.setNri_address1(nri_address1);
-                                obj.setNri_address2(nri_address2);
-                                obj.setNri_address3(nri_address3);
-                                obj.setNri_city(nri_city);
-                                obj.setNri_state(nri_state);
-                                obj.setNri_country(nri_country);
-                                obj.setNri_pincode(nri_pincode);
-
-                                obj.setBank_name1(bank_name);
-                                obj.setBank_code1(bank_code);
-                                obj.setBank_account_number1(bank_account_number);
-                                obj.setBank_account_type1(bank_account_type);
-                                obj.setBank_ifsc_code1(bank_ifsc_code);
-                                obj.setBank_micr_code1(bank_micr_code);
-                                obj.setBank_account_holder_name1(bank_account_holder_name);
-                                obj.setBank_branch1(bank_branch);
-                                obj.setBank_address1(bank_address);
-                                obj.setDefault_bank1(default_bank);
-
-                                obj.setJoint_holder_name1(joint_holder_name);
-                                obj.setJoint_holder_dob1(joint_holder_dob);
-                                obj.setJoint_holder_pan1(joint_holder_pan);
-                                obj.setJoint_holder_email1(joint_holder_email);
-                                obj.setJoint_holder_mobile1(joint_holder_mobile);
-                                obj.setJoint_holder_name2(joint_holder_name1);
-                                obj.setJoint_holder_dob2(joint_holder_dob1);
-                                obj.setJoint_holder_pan2(joint_holder_pan1);
-                                obj.setJoint_holder_email2(joint_holder_email1);
-                                obj.setJoint_holder_mobile2(joint_holder_mobile1);
-
-                                obj.setNumber_of_nominee(number_of_nominee);
-                                obj.setNominee1_type(nominee_type);
-                                obj.setNominee1_name(nominee1_name);
-                                obj.setNominee1_dob(nominee1_dob);
-                                obj.setNominee1_relation(nominee1_relation);
-                                obj.setNominee1_address1(nominee1_address1);
-                                obj.setNominee1_address2(nominee1_address2);
-                                obj.setNominee1_address3(nominee1_address3);
-                                obj.setNominee1_city(nominee1_city);
-                                obj.setNominee1_pincode(nominee1_pincode);
-                                obj.setNominee1_state(nominee1_state);
-                                obj.setNominee1_guard_name(nominee1_guard_name);
-                                obj.setNominee1_guard_pan(nominee1_guard_pan);
-
-                                obj.setNominee2_name(nominee2_name);
-                                obj.setNominee2_type(nominee2_type);
-                                obj.setNominee2_dob(nominee2_dob);
-                                obj.setNominee2_relation(nominee2_relation);
-                                obj.setNominee2_guard_name(nominee2_guard_name);
-                                obj.setNominee2_guard_pan(nominee2_guard_pan);
-                                obj.setNominee2_percentage(nominee2_percentage);
-
-                                obj.setNominee3_name(nominee3_name);
-                                obj.setNominee3_type(nominee3_type);
-                                obj.setNominee3_dob(nominee3_dob);
-                                obj.setNominee3_relation(nominee3_relation);
-                                obj.setNominee3_guard_name(nominee3_guard_name);
-                                obj.setNominee3_guard_pan(nominee3_guard_pan);
-                                obj.setNominee3_percentage(nominee3_percentage);
-
-                                obj.setGuard_name(guard_name);
-                                obj.setGuard_pan(guard_pan);
-                                obj.setGuard_dob(guard_dob);
-                                obj.setGuard_mobile(guard_mobile);
-                                obj.setGuard_relationship(guard_relationship);
-
-                                obj.setNse_customer(1);
-                                obj.setNse_iin_number(iin_number);
-                                obj.setNse_active(nse_active);
-                                obj.setAddress_type(address_type_desc);
-                                obj.setAddress_type_code(address_type);
-                                obj.setSource_of_wealth(source_of_wealth);
-                                obj.setSource_of_wealth_code(source_of_wealth_code);
-                                obj.setAnnual_income_code(annual_income_code);
-                                obj.setAnnual_income(annual_income);
-
-                                obj.setNetworth_amount(networth_amount);
-                                obj.setNetworth_dob(networth_dob);
-                                obj.setPolitical(political);
-                                obj.setPolitical_code(political_code);
-                                obj.setNse_ach1("");
-                                obj.setNse_ach_flag1(0);
-                                obj.setNse_ach_approved1(0);
-
-                                obj.setClient_name(client_name);
-                                obj.setCreated_date(new Date());
-                                obj.setRegister_source("IIN Update");
-                                obj.setOnline_flag("NSE");
-
-                                obj.setNominee1_pan(nom1_pan);
-                                obj.setNominee1_percentage(nom1_percentage);
-                                obj.setNominee1_country(nom1_country);
-                                obj.setNominee1_guard_relationship(nom1_guard_rel);
-                                obj.setNominee2_type(nom2type);
-                                obj.setNominee2_guard_relationship(nom2_guard_rel);
-                                obj.setNominee2_pan(nom2_pan);
-                                obj.setNominee3_type(nom3type);
-                                obj.setNominee3_guard_relationship(nom3_guard_rel);
-                                obj.setNominee3_pan(nom3_pan);
-
-                                userServiceClient.saveUserBseNseDetail(obj,token);
-
-                            }else{
-
-                                UserDto obj = pan_list.get(0);
-
-                                obj.setBroker_code(broker_code);
-                                obj.setEuin(euin);
-                                obj.setSalutation(title);
-                                obj.setName(name.replaceAll("\\s+", " ").trim());
-                                obj.setPan(pan);
-                                obj.setDate_of_birth(date_of_birth);
-                                obj.setDate_of_birth_greeting(date_of_birth);
-                                obj.setHolding_nature_code(holding_nature);
-                                obj.setHolding_nature(holding_nature_desc);
-                                obj.setTax_status_code(pan_tax_status_code);
-                                obj.setTax_status(pan_tax_status_desc);
-                                obj.setOccupation_code(occupation_code);
-                                obj.setOccupation(occupation);
-                                obj.setFather_name(father_name);
-                                obj.setStreet_1(street_1);
-                                obj.setStreet_2(street_2);
-                                obj.setStreet_3(street_3);
-                                obj.setCity(city);
-                                obj.setState(state);
-                                obj.setState_code(state_code);
-                                obj.setPincode(pincode);
-                                obj.setCountry(country);
-                                obj.setMobile(mobile);
-                                obj.setEmail(email);
-                                obj.setGender(gender);
-                                obj.setPlace_of_birth(place_of_birth);
-                                obj.setCountry_of_birth(country_of_birth);
-                                obj.setCountry_birth_code(country_birth_code);
-
-                                obj.setNri_address1(nri_address1);
-                                obj.setNri_address2(nri_address2);
-                                obj.setNri_address3(nri_address3);
-                                obj.setNri_city(nri_city);
-                                obj.setNri_state(nri_state);
-                                obj.setNri_country(nri_country);
-                                obj.setNri_pincode(nri_pincode);
-
-                                obj.setBank_name1(bank_name);
-                                obj.setBank_code1(bank_code);
-                                obj.setBank_account_number1(bank_account_number);
-                                obj.setBank_account_type1(bank_account_type);
-                                obj.setBank_ifsc_code1(bank_ifsc_code);
-                                obj.setBank_micr_code1(bank_micr_code);
-                                obj.setBank_account_holder_name1(bank_account_holder_name);
-                                obj.setBank_branch1(bank_branch);
-                                obj.setBank_address1(bank_address);
-                                obj.setDefault_bank1(default_bank);
-
-                                obj.setJoint_holder_name1(joint_holder_name);
-                                obj.setJoint_holder_dob1(joint_holder_dob);
-                                obj.setJoint_holder_pan1(joint_holder_pan);
-                                obj.setJoint_holder_email1(joint_holder_email);
-                                obj.setJoint_holder_mobile1(joint_holder_mobile);
-                                obj.setJoint_holder_name2(joint_holder_name1);
-                                obj.setJoint_holder_dob2(joint_holder_dob1);
-                                obj.setJoint_holder_pan2(joint_holder_pan1);
-                                obj.setJoint_holder_email2(joint_holder_email1);
-                                obj.setJoint_holder_mobile2(joint_holder_mobile1);
-
-                                obj.setNumber_of_nominee(number_of_nominee);
-                                obj.setNominee1_type(nominee_type);
-                                obj.setNominee1_name(nominee1_name);
-                                obj.setNominee1_dob(nominee1_dob);
-                                obj.setNominee1_relation(nominee1_relation);
-                                obj.setNominee1_address1(nominee1_address1);
-                                obj.setNominee1_address2(nominee1_address2);
-                                obj.setNominee1_address3(nominee1_address3);
-                                obj.setNominee1_city(nominee1_city);
-                                obj.setNominee1_pincode(nominee1_pincode);
-                                obj.setNominee1_state(nominee1_state);
-                                obj.setNominee1_guard_name(nominee1_guard_name);
-                                obj.setNominee1_guard_pan(nominee1_guard_pan);
-
-                                obj.setNominee2_name(nominee2_name);
-                                obj.setNominee2_type(nominee2_type);
-                                obj.setNominee2_dob(nominee2_dob);
-                                obj.setNominee2_relation(nominee2_relation);
-                                obj.setNominee2_guard_name(nominee2_guard_name);
-                                obj.setNominee2_guard_pan(nominee2_guard_pan);
-                                obj.setNominee2_percentage(nominee2_percentage);
-
-                                obj.setNominee3_name(nominee3_name);
-                                obj.setNominee3_type(nominee3_type);
-                                obj.setNominee3_dob(nominee3_dob);
-                                obj.setNominee3_relation(nominee3_relation);
-                                obj.setNominee3_guard_name(nominee3_guard_name);
-                                obj.setNominee3_guard_pan(nominee3_guard_pan);
-                                obj.setNominee3_percentage(nominee3_percentage);
-
-                                obj.setGuard_name(guard_name);
-                                obj.setGuard_pan(guard_pan);
-                                obj.setGuard_dob(guard_dob);
-                                obj.setGuard_mobile(guard_mobile);
-                                obj.setGuard_relationship(guard_relationship);
-
-                                obj.setNse_customer(1);
-                                obj.setNse_iin_number(iin_number);
-                                obj.setNse_active(nse_active);
-                                obj.setAddress_type(address_type_desc);
-                                obj.setAddress_type_code(address_type);
-                                obj.setSource_of_wealth(source_of_wealth);
-                                obj.setSource_of_wealth_code(source_of_wealth_code);
-                                obj.setAnnual_income_code(annual_income_code);
-                                obj.setAnnual_income(annual_income);
-
-                                obj.setNetworth_amount(networth_amount);
-                                obj.setNetworth_dob(networth_dob);
-                                obj.setPolitical(political);
-                                obj.setPolitical_code(political_code);
-                                obj.setNse_ach1("");
-                                obj.setNse_ach_flag1(0);
-                                obj.setNse_ach_approved1(0);
-
-                                obj.setBse_customer(0);
-                                obj.setBse_active(0);
-                                obj.setClient_name(client_name);
-                                obj.setCreated_date(new Date());
-                                obj.setRegister_source("IIN Update");
-                                obj.setOnline_flag("NSE");
-
-                                obj.setNominee1_pan(nom1_pan);
-                                obj.setNominee1_percentage(nom1_percentage);
-                                obj.setNominee1_country(nom1_country);
-                                obj.setNominee1_guard_relationship(nom1_guard_rel);
-                                obj.setNominee2_type(nom2type);
-                                obj.setNominee2_guard_relationship(nom2_guard_rel);
-                                obj.setNominee2_pan(nom2_pan);
-                                obj.setNominee3_type(nom3type);
-                                obj.setNominee3_guard_relationship(nom3_guard_rel);
-                                obj.setNominee3_pan(nom3_pan);
-
-                                userServiceClient.saveUser(obj,token);
-
-                            }
-                        }else{
-
-                            UserDto obj = new UserDto();
-
-                            obj.setBroker_code(broker_code);
-                            obj.setEuin(euin);
-                            obj.setSalutation(title);
-                            obj.setName(name.replaceAll("\\s+", " ").trim());
-                            obj.setPan(pan);
-                            obj.setBranch(default_branch);
-                            obj.setRm_name(default_rm);
-                            obj.setSuper_subbroker_name("");
-                            obj.setSubbroker_name("");
-                            obj.setDate_of_birth(date_of_birth);
-                            obj.setDate_of_birth_greeting(date_of_birth);
-                            obj.setHolding_nature_code(holding_nature);
-                            obj.setHolding_nature(holding_nature_desc);
-                            obj.setTax_status_code(pan_tax_status_code);
-                            obj.setTax_status(pan_tax_status_desc);
-                            obj.setOccupation_code(occupation_code);
-                            obj.setOccupation(occupation);
-                            obj.setFather_name(father_name);
-                            obj.setStreet_1(street_1);
-                            obj.setStreet_2(street_2);
-                            obj.setStreet_3(street_3);
-                            obj.setCity(city);
-                            obj.setState(state);
-                            obj.setState_code(state_code);
-                            obj.setPincode(pincode);
-                            obj.setCountry(country);
-                            obj.setMobile(mobile);
-                            obj.setEmail(email);
-                            obj.setGender(gender);
-                            obj.setPlace_of_birth(place_of_birth);
-                            obj.setCountry_of_birth(country_of_birth);
-                            obj.setCountry_birth_code(country_birth_code);
-
-                            obj.setNri_address1(nri_address1);
-                            obj.setNri_address2(nri_address2);
-                            obj.setNri_address3(nri_address3);
-                            obj.setNri_city(nri_city);
-                            obj.setNri_state(nri_state);
-                            obj.setNri_country(nri_country);
-                            obj.setNri_pincode(nri_pincode);
-
-                            obj.setBank_name1(bank_name);
-                            obj.setBank_code1(bank_code);
-                            obj.setBank_account_number1(bank_account_number);
-                            obj.setBank_account_type1(bank_account_type);
-                            obj.setBank_ifsc_code1(bank_ifsc_code);
-                            obj.setBank_micr_code1(bank_micr_code);
-                            obj.setBank_account_holder_name1(bank_account_holder_name);
-                            obj.setBank_branch1(bank_branch);
-                            obj.setBank_address1(bank_address);
-                            obj.setDefault_bank1(default_bank);
-
-                            obj.setJoint_holder_name1(joint_holder_name);
-                            obj.setJoint_holder_dob1(joint_holder_dob);
-                            obj.setJoint_holder_pan1(joint_holder_pan);
-                            obj.setJoint_holder_email1(joint_holder_email);
-                            obj.setJoint_holder_mobile1(joint_holder_mobile);
-                            obj.setJoint_holder_name2(joint_holder_name1);
-                            obj.setJoint_holder_dob2(joint_holder_dob1);
-                            obj.setJoint_holder_pan2(joint_holder_pan1);
-                            obj.setJoint_holder_email2(joint_holder_email1);
-                            obj.setJoint_holder_mobile2(joint_holder_mobile1);
-
-                            obj.setNumber_of_nominee(number_of_nominee);
-                            obj.setNominee1_type(nominee_type);
-                            obj.setNominee1_name(nominee1_name);
-                            obj.setNominee1_dob(nominee1_dob);
-                            obj.setNominee1_relation(nominee1_relation);
-                            obj.setNominee1_address1(nominee1_address1);
-                            obj.setNominee1_address2(nominee1_address2);
-                            obj.setNominee1_address3(nominee1_address3);
-                            obj.setNominee1_city(nominee1_city);
-                            obj.setNominee1_pincode(nominee1_pincode);
-                            obj.setNominee1_state(nominee1_state);
-                            obj.setNominee1_guard_name(nominee1_guard_name);
-                            obj.setNominee1_guard_pan(nominee1_guard_pan);
-
-                            obj.setNominee2_name(nominee2_name);
-                            obj.setNominee2_type(nominee2_type);
-                            obj.setNominee2_dob(nominee2_dob);
-                            obj.setNominee2_relation(nominee2_relation);
-                            obj.setNominee2_guard_name(nominee2_guard_name);
-                            obj.setNominee2_guard_pan(nominee2_guard_pan);
-                            obj.setNominee2_percentage(nominee2_percentage);
-
-                            obj.setNominee3_name(nominee3_name);
-                            obj.setNominee3_type(nominee3_type);
-                            obj.setNominee3_dob(nominee3_dob);
-                            obj.setNominee3_relation(nominee3_relation);
-                            obj.setNominee3_guard_name(nominee3_guard_name);
-                            obj.setNominee3_guard_pan(nominee3_guard_pan);
-                            obj.setNominee3_percentage(nominee3_percentage);
-
-                            obj.setGuard_name(guard_name);
-                            obj.setGuard_pan(guard_pan);
-                            obj.setGuard_dob(guard_dob);
-                            obj.setGuard_mobile(guard_mobile);
-                            obj.setGuard_relationship(guard_relationship);
-
-                            obj.setNse_customer(1);
-                            obj.setNse_iin_number(iin_number);
-                            obj.setNse_active(nse_active);
-                            obj.setAddress_type(address_type_desc);
-                            obj.setAddress_type_code(address_type);
-                            obj.setSource_of_wealth(source_of_wealth);
-                            obj.setSource_of_wealth_code(source_of_wealth_code);
-                            obj.setAnnual_income_code(annual_income_code);
-                            obj.setAnnual_income(annual_income);
-
-                            obj.setNetworth_amount(networth_amount);
-                            obj.setNetworth_dob(networth_dob);
-                            obj.setPolitical(political);
-                            obj.setPolitical_code(political_code);
-                            obj.setNse_ach1("");
-                            obj.setNse_ach_flag1(0);
-                            obj.setNse_ach_approved1(0);
-
-                            obj.setPhone_office(phone_office);
-                            obj.setPhone_residence(phone_residence);
-                            obj.setType_id(1);
-                            obj.setUser_pass(user_pass);
-                            obj.setUser_password(user_password);
-                            obj.setActive(1);
-
-                            obj.setBse_customer(0);
-                            obj.setBse_active(0);
-                            obj.setClient_name(client_name);
-                            obj.setCreated_date(new Date());
-                            obj.set_purchase_allowed(false);
-                            obj.set_redeem_allowed(false);
-                            obj.set_switch_allowed(false);
-                            obj.set_stp_allowed(false);
-                            obj.set_swp_allowed(false);
-
-                            obj.setMf_oneday_change(true);
-                            obj.setRegister_source("IIN Update");
-                            obj.setOnline_flag("NSE");
-                            obj.setOnline_kyc_flag(0);
-
-                            obj.setNominee1_pan(nom1_pan);
-                            obj.setNominee1_percentage(nom1_percentage);
-                            obj.setNominee1_country(nom1_country);
-                            obj.setNominee1_guard_relationship(nom1_guard_rel);
-                            obj.setNominee2_type(nom2type);
-                            obj.setNominee2_guard_relationship(nom2_guard_rel);
-                            obj.setNominee2_pan(nom2_pan);
-                            obj.setNominee3_type(nom3type);
-                            obj.setNominee3_guard_relationship(nom3_guard_rel);
-                            obj.setNominee3_pan(nom3_pan);
-
-                            userServiceClient.saveUser(obj,token);
-                        }
+                    obj.setBank_name1(bank_name);
+                    obj.setBank_account_number1(bank_account_number);
+                    obj.setBank_account_type1(bank_account_type);
+                    obj.setBank_ifsc_code1(bank_ifsc_code);
+                    obj.setBank_micr_code1(bank_micr_code);
+                    obj.setBank_account_holder_name1(bank_account_holder_name);
+                    obj.setBank_branch1(bank_branch);
+                    obj.setBank_address1(bank_address);
+                    if(default_bank!= null && default_bank.trim().equalsIgnoreCase("YES")){
+                        obj.setDefault_bank1("Y");
                     }else{
+                        obj.setDefault_bank1("N");
+                    }
+                    obj.setBank_name2(bank_name_2);
+                    obj.setBank_account_number2(account_no_2);
+                    obj.setBank_account_type2(account_type_2);
+                    obj.setBank_ifsc_code2(ifsc_code_2);
+                    obj.setBank_micr_code2(micr_no_2);
+                    obj.setBank_account_holder_name2(bank_account_holder_name);
+                    obj.setBank_branch2(bank_branch_2);
+                    obj.setBank_address2(bank_address);
+                    //obj.setDefault_bank2(default_bank_flag_2);
+                    if(default_bank_flag_2!= null && default_bank_flag_2.trim().equalsIgnoreCase("YES")){
+                        obj.setDefault_bank2("Y");
+                    }else{
+                        obj.setDefault_bank2("N");
+                    }
 
-                        List<UserDto> name_list = userServiceClient.getUserDetailsByPanName(pan,name,client_name,token);
+                    obj.setBank_name3(bank_name_3);
+                    obj.setBank_account_number3(account_no_3);
+                    obj.setBank_account_type3(account_type_3);
+                    obj.setBank_ifsc_code3(ifsc_code_3);
+                    obj.setBank_micr_code3(micr_no_3);
+                    obj.setBank_account_holder_name3(bank_account_holder_name);
+                    obj.setBank_branch3(bank_branch_3);
+                    obj.setBank_address3(bank_address);
+                    //obj.setDefault_bank3(default_bank_flag_3);
+                    if(default_bank_flag_3!= null && default_bank_flag_3.trim().equalsIgnoreCase("YES")){
+                        obj.setDefault_bank3("Y");
+                    }else{
+                        obj.setDefault_bank3("N");
+                    }
+                    obj.setBank_name4(bank_name_4);
+                    obj.setBank_account_number4(account_no_4);
+                    obj.setBank_account_type4(account_type_4);
+                    obj.setBank_ifsc_code4(ifsc_code_4);
+                    obj.setBank_micr_code4(micr_no_4);
+                    obj.setBank_account_holder_name4(bank_account_holder_name);
+                    obj.setBank_branch4(bank_branch_4);
+                    obj.setBank_address4(bank_address);
+                    //obj.setDefault_bank4(default_bank_flag_4);
+                    if(default_bank_flag_4!= null && default_bank_flag_4.trim().equalsIgnoreCase("YES")){
+                        obj.setDefault_bank4("Y");
+                    }else{
+                        obj.setDefault_bank4("N");
+                    }
 
-                        if (name_list.size() > 0) {
-                            List<UserDto> user_list = userServiceClient.getActiveUsersByPanName("",name,client_name,token);
+                    obj.setBank_name5(bank_name_5);
+                    obj.setBank_account_number5(account_no_5);
+                    obj.setBank_account_type5(account_type_5);
+                    obj.setBank_ifsc_code5(ifsc_code_5);
+                    obj.setBank_micr_code5(micr_no_5);
+                    obj.setBank_account_holder_name5(bank_account_holder_name);
+                    obj.setBank_branch5(bank_branch_5);
+                    obj.setBank_address5(bank_address);
+                    //obj.setDefault_bank5(default_bank_flag_5);
+                    if(default_bank_flag_5!= null && default_bank_flag_5.trim().equalsIgnoreCase("YES")){
+                        obj.setDefault_bank5("Y");
+                    }else{
+                        obj.setDefault_bank5("N");
+                    }
+                    obj.setJoint_holder_name1(joint_holder_name);
+                    obj.setJoint_holder_dob1(joint_holder_dob);
+                    obj.setJoint_holder_pan1(joint_holder_pan);
+                    obj.setJoint_holder_email1(joint_holder_email);
+                    obj.setJoint_holder_mobile1(joint_holder_mobile);
+                    obj.setJoint_holder_name2(joint_holder_name1);
+                    obj.setJoint_holder_dob2(joint_holder_dob1);
+                    obj.setJoint_holder_pan2(joint_holder_pan1);
+                    obj.setJoint_holder_email2(joint_holder_email1);
+                    obj.setJoint_holder_mobile2(joint_holder_mobile1);
 
-                            if (user_list.size() > 0) {
+                    obj.setNumber_of_nominee(number_of_nominee);
 
-                                UserDto obj2 = user_list.get(0);
+                    if(nominee_type.equalsIgnoreCase("NO"))
+                    {
+                        obj.setNominee1_type("N");
+                    }else{
+                        obj.setNominee1_type("Y");
+                    }
 
-                                if(obj2.getNse_iin_number().equalsIgnoreCase(iin_number) && obj2.getBroker_code().equalsIgnoreCase(broker_code) && obj2.getName().equalsIgnoreCase(name)){
-                                    continue;
-                                }
+                    obj.setNominee1_name(nominee1_name);
+                    obj.setNominee1_dob(nominee1_dob);
 
-                                UserBseNseDto obj = new UserBseNseDto();
+                    String relationKey = nominee1_relation == null ? "" : nominee1_relation.toUpperCase(Locale.ROOT);
+                    String code = NseUtils.relationMap.get(relationKey);
+                    if (code == null) {
+                        obj.setNominee1_relation("");
+                    }else{
+                        obj.setNominee1_relation(code);
+                    }
 
+                    obj.setNominee1_address1(nominee1_address1);
+                    obj.setNominee1_address2(nominee1_address2);
+                    obj.setNominee1_address3(nominee1_address3);
+                    obj.setNominee1_city(nominee1_city);
+                    obj.setNominee1_pincode(nominee1_pincode);
+                    obj.setNominee1_state(nominee1_state);
+                    obj.setNominee1_country(nominee_1_country);
+                    obj.setNominee1_guard_name(nominee1_guard_name);
+                    obj.setNominee1_guard_pan(nominee1_guard_pan);
+                    obj.setNominee1_id_no(nominee1_id_no);
+                    obj.setNominee1_email(nominee1_email);
+                    obj.setNominee1_mobile(nominee1_mobile);
+                    if(nominee1_id_type.equalsIgnoreCase("PAN"))
+                    {
+                        obj.setNominee1_id_type("1");
+                    }else if(nominee1_id_type.equalsIgnoreCase("Adhaar"))
+                    {
+                        obj.setNominee1_id_type("2");
+                    }
+                    else if(nominee1_id_type.equalsIgnoreCase("Driving licence"))
+                    {
+                        obj.setNominee1_id_type("3");
+                    }else if(nominee1_id_type.equalsIgnoreCase("Passport"))
+                    {
+                        obj.setNominee1_id_type("4");
+                    }else{
+                        obj.setNominee1_id_type("");
+                    }
+
+                    obj.setNominee2_name(nominee2_name);
+
+                    if(nominee2_type.equalsIgnoreCase("NO"))
+                    {
+                        obj.setNominee2_type("N");
+                    }else{
+                        obj.setNominee2_type("Y");
+                    }
+
+                    obj.setNominee2_dob(nominee2_dob);
+
+                    String relationKey2 = nominee2_relation == null ? "" : nominee2_relation.toUpperCase(Locale.ROOT);
+                    String code2 = NseUtils.relationMap.get(relationKey2);
+                    if (code2 == null) {
+                        obj.setNominee2_relation("");
+                    }else{
+                        obj.setNominee2_relation(code2);
+                    }
+
+                    obj.setNominee2_address1(nominee2_address1);
+                    obj.setNominee2_city(nominee2_city);
+                    obj.setNominee2_pincode(nominee2_pincode);
+                    obj.setNominee2_state(nominee2_state);
+                    obj.setNominee2_country(nominee_2_country);
+                    obj.setNominee2_guard_name(nominee2_guard_name);
+                    obj.setNominee2_guard_pan(nominee2_guard_pan);
+                    obj.setNominee2_percentage(nominee2_percentage);
+                    obj.setNominee2_id_no(nominee2_id_no);
+                    obj.setNominee2_email(nominee2_email);
+                    obj.setNominee2_mobile(nominee2_mobile);
+                    if(nominee2_id_type.equalsIgnoreCase("PAN"))
+                    {
+                        obj.setNominee2_id_type("1");
+                    }else if(nominee2_id_type.equalsIgnoreCase("Adhaar"))
+                    {
+                        obj.setNominee2_id_type("2");
+                    }
+                    else if(nominee2_id_type.equalsIgnoreCase("Driving licence"))
+                    {
+                        obj.setNominee2_id_type("3");
+                    }else if(nominee2_id_type.equalsIgnoreCase("Passport"))
+                    {
+                        obj.setNominee2_id_type("4");
+                    }else{
+                        obj.setNominee2_id_type("");
+                    }
+
+                    obj.setNominee3_name(nominee3_name);
+                    if(nominee3_type.equalsIgnoreCase("NO"))
+                    {
+                        obj.setNominee3_type("N");
+                    }else{
+                        obj.setNominee3_type("Y");
+                    }
+                    obj.setNominee3_dob(nominee3_dob);
+
+                    String relationKey3 = nominee3_relation == null ? "" : nominee3_relation.toUpperCase(Locale.ROOT);
+                    String code3 = NseUtils.relationMap.get(relationKey3);
+                    if (code3 == null) {
+                        obj.setNominee3_relation("");
+                    }else{
+                        obj.setNominee3_relation(code3);
+                    }
+
+                    obj.setNominee3_address1(nominee3_address1);
+                    obj.setNominee3_city(nominee3_city);
+                    obj.setNominee3_pincode(nominee3_pincode);
+                    obj.setNominee3_state(nominee3_state);
+                    obj.setNominee3_country(nominee_3_country);
+                    obj.setNominee3_guard_name(nominee3_guard_name);
+                    obj.setNominee3_guard_pan(nominee3_guard_pan);
+                    obj.setNominee3_percentage(nominee3_percentage);
+                    obj.setNominee3_id_no(nominee3_id_no);
+                    obj.setNominee3_email(nominee3_email);
+                    obj.setNominee3_mobile(nominee3_mobile);
+                    if(nominee3_id_type.equalsIgnoreCase("PAN"))
+                    {
+                        obj.setNominee3_id_type("1");
+                    }else if(nominee3_id_type.equalsIgnoreCase("Adhaar"))
+                    {
+                        obj.setNominee3_id_type("2");
+                    }
+                    else if(nominee3_id_type.equalsIgnoreCase("Driving licence"))
+                    {
+                        obj.setNominee3_id_type("3");
+                    }else if(nominee3_id_type.equalsIgnoreCase("Passport"))
+                    {
+                        obj.setNominee3_id_type("4");
+                    }else{
+                        obj.setNominee3_id_type("");
+                    }
+
+                    obj.setGuard_name(guard_name);
+                    obj.setGuard_pan(guard_pan);
+                    obj.setGuard_dob(guard_dob);
+                    obj.setGuard_mobile(guard_mobile);
+                    obj.setGuard_relationship(guard_relationship);
+
+                    obj.setNse_customer(1);
+                    obj.setNse_iin_number(iin_number);
+                    obj.setNse_active(nse_active);
+                    obj.setAddress_type(address_type_desc);
+                    obj.setAddress_type_code(address_type);
+                    obj.setSource_of_wealth(source_of_wealth);
+                    obj.setSource_of_wealth_code(source_of_wealth_code);
+                    obj.setAnnual_income_code(annual_income_code);
+                    obj.setAnnual_income(annual_income);
+
+                    obj.setNetworth_amount(networth_amount);
+                    obj.setNetworth_dob(networth_dob);
+                    obj.setPolitical(political);
+                    obj.setPolitical_code(political_code);
+                    obj.setNse_ach1("");
+                    obj.setNse_ach_flag1(0);
+                    obj.setNse_ach_approved1(0);
+
+                    obj.setBse_customer(0);
+                    obj.setBse_active(0);
+                    obj.setClient_name(client_name);
+                    obj.setCreated_date(new Date());
+                    obj.setRegister_source("IIN Update");
+                    obj.setOnline_flag("NSE");
+
+                    obj.setNominee1_pan(nom1_pan);
+                    obj.setNominee1_percentage(nom1_percentage);
+                    obj.setNominee1_country(nom1_country);
+                    obj.setNominee1_guard_relationship(nom1_guard_rel);
+                    obj.setNominee2_type(nom2type);
+                    obj.setNominee2_guard_relationship(nom2_guard_rel);
+                    obj.setNominee2_pan(nom2_pan);
+                    obj.setNominee3_type(nom3type);
+                    obj.setNominee3_guard_relationship(nom3_guard_rel);
+                    obj.setNominee3_pan(nom3_pan);
+
+                    obj.setTax_status(tax_status);
+                    obj.setTax_status_code(pan_tax_status_code);
+
+                    System.out.println("Start getUserDetailByUserIdAndIinNumberBrokerCode at " + new Date() );
+                    List<UserDto> pan_list = userServiceClient.getUserDetailByUserIdAndIinNumberBrokerCode(client_name,iin_number,broker_code,token);
+                    System.out.println("End getUserDetailByUserIdAndIinNumberBrokerCode at " + new Date() );
+                    System.out.println("panList = " + pan_list.size());
+
+                    if(pan_list.size() > 0)
+                    {
+                        UserDto obj2 = pan_list.get(0);
+                        obj.setId(obj2.getId());
+                        obj.setUser_id(obj2.getUser_id());
+
+                        System.out.println("Start updateUserDetails at " + new Date() );
+                        userServiceClient.updateUserDetails(obj, token);
+                        System.out.println("End updateUserDetails at " + new Date() );
+                    }else{
+                        if (!pan.isEmpty()) {
+                            System.out.println("Start getUserDetailsByPanName at " + new Date());
+                            List<UserDto> pan_list1 = userServiceClient.getUserByPanName(pan, name, client_name, token);
+                            System.out.println("End getUserDetailsByPanName at " + new Date());
+
+                            if (pan_list1.size() >= 1) {
+                                UserDto obj2 = pan_list1.get(0);
                                 obj.setUser_id(obj2.getId());
-                                obj.setBroker_code(broker_code);
-                                obj.setEuin(euin);
-                                obj.setSalutation(title);
-                                obj.setName(name);
-                                obj.setPan(pan);
-                                obj.setDate_of_birth(date_of_birth);
-                                obj.setHolding_nature_code(holding_nature);
-                                obj.setHolding_nature(holding_nature_desc);
-                                obj.setTax_status_code(pan_tax_status_code);
-                                obj.setTax_status(pan_tax_status_desc);
-                                obj.setOccupation_code(occupation_code);
-                                obj.setOccupation(occupation);
-                                obj.setFather_name(father_name);
-                                obj.setStreet_1(street_1);
-                                obj.setStreet_2(street_2);
-                                obj.setStreet_3(street_3);
-                                obj.setCity(city);
-                                obj.setState(state);
-                                obj.setState_code(state_code);
-                                obj.setPincode(pincode);
-                                obj.setCountry(country);
-                                obj.setMobile(mobile);
-                                obj.setEmail(email);
-                                obj.setGender(gender);
-                                obj.setPlace_of_birth(place_of_birth);
-                                obj.setCountry_of_birth(country_of_birth);
-                                obj.setCountry_birth_code(country_birth_code);
+                                System.out.println("Start updateUserDetails at " + new Date());
+                                userServiceClient.updateUserDetails(obj, token);
+                                System.out.println("End updateUserDetails at " + new Date());
+                            } else {
+                                System.out.println("Start getMfdMasterDetailsByClientName at " + new Date());
+                                BseNseKeyDto arnDetails = userServiceClient.getByClientName(client_name, token);
+                                System.out.println("End getMfdMasterDetailsByClientName at " + new Date());
 
-                                obj.setNri_address1(nri_address1);
-                                obj.setNri_address2(nri_address2);
-                                obj.setNri_address3(nri_address3);
-                                obj.setNri_city(nri_city);
-                                obj.setNri_state(nri_state);
-                                obj.setNri_country(nri_country);
-                                obj.setNri_pincode(nri_pincode);
+                                String defaultPassword = String.valueOf(SECURE_RANDOM.nextInt(900000) + 100000);
+                                obj.setBranch(arnDetails.getDefault_branch());
+                                obj.setRm_name(arnDetails.getDefault_rm());
+                                obj.setUser_password(NseUtils.encryptPassword(defaultPassword));
+                                obj.setUser_pass(defaultPassword);
 
-                                obj.setBank_name1(bank_name);
-                                obj.setBank_code1(bank_code);
-                                obj.setBank_account_number1(bank_account_number);
-                                obj.setBank_account_type1(bank_account_type);
-                                obj.setBank_ifsc_code1(bank_ifsc_code);
-                                obj.setBank_micr_code1(bank_micr_code);
-                                obj.setBank_account_holder_name1(bank_account_holder_name);
-                                obj.setBank_branch1(bank_branch);
-                                obj.setBank_address1(bank_address);
-                                obj.setDefault_bank1(default_bank);
-
-                                obj.setJoint_holder_name1(joint_holder_name);
-                                obj.setJoint_holder_dob1(joint_holder_dob);
-                                obj.setJoint_holder_pan1(joint_holder_pan);
-                                obj.setJoint_holder_email1(joint_holder_email);
-                                obj.setJoint_holder_mobile1(joint_holder_mobile);
-                                obj.setJoint_holder_name2(joint_holder_name1);
-                                obj.setJoint_holder_dob2(joint_holder_dob1);
-                                obj.setJoint_holder_pan2(joint_holder_pan1);
-                                obj.setJoint_holder_email2(joint_holder_email1);
-                                obj.setJoint_holder_mobile2(joint_holder_mobile1);
-
-                                obj.setNumber_of_nominee(number_of_nominee);
-                                obj.setNominee1_type(nominee_type);
-                                obj.setNominee1_name(nominee1_name);
-                                obj.setNominee1_dob(nominee1_dob);
-                                obj.setNominee1_relation(nominee1_relation);
-                                obj.setNominee1_address1(nominee1_address1);
-                                obj.setNominee1_address2(nominee1_address2);
-                                obj.setNominee1_address3(nominee1_address3);
-                                obj.setNominee1_city(nominee1_city);
-                                obj.setNominee1_pincode(nominee1_pincode);
-                                obj.setNominee1_state(nominee1_state);
-                                obj.setNominee1_guard_name(nominee1_guard_name);
-                                obj.setNominee1_guard_pan(nominee1_guard_pan);
-
-                                obj.setNominee2_name(nominee2_name);
-                                obj.setNominee2_type(nominee2_type);
-                                obj.setNominee2_dob(nominee2_dob);
-                                obj.setNominee2_relation(nominee2_relation);
-                                obj.setNominee2_guard_name(nominee2_guard_name);
-                                obj.setNominee2_guard_pan(nominee2_guard_pan);
-                                obj.setNominee2_percentage(nominee2_percentage);
-
-                                obj.setNominee3_name(nominee3_name);
-                                obj.setNominee3_type(nominee3_type);
-                                obj.setNominee3_dob(nominee3_dob);
-                                obj.setNominee3_relation(nominee3_relation);
-                                obj.setNominee3_guard_name(nominee3_guard_name);
-                                obj.setNominee3_guard_pan(nominee3_guard_pan);
-                                obj.setNominee3_percentage(nominee3_percentage);
-
-                                obj.setGuard_name(guard_name);
-                                obj.setGuard_pan(guard_pan);
-                                obj.setGuard_dob(guard_dob);
-                                obj.setGuard_mobile(guard_mobile);
-                                obj.setGuard_relationship(guard_relationship);
-
-                                obj.setNse_customer(1);
-                                obj.setNse_iin_number(iin_number);
-                                obj.setNse_active(nse_active);
-                                obj.setAddress_type(address_type_desc);
-                                obj.setAddress_type_code(address_type);
-                                obj.setSource_of_wealth(source_of_wealth);
-                                obj.setSource_of_wealth_code(source_of_wealth_code);
-                                obj.setAnnual_income_code(annual_income_code);
-                                obj.setAnnual_income(annual_income);
-
-                                obj.setNetworth_amount(networth_amount);
-                                obj.setNetworth_dob(networth_dob);
-                                obj.setPolitical(political);
-                                obj.setPolitical_code(political_code);
-                                obj.setNse_ach1("");
-                                obj.setNse_ach_flag1(0);
-                                obj.setNse_ach_approved1(0);
-
-                                obj.setClient_name(client_name);
-                                obj.setCreated_date(new Date());
-                                obj.setRegister_source("IIN Update");
-                                obj.setOnline_flag("NSE");
-
-                                obj.setNominee1_pan(nom1_pan);
-                                obj.setNominee1_percentage(nom1_percentage);
-                                obj.setNominee1_country(nom1_country);
-                                obj.setNominee1_guard_relationship(nom1_guard_rel);
-                                obj.setNominee2_type(nom2type);
-                                obj.setNominee2_guard_relationship(nom2_guard_rel);
-                                obj.setNominee2_pan(nom2_pan);
-                                obj.setNominee3_type(nom3type);
-                                obj.setNominee3_guard_relationship(nom3_guard_rel);
-                                obj.setNominee3_pan(nom3_pan);
-
-                                userServiceClient.saveUserBseNseDetail(obj,token);
-                            }else{
-                                UserDto obj = name_list.get(0);
-                                obj.setBroker_code(broker_code);
-                                obj.setEuin(euin);
-                                obj.setSalutation(title);
-                                obj.setName(name.replaceAll("\\s+", " ").trim());
-                                obj.setPan(pan);
-                                obj.setDate_of_birth(date_of_birth);
-                                obj.setDate_of_birth_greeting(date_of_birth);
-                                obj.setHolding_nature_code(holding_nature);
-                                obj.setHolding_nature(holding_nature_desc);
-                                obj.setTax_status_code(pan_tax_status_code);
-                                obj.setTax_status(pan_tax_status_desc);
-                                obj.setOccupation_code(occupation_code);
-                                obj.setOccupation(occupation);
-                                obj.setFather_name(father_name);
-                                obj.setStreet_1(street_1);
-                                obj.setStreet_2(street_2);
-                                obj.setStreet_3(street_3);
-                                obj.setCity(city);
-                                obj.setState(state);
-                                obj.setState_code(state_code);
-                                obj.setPincode(pincode);
-                                obj.setCountry(country);
-                                obj.setMobile(mobile);
-                                obj.setEmail(email);
-                                obj.setGender(gender);
-                                obj.setPlace_of_birth(place_of_birth);
-                                obj.setCountry_of_birth(country_of_birth);
-                                obj.setCountry_birth_code(country_birth_code);
-
-                                obj.setNri_address1(nri_address1);
-                                obj.setNri_address2(nri_address2);
-                                obj.setNri_address3(nri_address3);
-                                obj.setNri_city(nri_city);
-                                obj.setNri_state(nri_state);
-                                obj.setNri_country(nri_country);
-                                obj.setNri_pincode(nri_pincode);
-
-                                obj.setBank_name1(bank_name);
-                                obj.setBank_code1(bank_code);
-                                obj.setBank_account_number1(bank_account_number);
-                                obj.setBank_account_type1(bank_account_type);
-                                obj.setBank_ifsc_code1(bank_ifsc_code);
-                                obj.setBank_micr_code1(bank_micr_code);
-                                obj.setBank_account_holder_name1(bank_account_holder_name);
-                                obj.setBank_branch1(bank_branch);
-                                obj.setBank_address1(bank_address);
-                                obj.setDefault_bank1(default_bank);
-
-                                obj.setJoint_holder_name1(joint_holder_name);
-                                obj.setJoint_holder_dob1(joint_holder_dob);
-                                obj.setJoint_holder_pan1(joint_holder_pan);
-                                obj.setJoint_holder_email1(joint_holder_email);
-                                obj.setJoint_holder_mobile1(joint_holder_mobile);
-                                obj.setJoint_holder_name2(joint_holder_name1);
-                                obj.setJoint_holder_dob2(joint_holder_dob1);
-                                obj.setJoint_holder_pan2(joint_holder_pan1);
-                                obj.setJoint_holder_email2(joint_holder_email1);
-                                obj.setJoint_holder_mobile2(joint_holder_mobile1);
-
-                                obj.setNumber_of_nominee(number_of_nominee);
-                                obj.setNominee1_type(nominee_type);
-                                obj.setNominee1_name(nominee1_name);
-                                obj.setNominee1_dob(nominee1_dob);
-                                obj.setNominee1_relation(nominee1_relation);
-                                obj.setNominee1_address1(nominee1_address1);
-                                obj.setNominee1_address2(nominee1_address2);
-                                obj.setNominee1_address3(nominee1_address3);
-                                obj.setNominee1_city(nominee1_city);
-                                obj.setNominee1_pincode(nominee1_pincode);
-                                obj.setNominee1_state(nominee1_state);
-                                obj.setNominee1_guard_name(nominee1_guard_name);
-                                obj.setNominee1_guard_pan(nominee1_guard_pan);
-
-                                obj.setNominee2_name(nominee2_name);
-                                obj.setNominee2_type(nominee2_type);
-                                obj.setNominee2_dob(nominee2_dob);
-                                obj.setNominee2_relation(nominee2_relation);
-                                obj.setNominee2_guard_name(nominee2_guard_name);
-                                obj.setNominee2_guard_pan(nominee2_guard_pan);
-                                obj.setNominee2_percentage(nominee2_percentage);
-
-                                obj.setNominee3_name(nominee3_name);
-                                obj.setNominee3_type(nominee3_type);
-                                obj.setNominee3_dob(nominee3_dob);
-                                obj.setNominee3_relation(nominee3_relation);
-                                obj.setNominee3_guard_name(nominee3_guard_name);
-                                obj.setNominee3_guard_pan(nominee3_guard_pan);
-                                obj.setNominee3_percentage(nominee3_percentage);
-
-                                obj.setGuard_name(guard_name);
-                                obj.setGuard_pan(guard_pan);
-                                obj.setGuard_dob(guard_dob);
-                                obj.setGuard_mobile(guard_mobile);
-                                obj.setGuard_relationship(guard_relationship);
-
-                                obj.setNse_customer(1);
-                                obj.setNse_iin_number(iin_number);
-                                obj.setNse_active(nse_active);
-                                obj.setAddress_type(address_type_desc);
-                                obj.setAddress_type_code(address_type);
-                                obj.setSource_of_wealth(source_of_wealth);
-                                obj.setSource_of_wealth_code(source_of_wealth_code);
-                                obj.setAnnual_income_code(annual_income_code);
-                                obj.setAnnual_income(annual_income);
-
-                                obj.setNetworth_amount(networth_amount);
-                                obj.setNetworth_dob(networth_dob);
-                                obj.setPolitical(political);
-                                obj.setPolitical_code(political_code);
-                                obj.setNse_ach1("");
-                                obj.setNse_ach_flag1(0);
-                                obj.setNse_ach_approved1(0);
-
-                                obj.setBse_customer(0);
-                                obj.setBse_active(0);
-                                obj.setClient_name(client_name);
-                                // obj.setCreated_date(new Date());
-                                obj.setRegister_source("IIN Update");
-                                obj.setOnline_flag("NSE");
-
-                                obj.setNominee1_pan(nom1_pan);
-                                obj.setNominee1_percentage(nom1_percentage);
-                                obj.setNominee1_country(nom1_country);
-                                obj.setNominee1_guard_relationship(nom1_guard_rel);
-                                obj.setNominee2_type(nom2type);
-                                obj.setNominee2_guard_relationship(nom2_guard_rel);
-                                obj.setNominee2_pan(nom2_pan);
-                                obj.setNominee3_type(nom3type);
-                                obj.setNominee3_guard_relationship(nom3_guard_rel);
-                                obj.setNominee3_pan(nom3_pan);
-
-                                userServiceClient.saveUser(obj,token);
+                                System.out.println("Start saveUserDetail at " + new Date());
+                                userServiceClient.saveUserDetail(obj, token);
+                                System.out.println("End saveUserDetail at " + new Date());
                             }
-                        }else{
+                        }else
+                        {
+                            System.out.println("Start getUserDetailsByGuardianPanAndMinorName at " + new Date() );
+                            List<UserDto> pan_list2 = userServiceClient.getUserByGuardPanName(guardian_pan,name,client_name,token);
+                            System.out.println("End getUserDetailsByGuardianPanAndMinorName at " + new Date() );
+                            if (pan_list2.size() >= 1)
+                            {
+                                UserDto obj2 = pan_list2.get(0);
+                                obj.setUser_id(obj2.getId());
 
-                            UserDto obj = new UserDto();
-
-                            obj.setBroker_code(broker_code);
-                            obj.setEuin(euin);
-                            obj.setSalutation(title);
-                            obj.setName(name.replaceAll("\\s+", " ").trim());
-                            obj.setPan(pan);
-                            obj.setBranch(default_branch);
-                            obj.setRm_name(default_rm);
-                            obj.setSuper_subbroker_name("");
-                            obj.setSubbroker_name("");
-                            obj.setDate_of_birth(date_of_birth);
-                            obj.setDate_of_birth_greeting(date_of_birth);
-                            obj.setHolding_nature_code(holding_nature);
-                            obj.setHolding_nature(holding_nature_desc);
-                            obj.setTax_status_code(pan_tax_status_code);
-                            obj.setTax_status(pan_tax_status_desc);
-                            obj.setOccupation_code(occupation_code);
-                            obj.setOccupation(occupation);
-                            obj.setFather_name(father_name);
-                            obj.setStreet_1(street_1);
-                            obj.setStreet_2(street_2);
-                            obj.setStreet_3(street_3);
-                            obj.setCity(city);
-                            obj.setState(state);
-                            obj.setState_code(state_code);
-                            obj.setPincode(pincode);
-                            obj.setCountry(country);
-                            obj.setMobile(mobile);
-                            obj.setEmail(email);
-                            obj.setGender(gender);
-                            obj.setPlace_of_birth(place_of_birth);
-                            obj.setCountry_of_birth(country_of_birth);
-                            obj.setCountry_birth_code(country_birth_code);
-
-                            obj.setNri_address1(nri_address1);
-                            obj.setNri_address2(nri_address2);
-                            obj.setNri_address3(nri_address3);
-                            obj.setNri_city(nri_city);
-                            obj.setNri_state(nri_state);
-                            obj.setNri_country(nri_country);
-                            obj.setNri_pincode(nri_pincode);
-
-                            obj.setBank_name1(bank_name);
-                            obj.setBank_code1(bank_code);
-                            obj.setBank_account_number1(bank_account_number);
-                            obj.setBank_account_type1(bank_account_type);
-                            obj.setBank_ifsc_code1(bank_ifsc_code);
-                            obj.setBank_micr_code1(bank_micr_code);
-                            obj.setBank_account_holder_name1(bank_account_holder_name);
-                            obj.setBank_branch1(bank_branch);
-                            obj.setBank_address1(bank_address);
-                            obj.setDefault_bank1(default_bank);
-
-                            obj.setJoint_holder_name1(joint_holder_name);
-                            obj.setJoint_holder_dob1(joint_holder_dob);
-                            obj.setJoint_holder_pan1(joint_holder_pan);
-                            obj.setJoint_holder_email1(joint_holder_email);
-                            obj.setJoint_holder_mobile1(joint_holder_mobile);
-                            obj.setJoint_holder_name2(joint_holder_name1);
-                            obj.setJoint_holder_dob2(joint_holder_dob1);
-                            obj.setJoint_holder_pan2(joint_holder_pan1);
-                            obj.setJoint_holder_email2(joint_holder_email1);
-                            obj.setJoint_holder_mobile2(joint_holder_mobile1);
-
-                            obj.setNumber_of_nominee(number_of_nominee);
-                            obj.setNominee1_type(nominee_type);
-                            obj.setNominee1_name(nominee1_name);
-                            obj.setNominee1_dob(nominee1_dob);
-                            obj.setNominee1_relation(nominee1_relation);
-                            obj.setNominee1_address1(nominee1_address1);
-                            obj.setNominee1_address2(nominee1_address2);
-                            obj.setNominee1_address3(nominee1_address3);
-                            obj.setNominee1_city(nominee1_city);
-                            obj.setNominee1_pincode(nominee1_pincode);
-                            obj.setNominee1_state(nominee1_state);
-                            obj.setNominee1_guard_name(nominee1_guard_name);
-                            obj.setNominee1_guard_pan(nominee1_guard_pan);
-
-                            obj.setNominee2_name(nominee2_name);
-                            obj.setNominee2_type(nominee2_type);
-                            obj.setNominee2_dob(nominee2_dob);
-                            obj.setNominee2_relation(nominee2_relation);
-                            obj.setNominee2_guard_name(nominee2_guard_name);
-                            obj.setNominee2_guard_pan(nominee2_guard_pan);
-                            obj.setNominee2_percentage(nominee2_percentage);
-
-                            obj.setNominee3_name(nominee3_name);
-                            obj.setNominee3_type(nominee3_type);
-                            obj.setNominee3_dob(nominee3_dob);
-                            obj.setNominee3_relation(nominee3_relation);
-                            obj.setNominee3_guard_name(nominee3_guard_name);
-                            obj.setNominee3_guard_pan(nominee3_guard_pan);
-                            obj.setNominee3_percentage(nominee3_percentage);
-
-                            obj.setGuard_name(guard_name);
-                            obj.setGuard_pan(guard_pan);
-                            obj.setGuard_dob(guard_dob);
-                            obj.setGuard_mobile(guard_mobile);
-                            obj.setGuard_relationship(guard_relationship);
-
-                            obj.setNse_customer(1);
-                            obj.setNse_iin_number(iin_number);
-                            obj.setNse_active(nse_active);
-                            obj.setAddress_type(address_type_desc);
-                            obj.setAddress_type_code(address_type);
-                            obj.setSource_of_wealth(source_of_wealth);
-                            obj.setSource_of_wealth_code(source_of_wealth_code);
-                            obj.setAnnual_income_code(annual_income_code);
-                            obj.setAnnual_income(annual_income);
-
-                            obj.setNetworth_amount(networth_amount);
-                            obj.setNetworth_dob(networth_dob);
-                            obj.setPolitical(political);
-                            obj.setPolitical_code(political_code);
-                            obj.setNse_ach1("");
-                            obj.setNse_ach_flag1(0);
-                            obj.setNse_ach_approved1(0);
-
-                            obj.setPhone_office(phone_office);
-                            obj.setPhone_residence(phone_residence);
-                            obj.setType_id(1);
-                            obj.setUser_pass(user_pass);
-                            obj.setUser_password(user_password);
-                            obj.setActive(1);
-
-                            obj.setBse_customer(0);
-                            obj.setBse_active(0);
-                            obj.setClient_name(client_name);
-                            obj.setCreated_date(new Date());
-
-                            obj.set_purchase_allowed(false);
-                            obj.set_redeem_allowed(false);
-                            obj.set_switch_allowed(false);
-                            obj.set_stp_allowed(false);
-                            obj.set_swp_allowed(false);
-
-                            obj.setMf_oneday_change(true);
-                            obj.setRegister_source("IIN Update");
-                            obj.setOnline_flag("NSE");
-                            obj.setOnline_kyc_flag(0);
-
-                            obj.setNominee1_pan(nom1_pan);
-                            obj.setNominee1_percentage(nom1_percentage);
-                            obj.setNominee1_country(nom1_country);
-                            obj.setNominee1_guard_relationship(nom1_guard_rel);
-                            obj.setNominee2_type(nom2type);
-                            obj.setNominee2_guard_relationship(nom2_guard_rel);
-                            obj.setNominee2_pan(nom2_pan);
-                            obj.setNominee3_type(nom3type);
-                            obj.setNominee3_guard_relationship(nom3_guard_rel);
-                            obj.setNominee3_pan(nom3_pan);
-
-                            userServiceClient.saveUser(obj,token);
+                                System.out.println("Start updateUserDetails at " + new Date() );
+                                userServiceClient.updateUserDetails(obj, token);
+                                System.out.println("End updateUserDetails at " + new Date() );
+                            }else
+                            {
+                                BseNseKeyDto arnDetails = userServiceClient.getByClientName(client_name,token);
+                                String defaultPassword = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
+                                obj.setBranch(arnDetails.getDefault_branch());
+                                obj.setRm_name(arnDetails.getDefault_rm());
+                                obj.setUser_password(NseUtils.encryptPassword(defaultPassword));
+                                obj.setUser_pass(defaultPassword);
+                                System.out.println("Start saveUserDetail at " + new Date() );
+                                userServiceClient.saveUserDetail(obj, token);
+                                System.out.println("End saveUserDetail at " + new Date() );
+                            }
                         }
                     }
                 }
-
             } catch (Exception ex){
                 ex.printStackTrace();
+                throw ex;
             }
-
         } catch (Exception ex)
         {
             ex.printStackTrace();
+            throw  ex;
         }
-
     }
 
+    private String getRelationCode(String relationLabel) {
+        if (relationLabel == null) {
+            return null;
+        }
+        switch (relationLabel.trim()) {
+            case "Self":               return "SE";
+            case "Spouse":             return "SP";
+            case "Dependent Children": return "DC";
+            case "Dependent Siblings": return "DS";
+            case "Dependent Parents":  return "DP";
+            case "Guardian":           return "GD";
+            case "PMS":                return "PM";
+            case "Custodian":          return "CD";
+            case "POA":                return "PO";
+            default:                   return relationLabel.trim(); // already a code, pass through
+        }
+    }
 
     //getFolioNumberBySchemeCode
 

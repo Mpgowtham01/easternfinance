@@ -45,6 +45,19 @@ public interface UserRepository extends JpaRepository<User, Integer>
             @Param("clientName") String clientName
     );
 
+    @Query(value = "SELECT * FROM users WHERE client_name = :clientName AND active = 1  AND pan = :pan AND name= :name ", nativeQuery = true)
+    Optional<User> findByPanNameAndClientName(@Param("pan") String pan, @Param("name") String name, @Param("clientName") String clientName);
+
+    @Query(value = "SELECT * FROM users WHERE client_name = :clientName AND active = 1  AND guard_pan = :pan AND name= :name ", nativeQuery = true)
+    Optional<User> findByGuardPanNameAndClientName(@Param("pan") String pan, @Param("name") String name, @Param("clientName") String clientName);
+
+    @Query("SELECT u FROM User u WHERE u.guard_pan = :guard_pan AND u.name = :name AND u.client_name = :clientName")
+    List<User> findByGuardPanAndNameAndClientName(
+            @Param("guard_pan") String guard_pan,
+            @Param("name") String name,
+            @Param("clientName") String clientName
+    );
+
     //
 //    @Query("SELECT u FROM User u WHERE u.client_name = :clientName AND u.nse_iin_number = :nseIinNumber")
 //    Optional<User> findByClientNameAndNseIinNumber(@Param("clientName") String clientName, @Param("nseIinNumber") String nseIinNumber);

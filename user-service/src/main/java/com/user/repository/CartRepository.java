@@ -136,4 +136,7 @@ public interface CartRepository extends JpaRepository<Cart, Integer>
             @Param("cart_id") Integer cart_id
     );
 
+    @Query("SELECT c.purchase_type, COUNT(c) FROM Cart c WHERE c.user_id = :user_id AND c.active = true GROUP BY c.purchase_type")
+    List<Object[]> findActiveCartCount( @Param("user_id") Integer user_id);
+
 }
