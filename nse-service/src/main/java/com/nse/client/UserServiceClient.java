@@ -511,4 +511,14 @@ public interface UserServiceClient {
             @RequestHeader("Authorization") String token
     );
 
+    @PostMapping("/update-status")
+    int updateMandateStatus(@RequestParam("status") Integer status,
+                            @RequestParam("remark") String remark,
+                            @RequestParam("broker_code") String broker_code,
+                            @RequestParam("clientName") String clientName,
+                            @RequestParam("online_code") String online_code,
+                            @RequestParam("orderId") String orderId,
+                            @RequestParam("accountNo") String accountNo,
+                            @RequestHeader("Authorization") String token);
+
 }

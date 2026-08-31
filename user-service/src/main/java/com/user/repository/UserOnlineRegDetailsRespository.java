@@ -213,4 +213,13 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
     @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND nse_iin_number = :iin_number", nativeQuery = true)
     List<UsersOnlineRegDetails> findUserByIdAndClientNameAndiin_number(@Param("userId") Integer userid, @Param("clientName") String clientName, @Param("iin_number") String iin_number);
 
+    @Query("FROM UsersOnlineRegDetails u " +
+            "WHERE u.nse_iin_number = :nseIinNumber " +
+            "AND u.broker_code = :brokerCode " +
+            "AND u.client_name = :clientName")
+    Optional<UsersOnlineRegDetails> findByIinumberAndBrokerCode(
+            @Param("nseIinNumber") String nseIinNumber,
+            @Param("brokerCode") String brokerCode,
+            @Param("clientName") String clientName
+    );
 }

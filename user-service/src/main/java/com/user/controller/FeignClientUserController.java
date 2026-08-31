@@ -2558,4 +2558,87 @@ public class FeignClientUserController
 		}
 	}
 
+	@PostMapping("/update-status")
+	public int updateMandateStatus(@RequestParam("status") int status,
+								   @RequestParam("remark") String remark,
+								   @RequestParam("broker_code") String broker_code,
+								   @RequestParam("clientName") String clientName,
+								   @RequestParam("online_code") String online_code,
+								   @RequestParam("orderId") String orderId,
+								   @RequestParam("accountNo") String accountNo) {
+//        System.out.println("status=" + status +
+//                ", remark=" + remark +
+//                ", broker_code=" + broker_code +
+//                ", clientName=" + clientName +
+//                ", online_id=" + online_code +
+//                ", accountNo=" + accountNo);
+
+		List<UsersMandateDetails> existingList =
+				usersMandateDetailsRespository.findByBrokerCodeAndOnlineCodeAndAccountNo(
+						broker_code, online_code, accountNo, orderId);
+
+		if (!existingList.isEmpty()) {
+			UsersMandateDetails mandate = existingList.get(0);
+
+			if (mandate.getNse_ach().equals(orderId)) {
+				return usersMandateDetailsRespository.updateMandateStatus1(
+						status, remark, broker_code, clientName, online_code, orderId, accountNo
+				);
+			} else {
+				if (status == 1) {
+
+					Optional<UsersOnlineRegDetails> userDetails = userOnlineRegDetailsRespository.findByIinumberAndBrokerCode(online_code, broker_code, clientName);
+
+					UsersMandateDetails newMandate = new UsersMandateDetails();
+					newMandate.setNse_ach_approved(status);
+					newMandate.setNse_ach_rej_reason(remark);
+					newMandate.setBroker_code(broker_code);
+					newMandate.setClient_name(clientName);
+					newMandate.setOnline_code(online_code);
+					newMandate.setNse_ach(orderId);
+					newMandate.setBank_account_number(accountNo);
+					newMandate.setOnline_id(userDetails.get().getId());
+					newMandate.setOnline_flag("NSE");
+					newMandate.setUser_id(userDetails.get().getUser_id());
+
+					usersMandateDetailsRespository.save(newMandate);
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		} else {
+			if (status == 1) {
+				Optional<UsersOnlineRegDetails> userDetails = userOnlineRegDetailsRespository.findByIinumberAndBrokerCode(online_code, broker_code, clientName);
+
+				if (userDetails.isPresent()) {
+					UsersOnlineRegDetails details = userDetails.get();
+
+					UsersMandateDetails newMandate = new UsersMandateDetails();
+					newMandate.setNse_ach_approved(status);
+					newMandate.setNse_ach_rej_reason(remark);
+					newMandate.setBroker_code(broker_code);
+					newMandate.setClient_name(clientName);
+					newMandate.setOnline_code(online_code);
+					newMandate.setNse_ach(orderId);
+					newMandate.setBank_account_number(accountNo);
+					newMandate.setOnline_id(details.getId());
+					newMandate.setOnline_flag("NSE");
+					newMandate.setUser_id(details.getUser_id());
+
+					usersMandateDetailsRespository.save(newMandate);
+					return 1;
+				} else {
+					// No matching user → just skip, don’t throw error
+					System.out.println("No user found for online_code=" + online_code
+							+ ", broker_code=" + broker_code
+							+ ", clientName=" + clientName);
+					return 0;
+				}
+			} else {
+				return 0;
+			}
+		}
+	}
+
 }

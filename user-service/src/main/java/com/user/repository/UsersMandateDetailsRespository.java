@@ -115,4 +115,30 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
             @Param("nse_ach") String nse_ach
     );
 
+    @Query("FROM UsersMandateDetails u WHERE u.broker_code = :brokerCode AND u.online_flag = 'NSE' AND u.online_code = :onlineCode AND u.nse_ach = :orderId AND u.bank_account_number = :accountNo ORDER BY u.id DESC")
+    List<UsersMandateDetails> findByBrokerCodeAndOnlineCodeAndAccountNo(
+            @Param("brokerCode") String brokerCode,
+            @Param("onlineCode") String onlineCode,
+            @Param("accountNo") String accountNo,
+            @Param("orderId") String orderId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UsersMandateDetails u " +
+            "SET u.nse_ach_approved = :status, " +
+            "u.nse_ach_rej_reason = :remark " +
+            "WHERE u.broker_code = :broker_code " +
+            "AND u.client_name = :clientName " +
+            "AND u.online_flag = 'NSE' " +
+            "AND u.bank_account_number = :accountNo " +
+            "AND u.online_code = :online_code " +
+            "AND u.nse_ach = :orderId ")
+    int updateMandateStatus1(@Param("status") int status,
+                             @Param("remark") String remark,
+                             @Param("broker_code") String broker_code,
+                             @Param("clientName") String clientName,
+                             @Param("online_code") String online_code,
+                             @Param("orderId") String orderId,
+                             @Param("accountNo") String accountNo);
+
 }
