@@ -6269,10 +6269,9 @@ public class NseUserController
             if(user.isPresent())
             {
                 BseNseKey bseNseKey = bseNseKeyRepository.findByClientName(client_name);
-
                 String vendors = UserUtils.checkParameter(bseNseKey.getNse_bse());
 
-                if(StringHelper.isNotEmpty(vendors))
+                if(StringHelper.isEmpty(vendors))
                 {
                     return UserUtils.getCommonResponse("Client Not Available", StatusMessage.FailureCode);
                 }

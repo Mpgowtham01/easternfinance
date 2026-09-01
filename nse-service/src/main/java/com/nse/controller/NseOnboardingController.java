@@ -1350,16 +1350,16 @@ public class NseOnboardingController {
             @RequestParam(required = false) String guard_relation,
             @RequestParam(required = false) String guard_account_relation,
             @RequestParam(required = false) String father_name,
-            @RequestParam(required = false) String place_birth,
+            //@RequestParam(required = false) String place_birth,
             @RequestParam(required = false) String country_birth,
             @RequestParam(required = false) String country_birth_code,
             @RequestParam(required = false) String occupation,
             @RequestParam(required = false) String occupation_code,
-            @RequestParam(required = false) String income,
-            @RequestParam(required = false) String income_code,
-            @RequestParam(required = false) String source_wealth,
-            @RequestParam(required = false) String source_wealth_code,
-            @RequestParam(required = false) String political_status,
+//            @RequestParam(required = false) String income,
+//            @RequestParam(required = false) String income_code,
+//            @RequestParam(required = false) String source_wealth,
+//            @RequestParam(required = false) String source_wealth_code,
+//            @RequestParam(required = false) String political_status,
             @RequestParam(required = false) String address1,
             @RequestParam(required = false) String address2,
             @RequestParam(required = false) String address3,
@@ -1378,6 +1378,46 @@ public class NseOnboardingController {
             @RequestParam(required = false) String account_holder_name,
             @RequestParam(required = false) String account_type,
             @RequestParam(required = false) String account_desc,
+            @RequestParam(required = false) String ifsc_code2,
+            @RequestParam(required = false) String micr_code2,
+            @RequestParam(required = false) String bank_name2,
+            @RequestParam(required = false) String bank_code2,
+            @RequestParam(required = false) String branch_name2,
+            @RequestParam(required = false) String bank_address2,
+            @RequestParam(required = false) String account_number2,
+            @RequestParam(required = false) String account_holder_name2,
+            @RequestParam(required = false) String account_type2,
+            @RequestParam(required = false) String account_desc2,
+            @RequestParam(required = false) String ifsc_code3,
+            @RequestParam(required = false) String micr_code3,
+            @RequestParam(required = false) String bank_name3,
+            @RequestParam(required = false) String bank_code3,
+            @RequestParam(required = false) String branch_name3,
+            @RequestParam(required = false) String bank_address3,
+            @RequestParam(required = false) String account_number3,
+            @RequestParam(required = false) String account_holder_name3,
+            @RequestParam(required = false) String account_type3,
+            @RequestParam(required = false) String account_desc3,
+            @RequestParam(required = false) String ifsc_code4,
+            @RequestParam(required = false) String micr_code4,
+            @RequestParam(required = false) String bank_name4,
+            @RequestParam(required = false) String bank_code4,
+            @RequestParam(required = false) String branch_name4,
+            @RequestParam(required = false) String bank_address4,
+            @RequestParam(required = false) String account_number4,
+            @RequestParam(required = false) String account_holder_name4,
+            @RequestParam(required = false) String account_type4,
+            @RequestParam(required = false) String account_desc4,
+            @RequestParam(required = false) String ifsc_code5,
+            @RequestParam(required = false) String micr_code5,
+            @RequestParam(required = false) String bank_name5,
+            @RequestParam(required = false) String bank_code5,
+            @RequestParam(required = false) String branch_name5,
+            @RequestParam(required = false) String bank_address5,
+            @RequestParam(required = false) String account_number5,
+            @RequestParam(required = false) String account_holder_name5,
+            @RequestParam(required = false) String account_type5,
+            @RequestParam(required = false) String account_desc5,
             @RequestParam(required = false) String joint_holder_name,
             @RequestParam(required = false) String joint_holder_pan,
             @RequestParam(required = false) String joint_holder_email,
@@ -1401,14 +1441,14 @@ public class NseOnboardingController {
             @RequestParam(required = false) String nri_country,
             @RequestParam(required = false) String address_type,
             @RequestParam(required = false) String address_type_desc,
-            @RequestParam(required = false) String joint_holder_place_birth,
+            //@RequestParam(required = false) String joint_holder_place_birth,
             @RequestParam(required = false) String joint_holder_country_birth,
             @RequestParam(required = false) String joint_holder_occupation,
             @RequestParam(required = false) String joint_holder_income,
             @RequestParam(required = false) String joint_holder_source_wealth,
             @RequestParam(required = false) String joint_holder_address_type,
             @RequestParam(required = false) String joint_holder_political,
-            @RequestParam(required = false) String joint_holder_place_birth1,
+            //@RequestParam(required = false) String joint_holder_place_birth1,
             @RequestParam(required = false) String joint_holder_country_birth1,
             @RequestParam(required = false) String joint_holder_occupation1,
             @RequestParam(required = false) String joint_holder_income1,
@@ -1419,6 +1459,7 @@ public class NseOnboardingController {
             @RequestParam(required = false) String number_of_nominee_desc,
             @RequestParam(required = false) String nominee_type,
             @RequestParam(required = false) String nominee_type_desc,
+            @RequestParam(required = false) String nominee_soa,
             @RequestParam(required = false) String nominee1_name,
             @RequestParam(required = false) String nominee1_dob,
             @RequestParam(required = false) String nominee1_address1,
@@ -1509,7 +1550,20 @@ public class NseOnboardingController {
         try {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
 
-            UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            System.out.println("-----------------------------------");
+            System.out.println("nominee1_id_no = " + nominee1_id_no);
+            System.out.println("nominee1_id_type = " + nominee1_id_type);
+            System.out.println("nominee1_email = " + nominee1_email);
+            System.out.println("nominee1_mobile = " + nominee1_mobile);
+            System.out.println("-----------------------------------");
+
+            UserDto users =null;
+            try {
+                users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            } catch (FeignException e)
+            {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
             String client_name = users.getClient_name();
 
             // Add this block after all @RequestParam declarations inside the method
@@ -1533,16 +1587,16 @@ public class NseOnboardingController {
             guard_relation = NseUtils.checkParem(guard_relation);
             guard_account_relation = NseUtils.checkParem(guard_account_relation);
             father_name = NseUtils.checkParem(father_name);
-            place_birth = NseUtils.checkParem(place_birth);
+            //place_birth = NseUtils.checkParem(place_birth);
             country_birth = NseUtils.checkParem(country_birth);
             country_birth_code = NseUtils.checkParem(country_birth_code);
             occupation = NseUtils.checkParem(occupation);
             occupation_code = NseUtils.checkParem(occupation_code);
-            income = NseUtils.checkParem(income);
-            income_code = NseUtils.checkParem(income_code);
-            source_wealth = NseUtils.checkParem(source_wealth);
-            source_wealth_code = NseUtils.checkParem(source_wealth_code);
-            political_status = NseUtils.checkParem(political_status);
+//            income = NseUtils.checkParem(income);
+//            income_code = NseUtils.checkParem(income_code);
+//            source_wealth = NseUtils.checkParem(source_wealth);
+//            source_wealth_code = NseUtils.checkParem(source_wealth_code);
+//            political_status = NseUtils.checkParem(political_status);
             address1 = NseUtils.checkParem(address1);
             address2 = NseUtils.checkParem(address2);
             address3 = NseUtils.checkParem(address3);
@@ -1554,13 +1608,49 @@ public class NseOnboardingController {
             ifsc_code = NseUtils.checkParem(ifsc_code);
             micr_code = NseUtils.checkParem(micr_code);
             bank_name = NseUtils.checkParem(bank_name);
-            bank_code = NseUtils.checkParem(bank_code);
             branch_name = NseUtils.checkParem(branch_name);
             bank_address = NseUtils.checkParem(bank_address);
             account_number = NseUtils.checkParem(account_number);
             account_holder_name = NseUtils.checkParem(account_holder_name);
             account_type = NseUtils.checkParem(account_type);
-            account_desc = NseUtils.checkParem(account_desc);
+
+            ifsc_code2 = NseUtils.checkParem(ifsc_code2);
+            micr_code2 = NseUtils.checkParem(micr_code2);
+            bank_name2 = NseUtils.checkParem(bank_name2);
+            branch_name2 = NseUtils.checkParem(branch_name2);
+            bank_address2 = NseUtils.checkParem(bank_address2);
+            account_number2 = NseUtils.checkParem(account_number2);
+            account_holder_name2 = NseUtils.checkParem(account_holder_name2);
+            account_type2 = NseUtils.checkParem(account_type2);
+
+            ifsc_code3 = NseUtils.checkParem(ifsc_code3);
+            micr_code3 = NseUtils.checkParem(micr_code3);
+            bank_name3 = NseUtils.checkParem(bank_name3);
+            branch_name3 = NseUtils.checkParem(branch_name3);
+            bank_address3 = NseUtils.checkParem(bank_address3);
+            account_number3 = NseUtils.checkParem(account_number3);
+            account_holder_name3 = NseUtils.checkParem(account_holder_name3);
+            account_type3 = NseUtils.checkParem(account_type3);
+
+            ifsc_code4 = NseUtils.checkParem(ifsc_code4);
+            micr_code4 = NseUtils.checkParem(micr_code4);
+            bank_name4 = NseUtils.checkParem(bank_name4);
+            branch_name4 = NseUtils.checkParem(branch_name4);
+            bank_address4 = NseUtils.checkParem(bank_address4);
+            account_number4 = NseUtils.checkParem(account_number4);
+            account_holder_name4 = NseUtils.checkParem(account_holder_name4);
+            account_type4 = NseUtils.checkParem(account_type4);
+
+            ifsc_code5 = NseUtils.checkParem(ifsc_code5);
+            micr_code5 = NseUtils.checkParem(micr_code5);
+            bank_name5 = NseUtils.checkParem(bank_name5);
+//            bank_code5 = NseUtils.checkParem(bank_code5);
+            branch_name5 = NseUtils.checkParem(branch_name5);
+            bank_address5 = NseUtils.checkParem(bank_address5);
+            account_number5 = NseUtils.checkParem(account_number5);
+            account_holder_name5 = NseUtils.checkParem(account_holder_name5);
+            account_type5 = NseUtils.checkParem(account_type5);
+
             joint_holder_name = NseUtils.checkParem(joint_holder_name);
             joint_holder_pan = NseUtils.checkParem(joint_holder_pan);
             joint_holder_email = NseUtils.checkParem(joint_holder_email);
@@ -1584,14 +1674,14 @@ public class NseOnboardingController {
             nri_country = NseUtils.checkParem(nri_country);
             address_type = NseUtils.checkParem(address_type);
             address_type_desc = NseUtils.checkParem(address_type_desc);
-            joint_holder_place_birth = NseUtils.checkParem(joint_holder_place_birth);
+            //joint_holder_place_birth = NseUtils.checkParem(joint_holder_place_birth);
             joint_holder_country_birth = NseUtils.checkParem(joint_holder_country_birth);
             joint_holder_occupation = NseUtils.checkParem(joint_holder_occupation);
             joint_holder_income = NseUtils.checkParem(joint_holder_income);
             joint_holder_source_wealth = NseUtils.checkParem(joint_holder_source_wealth);
             joint_holder_address_type = NseUtils.checkParem(joint_holder_address_type);
             joint_holder_political = NseUtils.checkParem(joint_holder_political);
-            joint_holder_place_birth1 = NseUtils.checkParem(joint_holder_place_birth1);
+            //joint_holder_place_birth1 = NseUtils.checkParem(joint_holder_place_birth1);
             joint_holder_country_birth1 = NseUtils.checkParem(joint_holder_country_birth1);
             joint_holder_occupation1 = NseUtils.checkParem(joint_holder_occupation1);
             joint_holder_income1 = NseUtils.checkParem(joint_holder_income1);
@@ -1599,9 +1689,9 @@ public class NseOnboardingController {
             joint_holder_address_type1 = NseUtils.checkParem(joint_holder_address_type1);
             joint_holder_political1 = NseUtils.checkParem(joint_holder_political1);
             number_of_nominee = NseUtils.checkParem(number_of_nominee);
-            number_of_nominee_desc = NseUtils.checkParem(number_of_nominee_desc);
+//            number_of_nominee_desc = NseUtils.checkParem(number_of_nominee_desc);
             nominee_type = NseUtils.checkParem(nominee_type);
-            nominee_type_desc = NseUtils.checkParem(nominee_type_desc);
+//            nominee_type_desc = NseUtils.checkParem(nominee_type_desc);
             nominee1_name = NseUtils.checkParem(nominee1_name);
             nominee1_dob = NseUtils.checkParem(nominee1_dob);
             nominee1_address1 = NseUtils.checkParem(nominee1_address1);
@@ -1622,14 +1712,14 @@ public class NseOnboardingController {
             nominee1_guard_relationship = NseUtils.checkParem(nominee1_guard_relationship);
             nominee1_percentage = NseUtils.checkParem(nominee1_percentage);
             nominee2_type = NseUtils.checkParem(nominee2_type);
-            nominee2_type_desc = NseUtils.checkParem(nominee2_type_desc);
+//            nominee2_type_desc = NseUtils.checkParem(nominee2_type_desc);
             nominee2_name = NseUtils.checkParem(nominee2_name);
             nominee2_dob = NseUtils.checkParem(nominee2_dob);
             nominee2_relation = NseUtils.checkParem(nominee2_relation);
             nominee2_percentage = NseUtils.checkParem(nominee2_percentage);
             nominee2_address1 = NseUtils.checkParem(nominee2_address1);
-            nominee2_address2 = NseUtils.checkParem(nominee2_address2);
-            nominee2_address3 = NseUtils.checkParem(nominee2_address3);
+//            nominee2_address2 = NseUtils.checkParem(nominee2_address2);
+//            nominee2_address3 = NseUtils.checkParem(nominee2_address3);
             nominee2_pincode = NseUtils.checkParem(nominee2_pincode);
             nominee2_city = NseUtils.checkParem(nominee2_city);
             nominee2_state = NseUtils.checkParem(nominee2_state);
@@ -1643,14 +1733,14 @@ public class NseOnboardingController {
             nominee2_guard_pan = NseUtils.checkParem(nominee2_guard_pan);
             nominee2_guard_relationship = NseUtils.checkParem(nominee2_guard_relationship);
             nominee3_type = NseUtils.checkParem(nominee3_type);
-            nominee3_type_desc = NseUtils.checkParem(nominee3_type_desc);
+//            nominee3_type_desc = NseUtils.checkParem(nominee3_type_desc);
             nominee3_name = NseUtils.checkParem(nominee3_name);
             nominee3_dob = NseUtils.checkParem(nominee3_dob);
             nominee3_relation = NseUtils.checkParem(nominee3_relation);
             nominee3_percentage = NseUtils.checkParem(nominee3_percentage);
             nominee3_address1 = NseUtils.checkParem(nominee3_address1);
-            nominee3_address2 = NseUtils.checkParem(nominee3_address2);
-            nominee3_address3 = NseUtils.checkParem(nominee3_address3);
+//            nominee3_address2 = NseUtils.checkParem(nominee3_address2);
+//            nominee3_address3 = NseUtils.checkParem(nominee3_address3);
             nominee3_pincode = NseUtils.checkParem(nominee3_pincode);
             nominee3_city = NseUtils.checkParem(nominee3_city);
             nominee3_state = NseUtils.checkParem(nominee3_state);
@@ -1666,11 +1756,11 @@ public class NseOnboardingController {
             networth_dob = NseUtils.checkParem(networth_dob);
             networth_amount = NseUtils.checkParem(networth_amount);
             occupation_other = NseUtils.checkParem(occupation_other);
-            source_wealth_other = NseUtils.checkParem(source_wealth_other);
-            joint_holder_occupation_other = NseUtils.checkParem(joint_holder_occupation_other);
-            joint_source_wealth_other = NseUtils.checkParem(joint_source_wealth_other);
-            joint_holder_occupation_other1 = NseUtils.checkParem(joint_holder_occupation_other1);
-            joint_source_wealth_other1 = NseUtils.checkParem(joint_source_wealth_other1);
+//            source_wealth_other = NseUtils.checkParem(source_wealth_other);
+//            joint_holder_occupation_other = NseUtils.checkParem(joint_holder_occupation_other);
+//            joint_source_wealth_other = NseUtils.checkParem(joint_source_wealth_other);
+//            joint_holder_occupation_other1 = NseUtils.checkParem(joint_holder_occupation_other1);
+//            joint_source_wealth_other1 = NseUtils.checkParem(joint_source_wealth_other1);
             alter_mobile = NseUtils.checkParem(alter_mobile);
             alter_email = NseUtils.checkParem(alter_email);
             inv_category = NseUtils.checkParem(inv_category);
@@ -1686,500 +1776,316 @@ public class NseOnboardingController {
             joint_holder_mobile2_isd_code = NseUtils.checkParem(joint_holder_mobile2_isd_code);
             arn_number = NseUtils.checkParem(arn_number);
             gender = NseUtils.checkParem(gender);
+            nominee_soa = NseUtils.checkParem(nominee_soa);
 
+            if(nominee_soa.isEmpty())
+            {
+                nominee_soa = "N";
+            }
 
             String euin = "";
             if (!arn_number.isEmpty()) {
                 BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
                 String broker_code1 = nsekey.getBrokerCode();
-
                 if (broker_code1 == null) {
                     broker_code1 = "";
                 }
 
-
-                    euin = nsekey.getEuin();
-                    euin = euin.split(",")[0];
-
+                euin = nsekey.getEuin();
+                euin = euin.split(",")[0];
             }
 
-            UserDto user = userServiceClient.getUserDetailsByID(client_name, Integer.parseInt(userid),token);
-
-            if (user != null && user.getNse_iin_number().equalsIgnoreCase(iin_number)) {
-
-
-                user.setPan(pan);
-                user.setName(name.replaceAll("\\s+", " ").trim());
-                user.setEmail(email);
-                user.setMobile(mobile);
-                user.setMobile_isd_code(mobile_isd_code);
-                user.setMobile_relation(mobile_relation);
-                user.setEmail_relation(email_relation);
-                user.setAlter_email(alter_email);
-                user.setAlter_mobile(alter_mobile);
-                user.setDate_of_birth(dob);
-                user.setDate_of_birth_greeting(dob);
-                user.setFather_name(father_name);
-                user.setPhone_office(office_phone);
-                user.setPhone_residence(residence_phone);
-                user.setPlace_of_birth(place_birth);
-                user.setCountry_of_birth(country_birth);
-                user.setCountry_birth_code(country_birth_code);
-                user.setInv_category(inv_category);
-                user.setOccupation_code(occupation_code);
-                user.setOccupation(occupation);
-                user.setAnnual_income(income);
-                user.setAnnual_income_code(income_code);
-                user.setSource_of_wealth(source_wealth);
-                user.setSource_of_wealth_code(source_wealth_code);
-
-                if (source_wealth_code.equalsIgnoreCase("08") && !source_wealth_other.isEmpty()) {
-                    user.setSource_of_wealth(source_wealth_other);
-                }
-                user.setPolitical_code(political_status);
-                if (political_status.equalsIgnoreCase("Y") || political_status.equalsIgnoreCase("PEP")) {
-                    user.setPolitical("I am Politically exposed person");
-                }
-                if (political_status.equalsIgnoreCase("R") || political_status.equalsIgnoreCase("RPEP")) {
-                    user.setPolitical("I am related to Politically exposed person");
-                }
-                if (political_status.equalsIgnoreCase("N") || political_status.equalsIgnoreCase("NA")) {
-                    user.setPolitical("Not Applicable");
-                }
-
-                user.setPincode(pincode);
-                user.setCity(city);
-                user.setState(state);
-
-                System.out.println("updateUserDetailsByIIN::country: " + country);
-                user.setCountry(country);
-
-                user.setStreet_1(address1);
-                user.setStreet_2(address2);
-                user.setStreet_3(address3);
-                user.setState_code(state_code);
-                user.setBank_ifsc_code1(ifsc_code);
-                user.setBank_micr_code1(micr_code);
-                user.setBank_name1(bank_name);
-                user.setBank_code1(bank_code);
-                user.setBank_branch1(branch_name);
-                user.setBank_address1(bank_address);
-                user.setBank_account_number1(account_number);
-                user.setBank_account_holder_name1(account_holder_name);
-                user.setBank_account_type1(account_type);
-                user.setDefault_bank1("Y");
-                user.setBank_proof1(bank_proof);
-                user.setGuard_name(guard_name);
-                user.setGuard_pan(guard_pan);
-                user.setGuard_dob(guard_dob);
-                user.setGuard_mobile(guard_mobile);
-                user.setGuard_email(guard_email);
-                user.setGuard_relationship(guard_relation);
-                user.setGuard_account_relation(guard_account_relation);
-                user.setGuard_relation_proof(gaurd_relation_proof);
-                user.setTax_status_code(tax_status);
-                user.setTax_status(tax_status_des);
-                user.setJoint_holder_name1(joint_holder_name);
-                user.setJoint_holder_name2(joint_holder_name1);
-                user.setJoint_holder_dob1(joint_holder_dob);
-                user.setJoint_holder_dob2(joint_holder_dob1);
-                user.setJoint_holder_email1(joint_holder_email);
-                user.setJoint_holder_email2(joint_holder_email1);
-                user.setJoint_holder_mobile1(joint_holder_mobile);
-                user.setJoint_holder_mobile1_isd_code(joint_holder_mobile1_isd_code);
-                user.setJoint_holder_mobile2(joint_holder_mobile1);
-                user.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
-                user.setJoint_holder_email_relation1(joint_holder_email_relation);
-                user.setJoint_holder_email_relation2(joint_holder_email_relation1);
-                user.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
-                user.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
-
-                user.setJoint_holder_pan1(joint_holder_pan);
-                user.setJoint_holder_pan2(joint_holder_pan1);
-                user.setHolding_nature_code(holding_nature);
-                user.setHolding_nature(holding_nature_desc);
-                user.setGender("");
-                user.setMarital_status("");
-                user.setClient_name(client_name);
-                user.setNri_address1(nri_address1);
-                user.setNri_address2(nri_address2);
-                user.setNri_address3(nri_address3);
-                user.setNri_city(nri_city);
-                user.setNri_state(nri_state);
-                user.setNri_pincode(nri_pincode);
-                user.setNri_country(nri_country);
-                user.setAddress_type_code(address_type);
-                user.setAddress_type(address_type_desc);
-
-                user.setJoint_holder_place_of_birth1(joint_holder_place_birth);
-                user.setJoint_holder_place_of_birth2(joint_holder_place_birth1);
-                user.setJoint_holder_country_birth_code1(joint_holder_country_birth);
-                user.setJoint_holder_country_birth_code2(joint_holder_country_birth1);
-                user.setJoint_holder_occupation_code1(joint_holder_occupation);
-
-                if (joint_holder_occupation.equalsIgnoreCase("99") && !joint_holder_occupation_other.isEmpty()) {
-                    //user.setJoint_holder_occupation_other1(joint_holder_occupation_other);
-                }
-                user.setJoint_holder_occupation_code2(joint_holder_occupation1);
-                if (joint_holder_occupation1.equalsIgnoreCase("99") && !joint_holder_occupation_other1.isEmpty()) {
-                    //user.setJoint_holder_occupation_other2(joint_holder_occupation_other1);
-                }
-                user.setJoint_holder_source_of_wealth_code1(joint_holder_source_wealth);
-                if (joint_holder_source_wealth.equalsIgnoreCase("08") && !joint_source_wealth_other.isEmpty()) {
-                    //user.setJoint_holder_source_of_wealth_other1(joint_source_wealth_other);
-                }
-                user.setJoint_holder_source_of_wealth_code2(joint_holder_source_wealth1);
-                if (joint_holder_source_wealth1.equalsIgnoreCase("08") && !joint_source_wealth_other1.isEmpty()) {
-                    //user.setJoint_holder_source_of_wealth_other2(joint_source_wealth_other1);
-                }
-
-                user.setJoint_holder_annual_income_code1(joint_holder_income);
-                user.setJoint_holder_annual_income_code2(joint_holder_income1);
-                user.setJoint_holder_address_type_code1(joint_holder_address_type);
-                user.setJoint_holder_address_type_code2(joint_holder_address_type1);
-                user.setJoint_holder_political_code1(joint_holder_political);
-                user.setJoint_holder_political_code2(joint_holder_political1);
-
-                user.setNominee1_type(nominee_type);
-                user.setNominee1_guard_name(nominee1_guard_name);
-                user.setNominee1_guard_pan(nominee1_guard_pan);
-                user.setNominee2_type(nominee2_type);
-                user.setNominee2_guard_name(nominee2_guard_name);
-                user.setNominee2_guard_pan(nominee2_guard_pan);
-                user.setNominee3_type(nominee3_type);
-                user.setNominee3_guard_name(nominee3_guard_name);
-                user.setNominee3_guard_pan(nominee3_guard_pan);
-                user.setNumber_of_nominee(number_of_nominee);
-
-                user.setNominee1_name(nominee1_name);
-                user.setNominee1_dob(nominee1_dob);
-                user.setNominee1_address1(nominee1_address1);
-                user.setNominee1_address2(nominee1_address2);
-                user.setNominee1_address3(nominee1_address3);
-                user.setNominee1_pincode(nominee1_pincode);
-                user.setNominee1_city(nominee1_city);
-                user.setNominee1_state(nominee1_state);
-                user.setNominee1_state_code(nominee1_state_code);
-                user.setNominee1_country(nominee1_country);
-                user.setNominee1_email(nominee1_email);
-                user.setNominee1_mobile(nominee1_mobile);
-                user.setNominee1_id_no(nominee1_id_no);
-                user.setNominee1_id_type(nominee1_id_type);
-                user.setNominee1_relation(nominee1_relation);
-                user.setNominee1_percentage(nominee1_percentage);
-
-                user.setNominee2_name(nominee2_name);
-                user.setNominee2_dob(nominee2_dob);
-                user.setNominee2_percentage(nominee2_percentage);
-                user.setNominee2_relation(nominee2_relation);
-                user.setNominee2_address1(nominee2_address1);
-                //user.setNominee2_address2(nominee2_address2);
-                //user.setNominee2_address3(nominee2_address3);
-                user.setNominee2_pincode(nominee2_pincode);
-                user.setNominee2_city(nominee2_city);
-                user.setNominee2_state(nominee2_state);
-                user.setNominee2_state_code(nominee2_state_code);
-                user.setNominee2_country(nominee2_country);
-                user.setNominee2_email(nominee2_email);
-                user.setNominee2_mobile(nominee2_mobile);
-                user.setNominee2_id_no(nominee2_id_no);
-                user.setNominee2_id_type(nominee2_id_type);
-                user.setNominee3_name(nominee3_name);
-                user.setNominee3_dob(nominee3_dob);
-                user.setNominee3_percentage(nominee3_percentage);
-                user.setNominee3_relation(nominee3_relation);
-                user.setNominee3_address1(nominee3_address1);
-                //user.setNominee3_address2(nominee3_address2);
-                //user.setNominee3_address3(nominee3_address3);
-                user.setNominee3_pincode(nominee3_pincode);
-                user.setNominee3_city(nominee3_city);
-                user.setNominee3_state(nominee3_state);
-                user.setNominee3_state_code(nominee3_state_code);
-                user.setNominee3_country(nominee3_country);
-                user.setNominee3_email(nominee3_email);
-                user.setNominee3_mobile(nominee3_mobile);
-                user.setNominee3_id_no(nominee3_id_no);
-                user.setNominee3_id_type(nominee3_id_type);
-
-                user.setNetworth_amount(networth_amount);
-                user.setNetworth_dob(networth_dob);
-
-                user.setNominee1_guard_dob(nominee1_guard_dob);
-                user.setNominee2_guard_dob(nominee2_guard_dob);
-                user.setNominee3_guard_dob(nominee3_guard_dob);
-
-                user.setBroker_code(arn_number);
-                user.setEuin(euin);
-
-                user.setNominee1_guard_relationship(nominee1_guard_relationship);
-                user.setNominee2_guard_relationship(nominee2_guard_relationship);
-                user.setNominee3_guard_relationship(nominee3_guard_relationship);
-
-                user.setGender(gender);
-
-                userServiceClient.saveUser(user,token);
-
-                String logmsg = users.getFirst_name() + " did NSE Create Customer. Details:";
-                logmsg += "userid: " + userid + ",";
-                logmsg += "pan: " + pan + ",";
-                logmsg += "name: " + name + ",";
-                logmsg += "email: " + email + ",";
-                logmsg += "mobile: " + mobile + ",";
-                logmsg += "tax_status: " + tax_status + ",";
-                logmsg += "holding_nature: " + holding_nature + ",";
-                logmsg += "bank_name: " + bank_name + ",";
-                logmsg += "account_number: " + account_number + ",";
-                logmsg += "nominee1_name: " + nominee1_name + ",";
-                logmsg += "nominee1_relation: " + nominee1_relation + "";
-
-                nseLogService.saveLog("NSE Create Customer", "NSE Create Customer", logmsg, NseUtils.getIpAddr(request), source, client_name, users);
-
-                return NseUtils.commonResponse("Updated successfully",HttpStatus.OK);
-
-
-            } else {
-
-                UserBseNseDto nse = userServiceClient.getUserBseNseDetailsByIinNumber(iin_number, client_name,token);
-
-                if (nse != null) {
-                    nse.setPan(pan);
-                    nse.setName(name.replaceAll("\\s+", " ").trim());
-                    nse.setEmail(email);
-                    nse.setMobile(mobile);
-                    nse.setMobile_isd_code(mobile_isd_code);
-                    nse.setMobile_relation(mobile_relation);
-                    nse.setEmail_relation(email_relation);
-                    nse.setAlter_email(alter_email);
-                    nse.setAlter_mobile(alter_mobile);
-                    nse.setDate_of_birth(dob);
-                    nse.setFather_name(father_name);
-                    nse.setPhone_office(office_phone);
-                    nse.setPhone_residence(residence_phone);
-                    nse.setPlace_of_birth(place_birth);
-                    nse.setCountry_of_birth(country_birth);
-                    nse.setCountry_birth_code(country_birth_code);
-                    nse.setInv_category(inv_category);
-                    nse.setOccupation(occupation);
-                    nse.setOccupation_code(occupation_code);
-                    if (occupation_code.equalsIgnoreCase("99") && !occupation_other.isEmpty()) {
-                        nse.setOccupation(occupation_other);
-                    }
-                    nse.setAnnual_income(income);
-                    nse.setAnnual_income_code(income_code);
-                    nse.setSource_of_wealth(source_wealth);
-                    nse.setSource_of_wealth_code(source_wealth_code);
-                    if (source_wealth_code.equalsIgnoreCase("08") && !source_wealth_other.isEmpty()) {
-                        nse.setSource_of_wealth(source_wealth_other);
-                    }
-                    nse.setPolitical_code(political_status);
-                    if (political_status.equalsIgnoreCase("Y") || political_status.equalsIgnoreCase("PEP")) {
-                        nse.setPolitical("I am Politically exposed person");
-                    }
-                    if (political_status.equalsIgnoreCase("R") || political_status.equalsIgnoreCase("RPEP")) {
-                        nse.setPolitical("I am related to Politically exposed person");
-                    }
-                    if (political_status.equalsIgnoreCase("N") || political_status.equalsIgnoreCase("NA")) {
-                        nse.setPolitical("Not Applicable");
-                    }
-                    nse.setPincode(pincode);
-                    nse.setCity(city);
-                    nse.setState(state);
-                    System.out.println("updateUserDetailsByIIN::UserBseNseDetails::country: " + country);
-                    nse.setCountry(country);
-
-                    nse.setStreet_1(address1);
-                    nse.setStreet_2(address2);
-                    nse.setStreet_3(address3);
-                    nse.setState_code(state_code);
-                    nse.setBank_ifsc_code1(ifsc_code);
-                    nse.setBank_micr_code1(micr_code);
-                    nse.setBank_name1(bank_name);
-                    nse.setBank_code1(bank_code);
-                    nse.setBank_branch1(branch_name);
-                    nse.setBank_address1(bank_address);
-                    nse.setBank_account_number1(account_number);
-                    nse.setBank_account_holder_name1(account_holder_name);
-                    nse.setBank_account_type1(account_type);
-                    nse.setDefault_bank1("Y");
-                    nse.setBank_proof1(bank_proof);
-                    nse.setGuard_name(guard_name);
-                    nse.setGuard_pan(guard_pan);
-                    nse.setGuard_dob(guard_dob);
-                    nse.setGuard_mobile(guard_mobile);
-                    nse.setGuard_email(guard_email);
-                    nse.setGuard_relationship(guard_relation);
-                    nse.setGuard_account_relation(guard_account_relation);
-                    nse.setGuard_relation_proof(gaurd_relation_proof);
-                    nse.setTax_status_code(tax_status);
-                    nse.setTax_status(tax_status_des);
-                    nse.setJoint_holder_name1(joint_holder_name);
-                    nse.setJoint_holder_name2(joint_holder_name1);
-                    nse.setJoint_holder_dob1(joint_holder_dob);
-                    nse.setJoint_holder_dob2(joint_holder_dob1);
-                    nse.setJoint_holder_email1(joint_holder_email);
-                    nse.setJoint_holder_email2(joint_holder_email1);
-                    nse.setJoint_holder_mobile1(joint_holder_mobile);
-                    nse.setJoint_holder_mobile1_isd_code(joint_holder_mobile1_isd_code);
-                    nse.setJoint_holder_mobile2(joint_holder_mobile1);
-                    nse.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
-                    nse.setJoint_holder_email_relation1(joint_holder_email_relation);
-                    nse.setJoint_holder_email_relation2(joint_holder_email_relation1);
-                    nse.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
-                    nse.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
-
-                    nse.setJoint_holder_pan1(joint_holder_pan);
-                    nse.setJoint_holder_pan2(joint_holder_pan1);
-                    nse.setHolding_nature_code(holding_nature);
-                    nse.setHolding_nature(holding_nature_desc);
-                    nse.setGender("");
-                    nse.setClient_name(client_name);
-                    nse.setNri_address1(nri_address1);
-                    nse.setNri_address2(nri_address2);
-                    nse.setNri_address3(nri_address3);
-                    nse.setNri_city(nri_city);
-                    nse.setNri_state(nri_state);
-                    nse.setNri_pincode(nri_pincode);
-                    nse.setNri_country(nri_country);
-                    nse.setAddress_type_code(address_type);
-                    nse.setAddress_type(address_type_desc);
-
-                    nse.setJoint_holder_place_of_birth1(joint_holder_place_birth);
-                    nse.setJoint_holder_place_of_birth2(joint_holder_place_birth1);
-                    nse.setJoint_holder_country_birth_code1(joint_holder_country_birth);
-                    nse.setJoint_holder_country_birth_code2(joint_holder_country_birth1);
-                    nse.setJoint_holder_occupation_code1(joint_holder_occupation);
-                    if (joint_holder_occupation.equalsIgnoreCase("99") && !joint_holder_occupation_other.isEmpty()) {
-                        //nse.setJoint_holder_occupation_other1(joint_holder_occupation_other);
-                    }
-                    nse.setJoint_holder_occupation_code2(joint_holder_occupation1);
-                    if (joint_holder_occupation1.equalsIgnoreCase("99") && !joint_holder_occupation_other1.isEmpty()) {
-                        //nse.setJoint_holder_occupation_other2(joint_holder_occupation_other1);
-                    }
-                    nse.setJoint_holder_source_of_wealth_code1(joint_holder_source_wealth);
-                    if (joint_holder_source_wealth.equalsIgnoreCase("08") && !joint_source_wealth_other.isEmpty()) {
-                        //nse.setJoint_holder_source_of_wealth_other1(joint_source_wealth_other);
-                    }
-                    nse.setJoint_holder_source_of_wealth_code2(joint_holder_source_wealth1);
-                    if (joint_holder_source_wealth1.equalsIgnoreCase("08") && !joint_source_wealth_other1.isEmpty()) {
-                        //nse.setJoint_holder_source_of_wealth_other2(joint_source_wealth_other1);
-                    }
-                    nse.setJoint_holder_annual_income_code1(joint_holder_income);
-                    nse.setJoint_holder_annual_income_code2(joint_holder_income1);
-                    nse.setJoint_holder_address_type_code1(joint_holder_address_type);
-                    nse.setJoint_holder_address_type_code2(joint_holder_address_type1);
-                    nse.setJoint_holder_political_code1(joint_holder_political);
-                    nse.setJoint_holder_political_code2(joint_holder_political1);
-
-                    nse.setNominee1_type(nominee_type);
-                    nse.setNominee1_guard_name(nominee1_guard_name);
-                    nse.setNominee1_guard_pan(nominee1_guard_pan);
-                    nse.setNominee2_type(nominee2_type);
-                    nse.setNominee2_guard_name(nominee2_guard_name);
-                    nse.setNominee2_guard_pan(nominee2_guard_pan);
-                    nse.setNominee3_type(nominee3_type);
-                    nse.setNominee3_guard_name(nominee3_guard_name);
-                    nse.setNominee3_guard_pan(nominee3_guard_pan);
-                    nse.setNumber_of_nominee(number_of_nominee);
-
-                    nse.setNominee1_name(nominee1_name);
-                    nse.setNominee1_dob(nominee1_dob);
-                    nse.setNominee1_address1(nominee1_address1);
-                    nse.setNominee1_address2(nominee1_address2);
-                    nse.setNominee1_address3(nominee1_address3);
-                    nse.setNominee1_pincode(nominee1_pincode);
-                    nse.setNominee1_city(nominee1_city);
-                    nse.setNominee1_state(nominee1_state);
-                    nse.setNominee1_state_code(nominee1_state_code);
-                    nse.setNominee1_country(nominee1_country);
-                    nse.setNominee1_email(nominee1_email);
-                    nse.setNominee1_mobile(nominee1_mobile);
-                    nse.setNominee1_id_no(nominee1_id_no);
-                    nse.setNominee1_id_type(nominee1_id_type);
-                    nse.setNominee1_relation(nominee1_relation);
-                    nse.setNominee1_percentage(nominee1_percentage);
-
-                    nse.setNominee2_name(nominee2_name);
-                    nse.setNominee2_dob(nominee2_dob);
-                    nse.setNominee2_percentage(nominee2_percentage);
-                    nse.setNominee2_relation(nominee2_relation);
-                    nse.setNominee2_address1(nominee2_address1);
-                    //nse.setNominee2_address2(nominee2_address2);
-                    //nse.setNominee2_address3(nominee2_address3);
-                    nse.setNominee2_pincode(nominee2_pincode);
-                    nse.setNominee2_city(nominee2_city);
-                    nse.setNominee2_state(nominee2_state);
-                    nse.setNominee2_state_code(nominee2_state_code);
-                    nse.setNominee2_country(nominee2_country);
-                    nse.setNominee2_email(nominee2_email);
-                    nse.setNominee2_mobile(nominee2_mobile);
-                    nse.setNominee2_id_no(nominee2_id_no);
-                    nse.setNominee2_id_type(nominee2_id_type);
-                    nse.setNominee3_name(nominee3_name);
-                    nse.setNominee3_dob(nominee3_dob);
-                    nse.setNominee3_percentage(nominee3_percentage);
-                    nse.setNominee3_relation(nominee3_relation);
-                    nse.setNominee3_address1(nominee3_address1);
-                    //nse.setNominee3_address2(nominee3_address2);
-                    //nse.setNominee3_address3(nominee3_address3);
-                    nse.setNominee3_pincode(nominee3_pincode);
-                    nse.setNominee3_city(nominee3_city);
-                    nse.setNominee3_state(nominee3_state);
-                    nse.setNominee3_state_code(nominee3_state_code);
-                    nse.setNominee3_country(nominee3_country);
-                    nse.setNominee3_email(nominee3_email);
-                    nse.setNominee3_mobile(nominee3_mobile);
-                    nse.setNominee3_id_no(nominee3_id_no);
-                    nse.setNominee3_id_type(nominee3_id_type);
-
-                    nse.setNetworth_amount(networth_amount);
-                    nse.setNetworth_dob(networth_dob);
-
-                    nse.setNominee1_guard_dob(nominee1_guard_dob);
-                    nse.setNominee2_guard_dob(nominee2_guard_dob);
-                    nse.setNominee3_guard_dob(nominee3_guard_dob);
-
-                    nse.setBroker_code(arn_number);
-                    nse.setEuin(euin);
-
-                    nse.setNominee1_guard_relationship(nominee1_guard_relationship);
-                    nse.setNominee2_guard_relationship(nominee2_guard_relationship);
-                    nse.setNominee3_guard_relationship(nominee3_guard_relationship);
-
-                    nse.setGender(gender);
-
-                    userServiceClient.saveUserBseNseDetail(nse,token);
-
-                    String ipAddr = NseUtils.getIpAddr(request);
-                    if (ipAddr == null) {
-                        ipAddr = "";
-                    }
-
-                    String logmsg = users.getFirst_name() + " did NSE Create Customer. Details:";
-                    logmsg += "userid: " + userid + ",";
-                    logmsg += "pan: " + pan + ",";
-                    logmsg += "name: " + name + ",";
-                    logmsg += "email: " + email + ",";
-                    logmsg += "mobile: " + mobile + ",";
-                    logmsg += "tax_status: " + tax_status + ",";
-                    logmsg += "holding_nature: " + holding_nature + ",";
-                    logmsg += "bank_name: " + bank_name + ",";
-                    logmsg += "account_number: " + account_number + ",";
-                    logmsg += "nominee1_name: " + nominee1_name + ",";
-                    logmsg += "nominee1_relation: " + nominee1_relation + "";
-
-                    nseLogService.saveLog("Update Nse User Details", "Update Nse User Details", logmsg, NseUtils.getIpAddr(request), source, client_name, users);
-
-                    return NseUtils.commonResponse("Updated Successfully",HttpStatus.OK);
-
-                } else {
-                    return NseUtils.commonResponse("User details not available. Please try again!", HttpStatus.BAD_REQUEST);
-                }
-
+            UserDto user = null;
+            try {
+                user =  userServiceClient.getUserDetailsByID(client_name, Integer.valueOf(userid),token);
+            }catch (FeignException e)
+            {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
+
+            System.out.println("iin_number = " + iin_number);
+            System.out.println("client_name = " + client_name);
+            System.out.println("arn_number = " + arn_number);
+
+            UserDto nse = null;
+            try {
+                nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name, iin_number, arn_number,token);
+            }catch (FeignException e)
+            {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+
+            System.out.println("-----------------------------------");
+            System.out.println("nse = " + new Gson().toJson(nse));
+            System.out.println("-----------------------------------");
+
+            if (nse != null)
+            {
+                nse.setPan(pan);
+                nse.setName(name.replaceAll("\\s+", " ").trim());
+                nse.setEmail(email);
+                nse.setMobile(mobile);
+                nse.setMobile_isd_code(mobile_isd_code);
+                nse.setMobile_relation(mobile_relation);
+                nse.setEmail_relation(email_relation);
+                nse.setAlter_email(alter_email);
+                nse.setAlter_mobile(alter_mobile);
+                nse.setDate_of_birth(dob);
+                nse.setFather_name(father_name);
+                nse.setPhone_office(office_phone);
+                nse.setPhone_residence(residence_phone);
+                //nse.setPlace_of_birth(place_birth);
+                nse.setCountry_of_birth(country_birth);
+                nse.setCountry_birth_code(country_birth_code);
+                nse.setInv_category(inv_category);
+                nse.setOccupation(occupation);
+                nse.setOccupation_code(occupation_code);
+                if (occupation_code.equalsIgnoreCase("99") && !occupation_other.isEmpty()) {
+                    nse.setOccupation(occupation_other);
+                }
+//                nse.setAnnual_income(income);
+//                nse.setAnnual_income_code(income_code);
+//                nse.setSource_of_wealth(source_wealth);
+//                nse.setSource_of_wealth_code(source_wealth_code);
+//                if (source_wealth_code.equalsIgnoreCase("08") && !source_wealth_other.isEmpty()) {
+//                    nse.setSource_of_wealth(source_wealth_other);
+//                }
+//                nse.setPolitical_code(political_status);
+//                if (political_status.equalsIgnoreCase("Y") || political_status.equalsIgnoreCase("PEP")) {
+//                    nse.setPolitical("I am Politically exposed person");
+//                }
+//                if (political_status.equalsIgnoreCase("R") || political_status.equalsIgnoreCase("RPEP")) {
+//                    nse.setPolitical("I am related to Politically exposed person");
+//                }
+//                if (political_status.equalsIgnoreCase("N") || political_status.equalsIgnoreCase("NA")) {
+//                    nse.setPolitical("Not Applicable");
+//                }
+                nse.setPincode(pincode);
+                nse.setCity(city);
+                nse.setState(state);
+                System.out.println("updateUserDetailsByIIN::UserBseNseDetails::country: " + country);
+                nse.setCountry(country);
+
+                nse.setStreet_1(address1);
+                nse.setStreet_2(address2);
+                nse.setStreet_3(address3);
+                nse.setState_code(state_code);
+                nse.setBank_ifsc_code1(ifsc_code);
+                nse.setBank_micr_code1(micr_code);
+                nse.setBank_name1(bank_name);
+                nse.setBank_branch1(branch_name);
+                nse.setBank_address1(bank_address);
+                nse.setBank_account_number1(account_number);
+                nse.setBank_account_holder_name1(account_holder_name);
+                nse.setBank_account_type1(account_type);
+                nse.setDefault_bank1("Y");
+
+                nse.setBank_ifsc_code1(ifsc_code);
+                nse.setBank_micr_code1(micr_code);
+                nse.setBank_name1(bank_name);
+                nse.setBank_branch1(branch_name);
+                nse.setBank_address1(bank_address);
+                nse.setBank_account_number1(account_number);
+                nse.setBank_account_holder_name1(account_holder_name);
+                nse.setBank_account_type1(account_type);
+
+                nse.setBank_ifsc_code2(ifsc_code2);
+                nse.setBank_micr_code2(micr_code2);
+                nse.setBank_name2(bank_name2);
+                nse.setBank_branch2(branch_name2);
+                nse.setBank_address2(bank_address2);
+                nse.setBank_account_number2(account_number2);
+                nse.setBank_account_holder_name2(account_holder_name2);
+                nse.setBank_account_type2(account_type2);
+
+                nse.setBank_ifsc_code3(ifsc_code3);
+                nse.setBank_micr_code3(micr_code3);
+                nse.setBank_name3(bank_name3);
+                nse.setBank_branch3(branch_name3);
+                nse.setBank_address3(bank_address3);
+                nse.setBank_account_number3(account_number3);
+                nse.setBank_account_holder_name3(account_holder_name3);
+                nse.setBank_account_type3(account_type3);
+
+                nse.setBank_ifsc_code4(ifsc_code4);
+                nse.setBank_micr_code4(micr_code4);
+                nse.setBank_name4(bank_name4);
+                nse.setBank_branch4(branch_name4);
+                nse.setBank_address4(bank_address4);
+                nse.setBank_account_number4(account_number4);
+                nse.setBank_account_holder_name4(account_holder_name4);
+                nse.setBank_account_type4(account_type4);
+
+                nse.setBank_ifsc_code5(ifsc_code5);
+                nse.setBank_micr_code5(micr_code5);
+                nse.setBank_name5(bank_name5);
+                nse.setBank_branch5(branch_name5);
+                nse.setBank_address5(bank_address5);
+                nse.setBank_account_number5(account_number5);
+                nse.setBank_account_holder_name5(account_holder_name5);
+                nse.setBank_account_type5(account_type5);
+
+                nse.setBank_proof1(bank_proof);
+                nse.setGuard_name(guard_name);
+                nse.setGuard_pan(guard_pan);
+                nse.setGuard_dob(guard_dob);
+                nse.setGuard_mobile(guard_mobile);
+                nse.setGuard_email(guard_email);
+                nse.setGuard_relationship(guard_relation);
+                nse.setGuard_account_relation(guard_account_relation);
+                nse.setGuard_relation_proof(gaurd_relation_proof);
+                nse.setTax_status_code(tax_status);
+                nse.setTax_status(tax_status_des);
+                nse.setJoint_holder_name1(joint_holder_name);
+                nse.setJoint_holder_name2(joint_holder_name1);
+                nse.setJoint_holder_dob1(joint_holder_dob);
+                nse.setJoint_holder_dob2(joint_holder_dob1);
+                nse.setJoint_holder_email1(joint_holder_email);
+                nse.setJoint_holder_email2(joint_holder_email1);
+                nse.setJoint_holder_mobile1(joint_holder_mobile);
+                nse.setJoint_holder_mobile1_isd_code(joint_holder_mobile1_isd_code);
+                nse.setJoint_holder_mobile2(joint_holder_mobile1);
+                nse.setJoint_holder_mobile2_isd_code(joint_holder_mobile2_isd_code);
+                nse.setJoint_holder_email_relation1(joint_holder_email_relation);
+                nse.setJoint_holder_email_relation2(joint_holder_email_relation1);
+                nse.setJoint_holder_mobile_relation1(joint_holder_mobile_relation);
+                nse.setJoint_holder_mobile_relation2(joint_holder_mobile_relation1);
+
+                nse.setJoint_holder_pan1(joint_holder_pan);
+                nse.setJoint_holder_pan2(joint_holder_pan1);
+                nse.setHolding_nature_code(holding_nature);
+                nse.setHolding_nature(holding_nature_desc);
+                nse.setGender(gender);
+                nse.setClient_name(client_name);
+                nse.setNri_address1(nri_address1);
+                nse.setNri_address2(nri_address2);
+                nse.setNri_address3(nri_address3);
+                nse.setNri_city(nri_city);
+                nse.setNri_state(nri_state);
+                nse.setNri_pincode(nri_pincode);
+                nse.setNri_country(nri_country);
+                nse.setAddress_type_code(address_type);
+                nse.setAddress_type(address_type_desc);
+
+                //nse.setJoint_holder_place_of_birth1(joint_holder_place_birth);
+                //nse.setJoint_holder_place_of_birth2(joint_holder_place_birth1);
+                nse.setJoint_holder_country_birth_code1(joint_holder_country_birth);
+                nse.setJoint_holder_country_birth_code2(joint_holder_country_birth1);
+                nse.setJoint_holder_occupation_code1(joint_holder_occupation);
+//                if (joint_holder_occupation.equalsIgnoreCase("99") && !joint_holder_occupation_other.isEmpty()) {
+//                    //nse.setJoint_holder_occupation_other1(joint_holder_occupation_other);
+//                }
+                nse.setJoint_holder_occupation_code2(joint_holder_occupation1);
+//                if (joint_holder_occupation1.equalsIgnoreCase("99") && !joint_holder_occupation_other1.isEmpty()) {
+//                    //nse.setJoint_holder_occupation_other2(joint_holder_occupation_other1);
+//                }
+                nse.setJoint_holder_source_of_wealth_code1(joint_holder_source_wealth);
+//                if (joint_holder_source_wealth.equalsIgnoreCase("08") && !joint_source_wealth_other.isEmpty()) {
+//                    //nse.setJoint_holder_source_of_wealth_other1(joint_source_wealth_other);
+//                }
+                nse.setJoint_holder_source_of_wealth_code2(joint_holder_source_wealth1);
+//                if (joint_holder_source_wealth1.equalsIgnoreCase("08") && !joint_source_wealth_other1.isEmpty()) {
+//                    //nse.setJoint_holder_source_of_wealth_other2(joint_source_wealth_other1);
+//                }
+                nse.setJoint_holder_annual_income_code1(joint_holder_income);
+                nse.setJoint_holder_annual_income_code2(joint_holder_income1);
+                nse.setJoint_holder_address_type_code1(joint_holder_address_type);
+                nse.setJoint_holder_address_type_code2(joint_holder_address_type1);
+                nse.setJoint_holder_political_code1(joint_holder_political);
+                nse.setJoint_holder_political_code2(joint_holder_political1);
+                nse.setNominee_soa(nominee_soa);
+
+                nse.setNominee1_type(nominee_type);
+                nse.setNominee1_guard_name(nominee1_guard_name);
+                nse.setNominee1_guard_pan(nominee1_guard_pan);
+                nse.setNominee2_type(nominee2_type);
+                nse.setNominee2_guard_name(nominee2_guard_name);
+                nse.setNominee2_guard_pan(nominee2_guard_pan);
+                nse.setNominee3_type(nominee3_type);
+                nse.setNominee3_guard_name(nominee3_guard_name);
+                nse.setNominee3_guard_pan(nominee3_guard_pan);
+                nse.setNumber_of_nominee(number_of_nominee);
+
+                nse.setNominee1_name(nominee1_name);
+                nse.setNominee1_dob(nominee1_dob);
+                nse.setNominee1_address1(nominee1_address1);
+                nse.setNominee1_address2(nominee1_address2);
+                nse.setNominee1_address3(nominee1_address3);
+                nse.setNominee1_pincode(nominee1_pincode);
+                nse.setNominee1_city(nominee1_city);
+                nse.setNominee1_state(nominee1_state);
+                nse.setNominee1_state_code(nominee1_state_code);
+                nse.setNominee1_country(nominee1_country);
+                nse.setNominee1_email(nominee1_email);
+                nse.setNominee1_mobile(nominee1_mobile);
+                nse.setNominee1_id_no(nominee1_id_no);
+                nse.setNominee1_id_type(nominee1_id_type);
+                nse.setNominee1_relation(nominee1_relation);
+                nse.setNominee1_percentage(nominee1_percentage);
+
+                nse.setNominee2_name(nominee2_name);
+                nse.setNominee2_dob(nominee2_dob);
+                nse.setNominee2_percentage(nominee2_percentage);
+                nse.setNominee2_relation(nominee2_relation);
+                nse.setNominee2_address1(nominee2_address1);
+                //nse.setNominee2_address2(nominee2_address2);
+                //nse.setNominee2_address3(nominee2_address3);
+                nse.setNominee2_pincode(nominee2_pincode);
+                nse.setNominee2_city(nominee2_city);
+                nse.setNominee2_state(nominee2_state);
+                nse.setNominee2_state_code(nominee2_state_code);
+                nse.setNominee2_country(nominee2_country);
+                nse.setNominee2_email(nominee2_email);
+                nse.setNominee2_mobile(nominee2_mobile);
+                nse.setNominee2_id_no(nominee2_id_no);
+                nse.setNominee2_id_type(nominee2_id_type);
+                nse.setNominee3_name(nominee3_name);
+                nse.setNominee3_dob(nominee3_dob);
+                nse.setNominee3_percentage(nominee3_percentage);
+                nse.setNominee3_relation(nominee3_relation);
+                nse.setNominee3_address1(nominee3_address1);
+                //nse.setNominee3_address2(nominee3_address2);
+                //nse.setNominee3_address3(nominee3_address3);
+                nse.setNominee3_pincode(nominee3_pincode);
+                nse.setNominee3_city(nominee3_city);
+                nse.setNominee3_state(nominee3_state);
+                nse.setNominee3_state_code(nominee3_state_code);
+                nse.setNominee3_country(nominee3_country);
+                nse.setNominee3_email(nominee3_email);
+                nse.setNominee3_mobile(nominee3_mobile);
+                nse.setNominee3_id_no(nominee3_id_no);
+                nse.setNominee3_id_type(nominee3_id_type);
+
+                nse.setNetworth_amount(networth_amount);
+                nse.setNetworth_dob(networth_dob);
+
+                nse.setNominee1_guard_dob(nominee1_guard_dob);
+                nse.setNominee2_guard_dob(nominee2_guard_dob);
+                nse.setNominee3_guard_dob(nominee3_guard_dob);
+
+                nse.setBroker_code(arn_number);
+                nse.setEuin(euin);
+
+                nse.setNominee1_guard_relationship(nominee1_guard_relationship);
+                nse.setNominee2_guard_relationship(nominee2_guard_relationship);
+                nse.setNominee3_guard_relationship(nominee3_guard_relationship);
+
+                nse.setPan(pan);
+                nse.setGender(gender);
+                System.out.println("userServiceClient.saveUser::gender: " + nse.getGender());
+                userServiceClient.updateUser(nse,token);
+
+                return NseUtils.commonResponse(String.valueOf(user.getId()), HttpStatus.OK);
+            }
+            else
+            {
+                return NseUtils.commonResponse("User details not available. Please try again!", HttpStatus.BAD_REQUEST);
+            }
+
         }
         catch(Exception ex)
         {
-            return NseUtils.commonResponse("Something went wrong, We have taken note of the issue. Be rest assured we will fix it as soon as possible.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
     }

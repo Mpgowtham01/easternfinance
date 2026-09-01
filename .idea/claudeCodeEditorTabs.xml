@@ -1,25 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="64883259-ce5e-4c00-91dd-525ce0e65a55" />
+    <option name="activeSessionId" value="5d8b1932-7dcf-4620-b78c-751e6e7daaca" />
     <option name="openSessionIds">
       <list>
         <option value="98933a04-11fb-477c-b714-16ffb21df484" />
         <option value="5d8b1932-7dcf-4620-b78c-751e6e7daaca" />
-        <option value="64883259-ce5e-4c00-91dd-525ce0e65a55" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
         <entry key="5d8b1932-7dcf-4620-b78c-751e6e7daaca" value="/sessions/72daa3ef-a1cf-4fac-92ce-a5e658b9956f" />
-        <entry key="64883259-ce5e-4c00-91dd-525ce0e65a55" value="/sessions/ce724069-6896-4ec0-b164-2bcec7424f4c" />
         <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821" />
       </map>
     </option>
     <option name="sessionTitles">
       <map>
         <entry key="5d8b1932-7dcf-4620-b78c-751e6e7daaca" value="live swagger its not working why" />
-        <entry key="64883259-ce5e-4c00-91dd-525ce0e65a55" value="java.lang.NullPointerException: Cannot invoke &quot;Str" />
         <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="localhost:61789/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821?workingDir=D%3A%2FGithub%2Feasternfinance&amp;panelId=98933a04-11fb-477c-b714-16ffb21df484&amp;theme=dark" />
       </map>
     </option>

@@ -36,4 +36,11 @@ public interface UsersNomineeDetailsRepository extends JpaRepository<UsersNomine
             @Param("online_code") String online_code
     );
 
+    @Query(value = "SELECT * FROM users_nominee_details WHERE user_id = :userId AND online_flag = :online_flag AND online_id = :online_code", nativeQuery = true)
+    Optional<UsersNomineeDetails> findByUserId(
+            @Param("userId") Integer userId,
+            @Param("online_flag") String online_flag,
+            @Param("online_code") String online_code
+    );
+
 }

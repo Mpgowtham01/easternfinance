@@ -2,8 +2,8 @@ docker login -u karthick1986 -p Kart96860!
 mvn clean package -DskipTests
 docker build -t nse-service .
 docker run -d -p 4004:8080 nse-service
-docker tag nse-service karthick1986/easternfin-microservices-dev:nse-service-v1.0.46
-docker push karthick1986/easternfin-microservices-dev:nse-service-v1.0.46
+docker tag nse-service karthick1986/easternfin-microservices-dev:nse-service-v1.0.49
+docker push karthick1986/easternfin-microservices-dev:nse-service-v1.0.49
 
 
 docker run -d --name nse-service --network themfbox -p 4003:8080 nse-service

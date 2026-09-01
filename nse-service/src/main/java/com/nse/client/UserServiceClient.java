@@ -547,4 +547,7 @@ public interface UserServiceClient {
             @RequestParam("clientName") String client_name, @RequestHeader("Authorization") String token
     );
 
+    @PostMapping("/updateUser")
+    ResponseEntity<String>  updateUser(@RequestBody UserDto userDto, @RequestHeader("Authorization") String token);
+
 }

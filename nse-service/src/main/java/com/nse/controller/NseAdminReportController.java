@@ -3053,6 +3053,7 @@ public class NseAdminReportController
             @RequestParam(required = false) String to_date,
             @RequestParam(required = true) String broker_code,
             @RequestParam(required = false) String report_status_type,
+            @RequestParam(required = false) String mandate_id,
             @RequestParam(required = false) String source) throws Exception
     {
         try
@@ -3063,6 +3064,7 @@ public class NseAdminReportController
             to_date = NseUtils.checkParem(to_date);
             broker_code = NseUtils.checkParem(broker_code);
             report_status_type = NseUtils.checkParem(report_status_type);
+            mandate_id = NseUtils.checkParem(mandate_id);
 
             if(report_status_type.isEmpty()){report_status_type = "Order Status Report";}
             if(trans_type.isEmpty()){trans_type = "ALL";}
@@ -3082,11 +3084,22 @@ public class NseAdminReportController
             try
             {
                 JSONObject requestDetails = new JSONObject();
-                requestDetails.put("client_code", "");
-                requestDetails.put("from_date", from_date);
-                requestDetails.put("to_date", to_date);
-                requestDetails.put("mandate_id", "");
-                requestDetails.put("memberMandateIds", "");
+
+                if(!mandate_id.isEmpty())
+                {
+                    requestDetails.put("client_code", "");
+                    requestDetails.put("from_date", "");
+                    requestDetails.put("to_date", "");
+                    requestDetails.put("mandate_id", mandate_id);
+                    requestDetails.put("memberMandateIds", "");
+                }else
+                {
+                    requestDetails.put("client_code", "");
+                    requestDetails.put("from_date", from_date);
+                    requestDetails.put("to_date", to_date);
+                    requestDetails.put("mandate_id", "");
+                    requestDetails.put("memberMandateIds", "");
+                }
 
                 System.out.println("clientName = " + client_name + "af" + broker_code);
 

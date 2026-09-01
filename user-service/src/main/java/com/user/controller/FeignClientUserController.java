@@ -3489,4 +3489,324 @@ public class FeignClientUserController
 		}
 	}
 
+	@Hidden
+	@PostMapping(value = "/updateUser", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> updateUser(@RequestBody UserDto userDto)
+	{
+		try
+		{
+			System.out.println("feign::updateUser::here");
+			// Initialize entities
+			UsersOnlineRegDetails users = null;
+
+			Integer user_id = userDto.getUser_id();
+			String nse_iin_number = userDto.getNse_iin_number();
+			String broker_code = userDto.getBroker_code();
+			String client_name = userDto.getClient_name();
+
+			List<UsersOnlineRegDetails> usersList = userOnlineRegDetailsRespository.findByUserIdAndNseClientCodeAndBrokerCodeAndClientName(nse_iin_number, broker_code, client_name);
+			System.out.println("usersList:size: " + usersList.size());
+			if (usersList != null && !usersList.isEmpty()) {
+				users = usersList.get(0);
+			} else {
+				users = new UsersOnlineRegDetails();
+			}
+			UsersNomineeDetails nomineeDetails;
+
+			nomineeDetails = usersNomineeDetailsRepository.findByUserId(user_id, "NSE", String.valueOf(users.getId())).orElse(null);
+			if (nomineeDetails == null) {
+				nomineeDetails = new UsersNomineeDetails();
+			}
+
+			List<UsersBankDetails> bankDetailsList = new ArrayList<>();
+			// Map basic user details from DTO to entity
+			if (userDto.getUser_id() != null) {
+				users.setUser_id(userDto.getUser_id());
+			}
+
+			users.setOnline_flag("NSE");
+			users.setPan(userDto.getPan());
+			users.setName(userDto.getName());
+			users.setEmail(userDto.getEmail());
+			users.setMobile(userDto.getMobile());
+			users.setMobile_isd_code(userDto.getMobile_isd_code());
+			users.setMobile_relation(userDto.getMobile_relation());
+			users.setEmail_relation(userDto.getEmail_relation());
+			users.setAlter_email(userDto.getAlter_email());
+			users.setAlter_mobile(userDto.getAlter_mobile());
+			users.setDate_of_birth(userDto.getDate_of_birth());
+			users.setFather_name(userDto.getFather_name());
+			users.setPhone_office(userDto.getPhone_office());
+			users.setPhone_residence(userDto.getPhone_residence());
+			users.setPlace_of_birth(userDto.getPlace_of_birth());
+			users.setCountry_of_birth(userDto.getCountry_of_birth());
+			users.setCountry_birth_code(userDto.getCountry_birth_code());
+			users.setInv_category(userDto.getInv_category());
+			users.setOccupation(userDto.getOccupation());
+			users.setOccupation_code(userDto.getOccupation_code());
+			users.setAnnual_income(userDto.getAnnual_income());
+			users.setAnnual_income_code(userDto.getAnnual_income_code());
+			users.setSource_of_wealth(userDto.getSource_of_wealth());
+			users.setSource_of_wealth_code(userDto.getSource_of_wealth_code());
+			users.setPan(userDto.getPan());
+
+			if (userDto.getSource_of_wealth().equalsIgnoreCase("08") && !userDto.getSource_of_wealth().isEmpty()) {
+				users.setSource_of_wealth(userDto.getSource_of_wealth());
+			}
+
+			users.setPolitical_code(userDto.getPolitical_code());
+			if (userDto.getPolitical().equalsIgnoreCase("Y") || userDto.getPolitical().equalsIgnoreCase("PEP")) {
+				users.setPolitical("I am Politically exposed person");
+			} else if (userDto.getPolitical().equalsIgnoreCase("R") || userDto.getPolitical().equalsIgnoreCase("RPEP")) {
+				users.setPolitical("I am related to Politically exposed person");
+			} else if (userDto.getPolitical().equalsIgnoreCase("N") || userDto.getPolitical().equalsIgnoreCase("NA")) {
+				users.setPolitical("Not Applicable");
+			}
+
+			users.setPincode(userDto.getPincode());
+			users.setCity(userDto.getCity());
+			users.setState(userDto.getState());
+			users.setCountry(userDto.getCountry());
+			users.setStreet_1(userDto.getStreet_1());
+			users.setStreet_2(userDto.getStreet_2());
+			users.setStreet_3(userDto.getStreet_3());
+			users.setState_code(userDto.getState_code());
+
+			// Handle multiple bank accounts (1-3)
+			if (!userDto.getBank_account_number1().trim().isEmpty()) {
+				List<UsersBankDetails> bank_1 = usersBankDetailsRepository.findByAccountNumberAndUserIdAndOnline_flagAndOnline_code(user_id, "NSE", nse_iin_number, userDto.getBank_account_number1(), broker_code);
+				UsersBankDetails bank1 = null;
+				if (bank_1.size() > 0 && bank_1 != null) {
+					bank1 = bank_1.get(0);
+				}
+				if (bank1 == null) {
+					bank1 = new UsersBankDetails();
+				}
+				bank1.setBank_ifsc_code(userDto.getBank_ifsc_code1());
+				bank1.setBank_micr_code(userDto.getBank_micr_code1());
+				bank1.setBank_name(userDto.getBank_name1());
+				bank1.setBank_branch(userDto.getBank_branch1());
+				bank1.setBank_address(userDto.getBank_address1());
+				bank1.setBank_account_number(userDto.getBank_account_number1());
+				bank1.setBank_account_holder_name(userDto.getBank_account_holder_name1());
+				bank1.setBank_account_type(userDto.getBank_account_type1());
+				bank1.setBank_proof(userDto.getBank_proof1());
+				bankDetailsList.add(bank1);
+			}
+
+			if (!userDto.getBank_account_number2().trim().isEmpty()) {
+				List<UsersBankDetails> bank_2 = usersBankDetailsRepository.findByAccountNumberAndUserIdAndOnline_flagAndOnline_code(user_id, "NSE", nse_iin_number, userDto.getBank_account_number2(), broker_code);
+				UsersBankDetails bank2 = null;
+				if (bank_2.size() > 0 && bank_2 != null) {
+					bank2 = bank_2.get(0);
+				}
+				if (bank2 == null) {
+					bank2 = new UsersBankDetails();
+				}
+
+				bank2.setBank_ifsc_code(userDto.getBank_ifsc_code2());
+				bank2.setBank_micr_code(userDto.getBank_micr_code2());
+				bank2.setBank_name(userDto.getBank_name2());
+				bank2.setBank_branch(userDto.getBank_branch2());
+				bank2.setBank_address(userDto.getBank_address2());
+				bank2.setBank_account_number(userDto.getBank_account_number2());
+				bank2.setBank_account_holder_name(userDto.getBank_account_holder_name2());
+				bank2.setBank_account_type(userDto.getBank_account_type2());
+				bank2.setBank_proof(userDto.getBank_proof2());
+				bankDetailsList.add(bank2);
+			}
+
+			if (!userDto.getBank_account_number3().trim().isEmpty()) {
+				List<UsersBankDetails> bank_3 = usersBankDetailsRepository.findByAccountNumberAndUserIdAndOnline_flagAndOnline_code(user_id, "NSE", nse_iin_number, userDto.getBank_account_number3(), broker_code);
+				UsersBankDetails bank3 = null;
+				if (bank_3.size() > 0 && bank_3 != null) {
+					bank3 = bank_3.get(0);
+				}
+				if (bank3 == null) {
+					bank3 = new UsersBankDetails();
+				}
+				bank3.setBank_ifsc_code(userDto.getBank_ifsc_code3());
+				bank3.setBank_micr_code(userDto.getBank_micr_code3());
+				bank3.setBank_name(userDto.getBank_name3());
+				bank3.setBank_branch(userDto.getBank_branch3());
+				bank3.setBank_address(userDto.getBank_address3());
+				bank3.setBank_account_number(userDto.getBank_account_number3());
+				bank3.setBank_account_holder_name(userDto.getBank_account_holder_name3());
+				bank3.setBank_account_type(userDto.getBank_account_type3());
+				bank3.setBank_proof(userDto.getBank_proof3());
+				bankDetailsList.add(bank3);
+			}
+
+			// Set guardian details
+			users.setGuard_name(userDto.getGuard_name());
+			users.setGuard_pan(userDto.getGuard_pan());
+			users.setGuard_dob(userDto.getGuard_dob());
+			users.setGuard_mobile(userDto.getGuard_mobile());
+			users.setGuard_email(userDto.getGuard_email());
+			users.setGuard_relationship(userDto.getGuard_relationship());
+			users.setGuard_account_relation(userDto.getGuard_account_relation());
+			users.setGuard_relation_proof(userDto.getGuard_relation_proof());
+
+			users.setTax_status_code(userDto.getTax_status_code());
+			users.setTax_status(userDto.getTax_status());
+
+			// Set joint holder details
+			users.setJoint_holder_name1(userDto.getJoint_holder_name1());
+			users.setJoint_holder_name2(userDto.getJoint_holder_name2());
+			users.setJoint_holder_dob1(userDto.getJoint_holder_dob1());
+			users.setJoint_holder_dob2(userDto.getJoint_holder_dob2());
+			users.setJoint_holder_email1(userDto.getJoint_holder_email1());
+			users.setJoint_holder_email2(userDto.getJoint_holder_email2());
+			users.setJoint_holder_mobile1(userDto.getJoint_holder_mobile1());
+			users.setJoint_holder_mobile2(userDto.getJoint_holder_mobile2());
+			users.setJoint_holder_mobile2_isd_code(userDto.getJoint_holder_mobile2_isd_code());
+			users.setJoint_holder_email_relation1(userDto.getJoint_holder_email_relation1());
+			users.setJoint_holder_email_relation2(userDto.getJoint_holder_email_relation2());
+			users.setJoint_holder_mobile_relation1(userDto.getJoint_holder_mobile_relation1());
+			users.setJoint_holder_mobile_relation2(userDto.getJoint_holder_mobile_relation2());
+			users.setJoint_holder_pan1(userDto.getJoint_holder_pan1());
+			users.setJoint_holder_pan2(userDto.getJoint_holder_pan2());
+			users.setHolding_nature_code(userDto.getHolding_nature_code());
+			users.setHolding_nature(userDto.getHolding_nature());
+			users.setGender(userDto.getGender());
+			users.setClient_name(userDto.getClient_name());
+
+			// Set NRI address details
+			users.setNri_address1(userDto.getNri_address1());
+			users.setNri_address2(userDto.getNri_address2());
+			users.setNri_address3(userDto.getNri_address3());
+			users.setNri_city(userDto.getNri_city());
+			users.setNri_state(userDto.getNri_state());
+			users.setNri_pincode(userDto.getNri_pincode());
+			users.setNri_country(userDto.getNri_country());
+			users.setAddress_type_code(userDto.getAddress_type_code());
+			users.setAddress_type(userDto.getAddress_type());
+
+			// Set joint holder additional details
+			users.setJoint_holder_place_of_birth1(userDto.getJoint_holder_place_of_birth1());
+			users.setJoint_holder_place_of_birth2(userDto.getJoint_holder_place_of_birth2());
+			users.setJoint_holder_country_birth_code1(userDto.getJoint_holder_country_birth_code1());
+			users.setJoint_holder_country_birth_code2(userDto.getJoint_holder_country_birth_code2());
+			users.setJoint_holder_occupation_code1(userDto.getJoint_holder_occupation_code1());
+			users.setJoint_holder_occupation_code2(userDto.getJoint_holder_occupation_code2());
+			users.setJoint_holder_source_of_wealth_code1(userDto.getJoint_holder_source_of_wealth_code1());
+			users.setJoint_holder_source_of_wealth_code2(userDto.getJoint_holder_source_of_wealth_code2());
+			users.setJoint_holder_annual_income_code1(userDto.getJoint_holder_annual_income_code1());
+			users.setJoint_holder_annual_income_code2(userDto.getJoint_holder_annual_income_code2());
+			users.setJoint_holder_address_type_code1(userDto.getJoint_holder_address_type_code1());
+			users.setJoint_holder_address_type_code2(userDto.getJoint_holder_address_type_code2());
+			users.setJoint_holder_political_code1(userDto.getJoint_holder_political_code1());
+			users.setJoint_holder_political_code2(userDto.getJoint_holder_political_code2());
+
+			// Set nominee details
+			nomineeDetails.setNominee_soa(userDto.getNominee_soa());
+			nomineeDetails.setNominee1_type(userDto.getNominee1_type());
+			nomineeDetails.setNominee1_guard_name(userDto.getNominee1_guard_name());
+			nomineeDetails.setNominee1_guard_pan(userDto.getNominee1_guard_pan());
+			nomineeDetails.setNominee2_type(userDto.getNominee2_type());
+			nomineeDetails.setNominee2_guard_name(userDto.getNominee2_guard_name());
+			nomineeDetails.setNominee2_guard_pan(userDto.getNominee2_guard_pan());
+			nomineeDetails.setNominee3_type(userDto.getNominee3_type());
+			nomineeDetails.setNominee3_guard_name(userDto.getNominee3_guard_name());
+			nomineeDetails.setNominee3_guard_pan(userDto.getNominee3_guard_pan());
+			nomineeDetails.setNumber_of_nominee(userDto.getNumber_of_nominee());
+
+			// Nominee 1 details
+			nomineeDetails.setNominee1_name(userDto.getNominee1_name());
+			nomineeDetails.setNominee1_dob(userDto.getNominee1_dob());
+			nomineeDetails.setNominee1_address1(userDto.getNominee1_address1());
+			nomineeDetails.setNominee1_address2(userDto.getNominee1_address2());
+			nomineeDetails.setNominee1_address3(userDto.getNominee1_address3());
+			nomineeDetails.setNominee1_pincode(userDto.getNominee1_pincode());
+			nomineeDetails.setNominee1_city(userDto.getNominee1_city());
+			nomineeDetails.setNominee1_state(userDto.getNominee1_state());
+			nomineeDetails.setNominee1_state_code(userDto.getNominee1_state_code());
+			nomineeDetails.setNominee1_country(userDto.getNominee1_country());
+			nomineeDetails.setNominee1_email(userDto.getNominee1_email());
+			nomineeDetails.setNominee1_mobile(userDto.getNominee1_mobile());
+			nomineeDetails.setNominee1_id_no(userDto.getNominee1_id_no());
+			nomineeDetails.setNominee1_id_type(userDto.getNominee1_id_type());
+			nomineeDetails.setNominee1_relation(userDto.getNominee1_relation());
+			nomineeDetails.setNominee1_percentage(userDto.getNominee1_percentage());
+
+			// Nominee 2 details
+			nomineeDetails.setNominee2_name(userDto.getNominee2_name());
+			nomineeDetails.setNominee2_dob(userDto.getNominee2_dob());
+			nomineeDetails.setNominee2_percentage(userDto.getNominee2_percentage());
+			nomineeDetails.setNominee2_relation(userDto.getNominee2_relation());
+			nomineeDetails.setNominee2_address1(userDto.getNominee2_address1());
+			nomineeDetails.setNominee2_pincode(userDto.getNominee2_pincode());
+			nomineeDetails.setNominee2_city(userDto.getNominee2_city());
+			nomineeDetails.setNominee2_state(userDto.getNominee2_state());
+			nomineeDetails.setNominee2_state_code(userDto.getNominee2_state_code());
+			nomineeDetails.setNominee2_country(userDto.getNominee2_country());
+			nomineeDetails.setNominee2_email(userDto.getNominee2_email());
+			nomineeDetails.setNominee2_mobile(userDto.getNominee2_mobile());
+			nomineeDetails.setNominee2_id_no(userDto.getNominee2_id_no());
+			nomineeDetails.setNominee2_id_type(userDto.getNominee2_id_type());
+
+			// Nominee 3 details
+			nomineeDetails.setNominee3_name(userDto.getNominee3_name());
+			nomineeDetails.setNominee3_dob(userDto.getNominee3_dob());
+			nomineeDetails.setNominee3_percentage(userDto.getNominee3_percentage());
+			nomineeDetails.setNominee3_relation(userDto.getNominee3_relation());
+			nomineeDetails.setNominee3_address1(userDto.getNominee3_address1());
+			nomineeDetails.setNominee3_pincode(userDto.getNominee3_pincode());
+			nomineeDetails.setNominee3_city(userDto.getNominee3_city());
+			nomineeDetails.setNominee3_state(userDto.getNominee3_state());
+			nomineeDetails.setNominee3_state_code(userDto.getNominee3_state_code());
+			nomineeDetails.setNominee3_country(userDto.getNominee3_country());
+			nomineeDetails.setNominee3_email(userDto.getNominee3_email());
+			nomineeDetails.setNominee3_mobile(userDto.getNominee3_mobile());
+			nomineeDetails.setNominee3_id_no(userDto.getNominee3_id_no());
+			nomineeDetails.setNominee3_id_type(userDto.getNominee3_id_type());
+
+			users.setNetworth_amount(userDto.getNetworth_amount());
+			users.setNetworth_dob(userDto.getNetworth_dob());
+
+			nomineeDetails.setNominee1_guard_dob(userDto.getNominee1_guard_dob());
+			nomineeDetails.setNominee2_guard_dob(userDto.getNominee2_guard_dob());
+			nomineeDetails.setNominee3_guard_dob(userDto.getNominee3_guard_dob());
+
+			users.setBroker_code(userDto.getBroker_code());
+			users.setEuin(userDto.getEuin());
+
+			nomineeDetails.setNominee1_guard_relationship(userDto.getNominee1_guard_relationship());
+			nomineeDetails.setNominee2_guard_relationship(userDto.getNominee2_guard_relationship());
+			nomineeDetails.setNominee3_guard_relationship(userDto.getNominee3_guard_relationship());
+			users.setPan(userDto.getPan());
+			// Save all entities
+			//System.out.println("users: " +  new Gson().toJson(users));
+			UsersOnlineRegDetails savedUser = usersOnlineRegDetailsService.saveOrUpdateUserOnlineReg(users);
+			nomineeDetails.setUser_id(savedUser.getUser_id() != null ? savedUser.getUser_id() : savedUser.getId());
+			for (UsersBankDetails bankDetail : bankDetailsList) {
+
+				bankDetail.setUser_id(savedUser.getUser_id());
+				bankDetail.setOnline_id(savedUser.getId());
+				bankDetail.setOnline_flag("NSE");
+				bankDetail.setOnline_code(userDto.getNse_iin_number());
+				bankDetail.setBroker_code(savedUser.getBroker_code());
+				bankDetail.setClient_name(savedUser.getClient_name());
+				bankDetail.setUser_id(savedUser.getUser_id() != null ? savedUser.getUser_id() : savedUser.getId());
+				bankDetail.setCreated_date(new Date());
+				//System.out.println("bankDetail: " +  new Gson().toJson(bankDetail));
+				usersOnlineRegDetailsService.saveOrUpdateUserBank(bankDetail);
+			}
+			nomineeDetails.setUser_id(savedUser.getUser_id());
+			nomineeDetails.setOnline_id(savedUser.getId());
+			nomineeDetails.setOnline_flag("NSE");
+			nomineeDetails.setOnline_code(savedUser.getNse_iin_number());
+			nomineeDetails.setBroker_code(savedUser.getBroker_code());
+			nomineeDetails.setClient_name(savedUser.getClient_name());
+			nomineeDetails.setCreated_date(new Date());
+			//System.out.println("nomineeDetails: " +  new Gson().toJson(nomineeDetails));
+			usersOnlineRegDetailsService.saveOrUpdateUserNominee(nomineeDetails);
+
+			return ResponseEntity.ok("User saved successfully");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving user: " + e.getMessage());
+		}
+	}
+
 }

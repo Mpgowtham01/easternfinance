@@ -2,8 +2,8 @@ docker login -u karthick1986 -p Kart96860!
 mvn clean package -DskipTests
 docker build -t user-service .
 #docker run -d -p 4006:8080 user-service
-docker tag user-service karthick1986/easternfin-microservices-dev:user-service-v1.0.26
-docker push karthick1986/easternfin-microservices-dev:user-service-v1.0.26
+docker tag user-service karthick1986/easternfin-microservices-dev:user-service-v1.0.28
+docker push karthick1986/easternfin-microservices-dev:user-service-v1.0.28
 
 docker run -d --name product-service --network themfbox -p 4003:8080 product-service
 docker run -d --name auth-service --network themfbox -p 4001:8080 auth-service
