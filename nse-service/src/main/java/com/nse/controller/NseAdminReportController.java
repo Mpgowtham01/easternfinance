@@ -35,10 +35,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 
@@ -1400,35 +1402,34 @@ public class NseAdminReportController
             @RequestParam(required = false) String iin_number,
             @RequestParam(required = false) String from_date,
             @RequestParam(required = false) String to_date,
+            @RequestParam(required = false) String auth_status,
+            @RequestParam(required = false) String date_type,
             @RequestParam(required = false) String broker_code,
             @RequestParam(required = false) String source) throws Exception
     {
-        String userid = "";
-        String client_name = "";
         try
         {
             SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-            SimpleDateFormat sdf1 = new SimpleDateFormat("MM/dd/yyyy");
 
             iin_number = NseUtils.trimOrEmpty(iin_number);
             from_date = NseUtils.trimOrEmpty(from_date);
             to_date = NseUtils.trimOrEmpty(to_date);
+            auth_status = NseUtils.trimOrEmpty(auth_status);
+            date_type = NseUtils.trimOrEmpty(date_type);
             broker_code = NseUtils.trimOrEmpty(broker_code);
             source = NseUtils.trimOrEmpty(source);
 
-            userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
-
-            if(user == null)
+            if(date_type.isEmpty())
             {
-                return NseUtils.commonResponse("User not found, please login again", HttpStatus.BAD_REQUEST);
+                date_type = "AUTH_SENT_DATE";
             }
 
-            client_name = user.getClient_name();
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
 
-            if(from_date == "" && to_date =="")
+            if(from_date.isEmpty() || to_date.isEmpty())
             {
+                // Both dates are mandatory upstream, so a half-filled range defaults to the
+                // last 7 days instead of blowing up in sdf.parse("").
                 Calendar cal = Calendar.getInstance();
                 Date today = cal.getTime();
 
@@ -1441,12 +1442,24 @@ public class NseAdminReportController
 
             }else
             {
-                Date toDate = sdf.parse(to_date);
-                Date fromDate = sdf.parse(from_date);
+                sdf.setLenient(false);
+
+                Date toDate;
+                Date fromDate;
+
+                try
+                {
+                    fromDate = sdf.parse(from_date);
+                    toDate = sdf.parse(to_date);
+                }
+                catch (ParseException ex)
+                {
+                    return NseUtils.commonResponse("Invalid date. from_date and to_date must be in DD-MM-YYYY format.", HttpStatus.BAD_REQUEST);
+                }
 
                 if(toDate.before(fromDate))
                 {
-                    return NseUtils.commonResponse("From date cannot be future date", HttpStatus.BAD_REQUEST);
+                    return NseUtils.commonResponse("To date cannot be before from date", HttpStatus.BAD_REQUEST);
                 }
 
                 long diffInMillis = toDate.getTime() - fromDate.getTime();
@@ -1461,15 +1474,18 @@ public class NseAdminReportController
                 from_date = sdf.format(fromDate);
             }
 
-            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
-
             try
             {
                 JSONObject requestDetails = new JSONObject();
-                requestDetails.put("client_code", "");
+
                 requestDetails.put("from_date", from_date);
                 requestDetails.put("to_date", to_date);
+                requestDetails.put("client_code", iin_number);
                 requestDetails.put("auth_status", "");
+                requestDetails.put("date_type", "AUTH_SENT_DATE");
+
+                long t0 = System.currentTimeMillis();
+                logger.info("clientAuthorizationReport: handler start");
 
                 BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name, token);
                 String broker_code1 = nsekey.getBrokerCode();
@@ -1481,135 +1497,106 @@ public class NseAdminReportController
                     broker_code = broker_code1;
                 }
 
-                BseNseOnlineAccessDto online_access = null;
-
+                BseNseOnlineAccessDto onlineAccess = null;
                 try
                 {
-                    online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
-
-                } catch (feign.FeignException.NotFound ex)
+                    onlineAccess = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+                } catch (FeignException.NotFound ex)
                 {
                     return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST);
                 }
 
-                String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
-                String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
-                String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
-                String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+                logger.info("clientAuthorizationReport: user-service lookups done in {} ms", System.currentTimeMillis() - t0);
 
-                String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+                String nseUserid = NseUtils.trimOrEmpty(onlineAccess.getNse_userid());
+                String nseMemberid = NseUtils.trimOrEmpty(onlineAccess.getNse_memberid());
+                String nseSecretKey = NseUtils.trimOrEmpty(onlineAccess.getNse_secret_key());
+                String nseLicenseKey = NseUtils.trimOrEmpty(onlineAccess.getNse_license_key());
+
+                String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nseSecretKey, nseLicenseKey, nseUserid);
+
+                System.out.println("base64Encoded = " + base64Encoded);
+                System.out.println("nseMemberid = " + nseMemberid);
+
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
-                headers.set("memberId", nse_memberid);
+                headers.set("memberId", nseMemberid);
                 headers.set("Authorization", "Basic " + base64Encoded);
                 headers.set("User-Agent", "PostmanRuntime/7.43.3");
                 headers.set("Accept-Encoding", "gzip, deflate, br");
                 headers.set("Accept-Language", "en-US");
                 headers.set("Connection", "keep-alive");
                 headers.set("Referer", "");
-
+                System.out.println("requestDetails = " + requestDetails.toString());
                 HttpEntity<String> entity = new HttpEntity<>(requestDetails.toString(), headers);
 
                 String clientAuthorizationReportApi_url = NseApiUrls.clientAuthorizationReportApi_url;
 
-                ResponseEntity<String> mandateResult = RestTemplateFactory.createRestTemplate().postForEntity(clientAuthorizationReportApi_url, entity, String.class);
-                String statusCode = mandateResult.getStatusCode().toString();
-                String responseBody = mandateResult.getBody().toString();
+                RestTemplate nseRestTemplate = RestTemplateFactory.createRestTemplate();
+                long postStart = System.currentTimeMillis();
+                logger.info("clientAuthorizationReport: POST -> {} ({} ms after handler start)", clientAuthorizationReportApi_url, postStart - t0);
+
+                ResponseEntity<String> mandateResult;
+                try
+                {
+                    mandateResult = nseRestTemplate.postForEntity(clientAuthorizationReportApi_url, entity, String.class);
+                }
+                catch (RuntimeException ex)
+                {
+                    logger.warn("clientAuthorizationReport: POST failed after {} ms", System.currentTimeMillis() - postStart);
+                    throw ex;
+                }
+                logger.info("clientAuthorizationReport: POST responded in {} ms", System.currentTimeMillis() - postStart);
+                String responseBody = mandateResult.getBody();
+                System.out.println("clientAuthorizationReport::Response Code: " + mandateResult.getStatusCode());
+                System.out.println("clientAuthorizationReport::Response Body: " + responseBody);
+
+                if(responseBody == null || responseBody.trim().isEmpty())
+                {
+                    return NseUtils.commonResponse("Empty response from NSE report service. Please try again.", HttpStatus.BAD_GATEWAY);
+                }
 
                 JSONObject jsonObject = new JSONObject(responseBody);
-                JSONArray regDataArray = new JSONArray();
 
-                String status = jsonObject.getString("report_data_total");
-                String error_remark = jsonObject.getString("error_remark");
+                // NSE omits report_data_total / error_remark on some error payloads, so read
+                // every field with optString and drive the outcome off response_status.
+                String responseStatus = jsonObject.optString("response_status");
+                String error_remark = jsonObject.optString("error_remark");
 
-                if (jsonObject.has("report_data"))
+                if(!"S".equalsIgnoreCase(responseStatus))
                 {
-                    regDataArray = jsonObject.getJSONArray("report_data");
-                }
-
-                NseTransactions nsetrans = new NseTransactions();
-                nsetrans.setUrl(clientAuthorizationReportApi_url);
-                nsetrans.setNse_request(requestDetails.toString());
-                nsetrans.setNse_response(responseBody);
-                nsetrans.setReturn_msg(status);
-                nsetrans.setService_return_code(status);
-                nsetrans.setService_msg(status);
-                nsetrans.setReg_id("");
-                nsetrans.setPayment_link("");
-                nsetrans.setPan("");
-                nsetrans.setName("");
-                nsetrans.setBranch(user.getBranch());
-                nsetrans.setRm_name(user.getRm_name());
-                nsetrans.setSubbroker_name(user.getSubbroker_name());
-                nsetrans.setClient_name(client_name);
-                nsetrans.setIin_number("");
-                nsetrans.setScheme_name("");
-                nsetrans.setScheme_code("");
-                nsetrans.setFolio_no("");
-                nsetrans.setAmount_units("");
-                nsetrans.setFrequency("");
-                nsetrans.setPeriod_day("");
-                nsetrans.setUmrn_no("");
-                nsetrans.setPurchase_type("");
-                nsetrans.setPayment_ref_no("");
-                nsetrans.setUnique_number("");
-                nsetrans.setAuto_trxn_no("");
-                nsetrans.setSip_reg_no("");
-                nsetrans.setPayment_mode("");
-                nsetrans.setTopup_amount(0.0);
-                nsetrans.setBank_acc_no("");
-                nsetrans.setTransaction_number("");
-                nsetrans.setApplication_number("");
-                nsetrans.setTo_scheme_code("");
-                nsetrans.setTo_scheme_name("");
-                nsetrans.setTransaction_type("Client Authorization report");
-                nsetrans.setTransaction_status("");
-                nsetrans.setPayment_status("");
-                nsetrans.setActive_ceased_status("");
-                nsetrans.setRemarks(status);
-                nsetrans.setMandate_id("");
-                nsetrans.setMandate_status("");
-                nsetrans.setEmandate_auth_flag("");
-                nsetrans.setApp_received_flag("");
-                nsetrans.setTransaction_date(new Date());
-                nsetrans.setUser_id(Integer.parseInt(userid));
-                if(source.equalsIgnoreCase("Mobile"))
-                {
-                    nsetrans.setRegister_source("Mobile App");
-                }else{
-                    nsetrans.setRegister_source("Website");
-                }
-
-                nsetrans.setBroker_code("");
-                nsetrans.setEuin_number("");
-                nsetrans.setCc_received("");
-                nsetrans.setFund_trans_to_amc("");
-                nsetrans.setRefund_status("");
-                nsetrans.setRefund_amount("");
-                nseTransactionService.save(nsetrans);
-
-                nseLogService.saveLog("Fetch Client Authorization report", "Fetch Client Authorization report", NseUtils.buildLogMessage("Fetch Client Authorization report", user, request), NseUtils.getIpAddr(request), source, client_name, user);
-
-                if(status.equalsIgnoreCase("0") || status.equalsIgnoreCase(""))
-                {
+                    if(error_remark.isEmpty())
+                    {
+                        error_remark = "Unable to fetch client authorization report from NSE.";
+                    }
                     return NseUtils.commonResponse(error_remark, HttpStatus.BAD_REQUEST);
+                }
+
+                JSONArray regDataArray = jsonObject.optJSONArray("report_data");
+
+                if(regDataArray == null)
+                {
+                    regDataArray = new JSONArray();
                 }
 
                 return ResponseEntity.ok(regDataArray.toString());
 
-            }catch (Exception ex)
+            }catch (ResourceAccessException ex)
             {
-                logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
                 System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                 ex.printStackTrace();
-                return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+                return NseUtils.commonResponse("NSE report service is not responding. Please try again after some time, or narrow the search using IIN number.", HttpStatus.GATEWAY_TIMEOUT);
+            }catch (Exception ex)
+            {
+                System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+                ex.printStackTrace();
+                return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }catch (Exception ex)
         {
-            logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
