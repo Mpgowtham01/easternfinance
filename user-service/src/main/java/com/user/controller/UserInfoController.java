@@ -6,11 +6,14 @@ import com.user.config.TokenInterceptor;
 import com.user.dto.UserDto;
 import com.user.mapper.UserMapper;
 import com.user.model.*;
+import com.user.pojo.CommonPojo;
 import com.user.pojo.InvestorClientCodePojo;
 import com.user.pojo.MandateDetailsPojo;
 import com.user.repository.*;
 import com.user.response.IfscCodeResponse;
 import com.user.response.InvestorClientCodeResponse;
+import com.user.response.StatusMessage;
+import com.user.response.TransactionCommonResponse;
 import com.user.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -951,6 +954,115 @@ public class UserInfoController
         {
             ex.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching key"));
+        }
+    }
+
+    @GetMapping(value="/getCancelSipReason")
+    public ResponseEntity<?> getCancelSipReason(@RequestHeader("Authorization") String token) throws Exception
+    {
+        Optional<UsersOnlineRegDetails> user = null;
+        List<CommonPojo> masterList = new ArrayList<CommonPojo>();
+        CommonPojo pojo = null;
+        Integer log_id = null;
+        try
+        {
+            String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            if(StringHelper.isEmpty(client_name))
+            {
+                return UserUtils.getCommonResponse(StatusMessage.ClientNameInvalidMessage, StatusMessage.FailureCode);
+            }
+
+            if(StringHelper.isEmpty(user_id))
+            {
+                return UserUtils.getCommonResponse("Please provide the user id", StatusMessage.FailureCode);
+            }
+
+            user = userOnlineRegDetailsRespository.findInactiveNseByUserIdAndClientNameInActive(Integer.parseInt(user_id), client_name);
+
+            if(user.isPresent())
+            {
+                pojo = new CommonPojo();
+                pojo.setCode("SC1");
+                pojo.setDesc("Non availability of Funds");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC2");
+                pojo.setDesc("Scheme not performing");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC3");
+                pojo.setDesc("Service issue");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC4");
+                pojo.setDesc("Load Revised");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC5");
+                pojo.setDesc("Wish to invest in other schemes");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC6");
+                pojo.setDesc("Change in Fund Manager");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC7");
+                pojo.setDesc("Goal Achieved");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC8");
+                pojo.setDesc("Not comfortable with market volatility");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC9");
+                pojo.setDesc("Will be restarting SIP after few months");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC10");
+                pojo.setDesc("Modifications in bank/mandate/date etc");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC11");
+                pojo.setDesc("I have decided to invest elsewhere");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC12");
+                pojo.setDesc("This is not the right time to invest");
+                masterList.add(pojo);
+
+                pojo = new CommonPojo();
+                pojo.setCode("SC13");
+                pojo.setDesc("Others (pls specify the reason)");
+                masterList.add(pojo);
+
+                TransactionCommonResponse apiResponse = new TransactionCommonResponse();
+                apiResponse.setStatus(StatusMessage.SuccessCode);
+                apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+                apiResponse.setMsg(StatusMessage.SuccessMessage);
+                apiResponse.setList(masterList);
+                return new ResponseEntity<TransactionCommonResponse>(apiResponse, HttpStatus.OK);
+            }else
+            {
+                return UserUtils.getCommonResponse("User details not available.", StatusMessage.FailureCode);
+            }
+        }
+        catch(Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
+            return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
         }
     }
 

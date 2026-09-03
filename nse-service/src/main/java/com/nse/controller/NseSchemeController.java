@@ -410,7 +410,6 @@ public class NseSchemeController {
                         masterList.add(pojo);
                     }
                 }
-
             } else
             {
                 pojo = new CommonPojo();
@@ -485,7 +484,6 @@ public class NseSchemeController {
                     return NseUtils.commonResponse("No record found for the given Client Name.", HttpStatus.BAD_REQUEST);
                 }
             }
-            System.out.println("user = " + user);
 
             if (user != null && user.getNse_iin_number().equalsIgnoreCase(iin_number))
             {

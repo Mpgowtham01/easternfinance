@@ -27,7 +27,6 @@ public class NseOnlineSchemeMasterService
 
     public List<String> getLumpsumCategories(String amcCode)
     {
-        System.out.println("amcCode = " + amcCode);
         if(!amcCode.equalsIgnoreCase("All"))
         {
             return nseOnlineSchemeMasterRepository.getLumpsumCategoriesByAmc(amcCode);
@@ -38,7 +37,6 @@ public class NseOnlineSchemeMasterService
 
     public List<Object[]> getLumpsumSchemeNames(String amcName, String category)
     {
-        System.out.println("amc_name = " + amcName);
         if(amcName.equalsIgnoreCase("All") && category.equalsIgnoreCase("All"))
         {
             return nseOnlineSchemeMasterRepository.getAllLumpsumSchemes();
@@ -50,7 +48,6 @@ public class NseOnlineSchemeMasterService
             if(amcName.contains("SIF"))
             {
                 String amc_name = NseUtils.getSIFAmcCode(amcName);
-                System.out.println("53 = " + amc_name);
                 return nseOnlineSchemeMasterRepository.getAllSIFLumpsumSchemesByAmcCode(amc_name);
             }
 
@@ -60,7 +57,6 @@ public class NseOnlineSchemeMasterService
             if(amcName.contains("SIF"))
             {
                 String amc_name = NseUtils.getSIFAmcCode(amcName);
-                System.out.println("63 = " + amc_name);
                 return nseOnlineSchemeMasterRepository.getAllSIFLumpsumSchemesByAmcCodeAndCategory(amc_name,category);
             }
             return nseOnlineSchemeMasterRepository.getAllLumpsumSchemesByAmcCodeAndCategory(amcName, category);
