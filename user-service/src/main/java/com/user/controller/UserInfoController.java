@@ -963,70 +963,71 @@ public class UserInfoController
     {
         List<CommonPojo> masterList = new ArrayList<CommonPojo>();
         CommonPojo pojo = null;
+
         try
         {
             pojo = new CommonPojo();
-            pojo.setCode("SC1");
+            pojo.setCode("01");
             pojo.setDesc("Non availability of Funds");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC2");
+            pojo.setCode("02");
             pojo.setDesc("Scheme not performing");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC3");
+            pojo.setCode("03");
             pojo.setDesc("Service issue");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC4");
+            pojo.setCode("04");
             pojo.setDesc("Load Revised");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC5");
+            pojo.setCode("05");
             pojo.setDesc("Wish to invest in other schemes");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC6");
+            pojo.setCode("06");
             pojo.setDesc("Change in Fund Manager");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC7");
+            pojo.setCode("07");
             pojo.setDesc("Goal Achieved");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC8");
+            pojo.setCode("08");
             pojo.setDesc("Not comfortable with market volatility");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC9");
+            pojo.setCode("09");
             pojo.setDesc("Will be restarting SIP after few months");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC10");
+            pojo.setCode("10");
             pojo.setDesc("Modifications in bank/mandate/date etc");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC11");
+            pojo.setCode("11");
             pojo.setDesc("I have decided to invest elsewhere");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC12");
+            pojo.setCode("12");
             pojo.setDesc("This is not the right time to invest");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("SC13");
+            pojo.setCode("13");
             pojo.setDesc("Others (pls specify the reason)");
             masterList.add(pojo);
 
@@ -1035,13 +1036,21 @@ public class UserInfoController
             apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
             apiResponse.setMsg(StatusMessage.SuccessMessage);
             apiResponse.setList(masterList);
-            return new ResponseEntity<TransactionCommonResponse>(apiResponse, HttpStatus.OK);
 
+            return new ResponseEntity<TransactionCommonResponse>(
+                    apiResponse,
+                    HttpStatus.OK
+            );
         }
         catch(Exception ex)
         {
-            System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
-            return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
+            System.out.println("Exception Date & Time = " + new Date());
+            ex.printStackTrace();
+
+            return UserUtils.getCommonResponse(
+                    StatusMessage.ExceptionAPIMessage,
+                    StatusMessage.ExceptionCode
+            );
         }
     }
 

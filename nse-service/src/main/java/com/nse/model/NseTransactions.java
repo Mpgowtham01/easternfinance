@@ -72,6 +72,7 @@ public class NseTransactions {
     private String fund_trans_to_amc;
     private String refund_status;
     private String refund_amount;
+    private String order_status;
     private Integer first_order_today;
 //    private String ip_address;
 //    private String origin_user_id;

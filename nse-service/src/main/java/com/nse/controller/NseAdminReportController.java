@@ -3,12 +3,14 @@ package com.nse.controller;
 import com.google.gson.Gson;
 import com.nse.client.UserServiceClient;
 import com.nse.config.TokenInterceptor;
+import com.nse.dto.UserIinBrokerDto;
 import com.nse.dto.mf.BseNseKeyDto;
 import com.nse.dto.mf.BseNseOnlineAccessDto;
 import com.nse.dto.mf.UserDto;
 import com.nse.model.NseOnlineStepUpSchemeMaster;
 import com.nse.model.NseTransactions;
 import com.nse.repository.NseLogRepository;
+import com.nse.repository.NseTransactionRepository;
 import com.nse.response.CommonResponse;
 import com.nse.response.StatusMessage;
 import com.nse.response.SuccessResponse;
@@ -46,9 +48,12 @@ import java.time.LocalDate;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @RestController
 @SecurityRequirement(name = "bearerAuth")
@@ -60,6 +65,10 @@ public class NseAdminReportController
 {
 
     private static final Logger logger = LoggerFactory.getLogger(NseAdminReportController.class);
+
+    private static final String LOG_USER_AND_CLIENT = "userId = {} | clientName = {}";
+
+    private static final String NO_ARN_FOUND = "No ARN/Broker codes found for client";
 
     @Value("${jwt.secret-key}")
     private String secretKey;
@@ -81,6 +90,9 @@ public class NseAdminReportController
 
     @Autowired
     NseAmfiOnlineSchemeMaster nseAmfiOnlineSchemeMaster;
+
+    @Autowired
+    NseTransactionRepository nseTransactionRepository;
 
     @Operation(
             summary = "Update UTR Number for Purchase Order",
@@ -1873,223 +1885,182 @@ public class NseAdminReportController
     })
     @GetMapping("/getOrderStatusReport")
     public ResponseEntity<?> getOrderStatusReport(
-            HttpServletRequest request,
             @RequestHeader("Authorization") String token,
             @RequestParam(required = false) String trans_type,
             @RequestParam(required = false) String report_status_type,
             @RequestParam(required = false) String from_date,
             @RequestParam(required = false) String to_date,
-            @RequestParam(required = false) String broker_code,
-            @RequestParam(required = false) String source) throws Exception {
-
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-        SimpleDateFormat sdf1 = new SimpleDateFormat("MM/dd/yyyy");
+            @RequestParam(required = false) String source) throws Exception
+    {
         String userid = "";
-        String client_name = "";
         try
         {
             trans_type = NseUtils.checkParem(trans_type);
             report_status_type = NseUtils.checkParem(report_status_type);
             from_date = NseUtils.checkParem(from_date);
             to_date = NseUtils.checkParem(to_date);
-            broker_code = NseUtils.checkParem(broker_code);
-            source = NseUtils.checkParem(source);
 
-            if(report_status_type.isEmpty()){report_status_type = "Order Status Report";}
-            if(trans_type.isEmpty()){trans_type = "ALL";}
+            if (report_status_type.isEmpty()) report_status_type = "Order Status Report";
+            if (trans_type.isEmpty()) trans_type = "ALL";
 
-            if(from_date.isEmpty() || to_date.isEmpty())
-            {
+            if (from_date.isEmpty() || to_date.isEmpty()) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
                 LocalDate today = LocalDate.now();
-                LocalDate fromDate = today.minusDays(6);
-
+                LocalDate fromDate = today.minusDays(6);//StringHelper.isNotEmpty(iin_number) ? today.minusDays(6) : today.minusDays(6);
                 from_date = fromDate.format(formatter);
                 to_date = today.format(formatter);
             }
 
-            userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            userid = TokenInterceptor.extractAdminIdFromToken(token, secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            logger.info(LOG_USER_AND_CLIENT, userid, client_name);
 
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            List<UserDto> userList = userServiceClient.getUserByIdAndClientNameActiveNse(client_name,Integer.valueOf(userid),token);
 
-            if(user == null)
-            {
-                return NseUtils.commonResponse("User not found, please login again.", HttpStatus.BAD_REQUEST);
-            }
-
-            client_name = user.getClient_name();
-
-            String login_userid = String.valueOf(user.getId());
-            String login_name = user.getFirst_name();
-            String login_mobile = user.getMobile();
+            List<UserIinBrokerDto> iinBrokerList = userList.stream()
+                    .filter(u -> u.getNse_iin_number() != null &&
+                            !u.getNse_iin_number().isEmpty() &&
+                            !"0".equals(u.getNse_iin_number()))
+                    .map(u -> new UserIinBrokerDto(u.getNse_iin_number(), u.getBroker_code()))
+                    .collect(Collectors.toList());
 
             RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
-            try
-            {
-                JSONObject orderRequest = new JSONObject();
-                orderRequest.put("from_date", from_date);
-                orderRequest.put("to_date", to_date);
-                orderRequest.put("trans_type", trans_type);
-                orderRequest.put("order_type", "ALL");
-                orderRequest.put("sub_order_type", "ALL");
-                orderRequest.put("client_code", "");
-                orderRequest.put("order_status", "All");
-                orderRequest.put("settlement_type", "ALL");
-                orderRequest.put("order_ids", "");
-                orderRequest.put("member_unique_ids", "");
 
-                System.out.println(orderRequest.getString("from_date"));
-                System.out.println(orderRequest.getString("to_date"));
-
-                BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name, token);
-                String broker_code1 = nsekey.getBrokerCode();
-
-                if(broker_code1 == null) {broker_code1 = "";}
-
-                if(broker_code.isEmpty())
-                {
-                    broker_code = broker_code1;
-                }
-
-                BseNseOnlineAccessDto online_access = null;
-
-                try
-                {
-                    online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
-
-                } catch (feign.FeignException.NotFound ex)
-                {
-                    return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST);
-                }
-
-                String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
-                String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
-                String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
-                String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
-
-                String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
-                System.out.println("orderStatusReportApi::requestBody: " + orderRequest.toString());
-                System.out.println("orderStatusReportApi::authorization: " + base64Encoded);
-
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-                headers.set("memberId", nse_memberid);
-                headers.set("Authorization", "Basic "+base64Encoded);
-                headers.set("User-Agent", "PostmanRuntime/7.43.3");
-                headers.set("Accept-Encoding", "gzip, deflate, br");
-                headers.set("Accept-Language", "en-US");
-                headers.set("Connection", "keep-alive");
-                headers.set("Referer", "");
-
-                HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
-
-                System.out.println("report_status_type = " + report_status_type);
-                String orderStatus_url= "";
-                if(report_status_type.equalsIgnoreCase("Order Status Report"))
-                {
-                    orderStatus_url= NseApiUrls.nse_order_status;
-                }
-                else
-                {
-                    orderStatus_url= NseApiUrls.nse_preview_order;
-                }
-
-                ResponseEntity<String> orderStatusresponse = restTemplate.postForEntity(orderStatus_url, entity, String.class);
-                System.out.println("orderStatusReportApi::Response Code: " + orderStatusresponse.getStatusCode());
-                //System.out.println("orderStatusReportApi::Response Body: " + orderStatusresponse.getBody());
-
-                JSONObject jsonResponse = new JSONObject(orderStatusresponse.getBody());
-                String responseStatus = jsonResponse.optString("response_status");
-                String error_remark = jsonResponse.optString("error_remark");
-
-//                NseTransactions nsetrans = new NseTransactions();
-//                nsetrans.setUrl(orderStatus_url);
-//                nsetrans.setNse_request(orderRequest.toString());
-//                nsetrans.setNse_response(jsonResponse.toString());
-//                nsetrans.setReturn_msg(responseStatus);
-//                nsetrans.setService_return_code(responseStatus);
-//                nsetrans.setService_msg(responseStatus);
-//                nsetrans.setReg_id("");
-//                nsetrans.setPayment_link("");
-//                nsetrans.setPan("");
-//                nsetrans.setName("");
-//                nsetrans.setBranch(user.getBranch());
-//                nsetrans.setRm_name(user.getRm_name());
-//                nsetrans.setSubbroker_name(user.getSubbroker_name());
-//                nsetrans.setClient_name(client_name);
-//                nsetrans.setIin_number("");
-//                nsetrans.setScheme_name("");
-//                nsetrans.setScheme_code("");
-//                nsetrans.setFolio_no("");
-//                nsetrans.setAmount_units("");
-//                nsetrans.setFrequency("");
-//                nsetrans.setPeriod_day("");
-//                nsetrans.setUmrn_no("");
-//                nsetrans.setPurchase_type("");
-//                nsetrans.setPayment_ref_no("");
-//                nsetrans.setUnique_number("");
-//                nsetrans.setAuto_trxn_no("");
-//                nsetrans.setSip_reg_no("");
-//                nsetrans.setPayment_mode("");
-//                nsetrans.setTopup_amount(0.0);
-//                nsetrans.setBank_acc_no("");
-//                nsetrans.setTransaction_number("");
-//                nsetrans.setApplication_number("");
-//                nsetrans.setTo_scheme_code("");
-//                nsetrans.setTo_scheme_name("");
-//                nsetrans.setTransaction_type("Get Order Status Report");
-//                nsetrans.setTransaction_status("");
-//                nsetrans.setPayment_status("");
-//                nsetrans.setActive_ceased_status("");
-//                nsetrans.setRemarks(responseStatus);
-//                nsetrans.setMandate_id("");
-//                nsetrans.setMandate_status("");
-//                nsetrans.setEmandate_auth_flag("");
-//                nsetrans.setApp_received_flag("");
-//                nsetrans.setTransaction_date(new Date());
-//                nsetrans.setUser_id(Integer.parseInt(userid));
-//                if (source.equalsIgnoreCase("Mobile")) {
-//                    nsetrans.setRegister_source("Mobile App");
-//                } else {
-//                    nsetrans.setRegister_source("Website");
-//                }
-//
-//                nsetrans.setBroker_code("");
-//                nsetrans.setEuin_number("");
-//                nsetrans.setCc_received("");
-//                nsetrans.setFund_trans_to_amc("");
-//                nsetrans.setRefund_status("");
-//                nsetrans.setRefund_amount("");
-//                nseTransactionService.save(nsetrans);
-
-                String report_data_json = "[]";
-
-                if (!responseStatus.equalsIgnoreCase("S"))
-                {
-                    return NseUtils.commonResponse(error_remark, HttpStatus.BAD_REQUEST);
-                }
-
-                JSONArray reportDataArray = jsonResponse.optJSONArray("report_data");
-
-                if (reportDataArray != null)
-                {
-                    report_data_json = reportDataArray.toString().replace("'", "\\'");
-                }
-
-                return ResponseEntity.ok(report_data_json);
-
-            }catch (Exception ex)
-            {
-                System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
-                ex.printStackTrace();
-                return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            BseNseKeyDto mfdDetails = userServiceClient.getByClientName(client_name, token);
+            if (mfdDetails == null) {
+                return NseUtils.commonResponse(NO_ARN_FOUND, HttpStatus.BAD_REQUEST);
             }
-        } catch (Exception ex)
-        {
-            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+
+            final String orderStatusUrl = report_status_type.equalsIgnoreCase("Order Status Report")
+                    ? NseApiUrls.nse_order_status
+                    : NseApiUrls.nse_preview_order;
+
+            List<JSONObject> allOrders = Collections.synchronizedList(new ArrayList<>());
+
+            int poolSize = Math.min(iinBrokerList.size(), Runtime.getRuntime().availableProcessors() * 2);
+            ExecutorService executor = Executors.newFixedThreadPool(poolSize);
+
+            try {
+                String finalFrom_date = from_date;
+                String finalTo_date = to_date;
+                String finalTrans_type = trans_type;
+                List<CompletableFuture<Void>> futures = iinBrokerList.stream()
+                        .map(item -> CompletableFuture.runAsync(() -> {
+
+                            String iin        = item.getIin();
+                            String brokerCode = item.getBrokerCode();
+                            System.out.println("iin = " + iin + " brokerCode = " + brokerCode);
+                            BseNseOnlineAccessDto online_access = null;
+
+                            try
+                            {
+                                online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, brokerCode,token);
+
+                            } catch (FeignException.NotFound ex)
+                            {
+                                logger.warn("NSE Online Credentials Not available for clientName = {} | brokerCode = {}", client_name, brokerCode);
+                                return;
+                            }
+
+                            if (online_access == null)
+                            {
+                                logger.warn("NSE Online Credentials Not available for clientName = {} | brokerCode = {}", client_name, brokerCode);
+                                return;
+                            }
+
+                            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+                            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+                            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+                            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+                            String base64Encoded = "";
+
+                            try
+                            {
+                                base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+                            }catch(Exception e)
+                            {
+                                e.printStackTrace();
+                            }
+
+                            JSONObject orderRequest = new JSONObject();
+                            orderRequest.put("from_date", finalFrom_date);
+                            orderRequest.put("to_date", finalTo_date);
+                            orderRequest.put("trans_type", finalTrans_type);
+                            orderRequest.put("order_type", "ALL");
+                            orderRequest.put("sub_order_type", "ALL");
+                            orderRequest.put("client_code", iin);
+                            orderRequest.put("order_status", "All");
+                            orderRequest.put("settlement_type", "ALL");
+                            orderRequest.put("order_ids", "");
+                            orderRequest.put("member_unique_ids", "");
+                            System.out.println("orderRequest = " + orderRequest);
+                            HttpHeaders headers = new HttpHeaders();
+                            headers.setContentType(MediaType.APPLICATION_JSON);
+                            headers.set("memberId", nse_memberid);
+                            headers.set("Authorization", "Basic " + base64Encoded);
+                            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+                            headers.set("Accept-Encoding", "gzip, deflate, br");
+                            headers.set("Accept-Language", "en-US");
+                            headers.set("Connection", "keep-alive");
+
+                            HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
+
+                            try {
+                                ResponseEntity<String> response = restTemplate.postForEntity(orderStatusUrl, entity, String.class);
+                                JSONArray ordersArray = new JSONObject(response.getBody()).optJSONArray("report_data");
+                                System.out.println("response = " + response.getBody());
+                                if (ordersArray == null || ordersArray.isEmpty())
+                                {
+                                    return;
+                                }
+
+                                IntStream.range(0, ordersArray.length())
+                                        .mapToObj(ordersArray::getJSONObject)
+                                        .forEach(order ->
+                                        {
+                                            String orderId = "";
+                                            String order_id = order.optString("order_id");
+                                            String sip_registration_no = order.optString("sip_registration_no");
+                                            String order_type = order.optString("order_type");
+
+                                            if(order_type.equalsIgnoreCase("XSP") || order_type.equalsIgnoreCase("STP"))
+                                            {
+                                                orderId = sip_registration_no;
+                                            }else {
+                                                orderId = order_id;
+                                            }
+                                            System.out.println("orderId = " + orderId);
+                                            nseTransactionRepository.updateOrderStatusValue(
+                                                    order.optString("order_status"),
+                                                    order.optString("order_remark"),
+                                                    client_name,
+                                                    orderId
+                                            );
+                                            allOrders.add(order);
+                                        });
+
+                            } catch (RuntimeException e)
+                            {
+                                e.printStackTrace();
+                            }
+
+                        }, executor))
+                        .collect(Collectors.toList());
+
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+            } finally {
+                executor.shutdown();
+            }
+
+            // ✅ Final response
+            return NseUtils.commonResponse("please click ok to load page!",HttpStatus.OK);
+
+        } catch (RuntimeException ex) {
+            System.out.println("❌ Exception Date & Time = " + new Date() + " | ERROR = " + ex.getMessage());
             ex.printStackTrace();
-            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

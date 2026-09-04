@@ -1,9 +1,11 @@
 package com.nse.repository;
 
 import com.nse.model.NseTransactions;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -68,6 +70,18 @@ public interface NseTransactionRepository extends JpaRepository<NseTransactions,
             @Param("clientName") String clientName,
             @Param("schemeName") String schemeName
     );
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE NseTransactions u " +
+            "SET u.order_status = :order_status, " +
+            "    u.remarks = :remark " +
+            "WHERE u.client_name = :clientName " +
+            "AND u.reg_id = :regid ")
+    int updateOrderStatusValue(@Param("order_status") String order_status,
+                               @Param("remark") String remark,
+                               @Param("clientName") String clientName,
+                               @Param("regid") String regid);
 
 
 }
