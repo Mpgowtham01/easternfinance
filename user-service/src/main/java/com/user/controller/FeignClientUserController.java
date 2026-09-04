@@ -3809,4 +3809,23 @@ public class FeignClientUserController
 		}
 	}
 
+	@Hidden
+	@GetMapping("/getDistinctBrokerCodes")
+	public ResponseEntity<?> getDistinctBrokerCodes(@RequestParam("clientName") String clientName) {
+		try {
+
+
+			List<String> list = bseNseKeyRepository.findDistinctBrokerCodesByClientName(clientName);
+
+			if (list != null) {
+				return ResponseEntity.ok(list);
+			} else {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 404, "status_msg", "User not found"));
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching user details"));
+		}
+	}
+
 }

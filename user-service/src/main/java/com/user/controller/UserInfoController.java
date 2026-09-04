@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.internal.util.StringHelper;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -1063,6 +1064,451 @@ public class UserInfoController
         {
             System.out.println("Exception Date & Time = " + new Date()); ex.printStackTrace();
             return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
+        }
+    }
+
+    @GetMapping("/getUserDetailsUserId")
+    public ResponseEntity<?> getUserDetailsUserId(@RequestHeader("Authorization") String token) {
+        try
+        {
+
+            System.out.println("------------------------------------------------------" + new Date());
+            String userId = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+
+            Optional<User> userList = userRepository.findUSerByIdAndActive(Integer.valueOf(userId));
+            User userDto = userList.get();
+            System.out.println(userDto);
+
+            List<UsersOnlineRegDetails> userOptional = userOnlineRegDetailsRespository.findNseUserByUserId(Integer.valueOf(userId));
+            UserDto dto = UserMapper.mapUserToDto(userDto);
+
+            UsersOnlineRegDetails user = userOptional.stream().findFirst().orElse(null);
+            if (user == null) {
+                return ResponseEntity.ok(dto);
+            }
+            user = userOptional.get(0);
+
+            BeanUtils.copyProperties(user, dto);
+            if(userDto.getPan() != null && !userDto.getPan().trim().isEmpty()){
+                dto.setPan(userDto.getPan());
+            }else{
+                dto.setPan(user.getPan());
+            }
+
+
+            List<UsersBankDetails> bankList = usersBankDetailsRepository.findByUserId(Integer.valueOf(userId),"NSE", String.valueOf(userOptional.get(0).getId()));
+
+            String bank_name1 = bankList.size() > 0 ? bankList.get(0).getBank_name() : null;
+            String bank_branch1 = bankList.size() > 0 ? bankList.get(0).getBank_branch() : null;
+            String bank_address1 = bankList.size() > 0 ? bankList.get(0).getBank_address() : null;
+            String bank_account_number1 = bankList.size() > 0 ? bankList.get(0).getBank_account_number() : null;
+            String bank_account_holder_name1 = bankList.size() > 0 ? bankList.get(0).getBank_account_holder_name() : null;
+            String bank_account_type1 = bankList.size() > 0 ? bankList.get(0).getBank_account_type() : null;
+            String bank_ifsc_code1 = bankList.size() > 0 ? bankList.get(0).getBank_ifsc_code() : null;
+            String bank_micr_code1 = bankList.size() > 0 ? bankList.get(0).getBank_micr_code() : null;
+            String bank_proof1 = bankList.size() > 0 ? bankList.get(0).getBank_proof() : null;
+
+            String bank_name2 = bankList.size() > 1 ? bankList.get(1).getBank_name() : null;
+            String bank_branch2 = bankList.size() > 1 ? bankList.get(1).getBank_branch() : null;
+            String bank_address2 = bankList.size() > 1 ? bankList.get(1).getBank_address() : null;
+            String bank_account_number2 = bankList.size() > 1 ? bankList.get(1).getBank_account_number() : null;
+            String bank_account_holder_name2 = bankList.size() > 1 ? bankList.get(1).getBank_account_holder_name() : null;
+            String bank_account_type2 = bankList.size() > 1 ? bankList.get(1).getBank_account_type() : null;
+            String bank_ifsc_code2 = bankList.size() > 1 ? bankList.get(1).getBank_ifsc_code() : null;
+            String bank_micr_code2 = bankList.size() > 1 ? bankList.get(1).getBank_micr_code() : null;
+            String bank_proof2 = bankList.size() > 1 ? bankList.get(1).getBank_proof() : null;
+
+            String bank_name3 = bankList.size() > 2 ? bankList.get(2).getBank_name() : null;
+            String bank_branch3 = bankList.size() > 2 ? bankList.get(2).getBank_branch() : null;
+            String bank_address3 = bankList.size() > 2 ? bankList.get(2).getBank_address() : null;
+            String bank_account_number3 = bankList.size() > 2 ? bankList.get(2).getBank_account_number() : null;
+            String bank_account_holder_name3 = bankList.size() > 2 ? bankList.get(2).getBank_account_holder_name() : null;
+            String bank_account_type3 = bankList.size() > 2 ? bankList.get(2).getBank_account_type() : null;
+            String bank_ifsc_code3 = bankList.size() > 2 ? bankList.get(2).getBank_ifsc_code() : null;
+            String bank_micr_code3 = bankList.size() > 2 ? bankList.get(2).getBank_micr_code() : null;
+            String bank_proof3 = bankList.size() > 2 ? bankList.get(2).getBank_proof() : null;
+
+            dto.setBank_name1(bank_name1);
+            dto.setBank_branch1(bank_branch1);
+            dto.setBank_address1(bank_address1);
+            dto.setBank_account_number1(bank_account_number1);
+            dto.setBank_account_holder_name1(bank_account_holder_name1);
+            dto.setBank_account_type1(bank_account_type1);
+            dto.setBank_ifsc_code1(bank_ifsc_code1);
+            dto.setBank_micr_code1(bank_micr_code1);
+            dto.setBank_proof1(bank_proof1);
+
+            dto.setBank_name2(bank_name2);
+            dto.setBank_branch2(bank_branch2);
+            dto.setBank_address2(bank_address2);
+            dto.setBank_account_number2(bank_account_number2);
+            dto.setBank_account_holder_name2(bank_account_holder_name2);
+            dto.setBank_account_type2(bank_account_type2);
+            dto.setBank_ifsc_code2(bank_ifsc_code2);
+            dto.setBank_micr_code2(bank_micr_code2);
+            dto.setBank_proof1(bank_proof2);
+
+            dto.setBank_name3(bank_name3);
+            dto.setBank_branch3(bank_branch3);
+            dto.setBank_address3(bank_address3);
+            dto.setBank_account_number3(bank_account_number3);
+            dto.setBank_account_holder_name3(bank_account_holder_name3);
+            dto.setBank_account_type3(bank_account_type3);
+            dto.setBank_ifsc_code3(bank_ifsc_code3);
+            dto.setBank_micr_code3(bank_micr_code3);
+            dto.setBank_proof1(bank_proof3);
+
+            Integer nse_ach_flag = null;
+            String nse_ach = null;
+            String nse_ach_amount = null;
+            Integer nse_ach_approved = null;
+            String nse_ach_rej_reason = null;
+            Date nse_ach_created_date =null;
+            Integer nse_ach_flag1 = null;
+            String nse_ach1 = null;
+            String nse_ach_amount1 = null;
+            Integer nse_ach_approved1 = null;
+            String nse_ach_rej_reason1 = null;
+            Date nse_ach_created_date1 =null;
+            Integer nse_ach_flag2 = null;
+            String nse_ach2 = null;
+            String nse_ach_amount2 = null;
+            Integer nse_ach_approved2 = null;
+            String nse_ach_rej_reason2 = null;
+            Date nse_ach_created_date2 =null;
+
+            List<UsersMandateDetails> mandateList = usersMandateDetailsRepository.findByUserId(Integer.valueOf(userId));
+
+            UsersMandateDetails mandate = mandateList.stream()
+                    .filter(x -> x.getBank_account_number().equalsIgnoreCase(bank_account_number1))
+                    .findFirst().orElse(null);
+
+            if (mandate != null) {
+                nse_ach_flag = mandate.getNse_ach_flag();
+                nse_ach = mandate.getNse_ach();
+                nse_ach_amount = mandate.getNse_ach_amount();
+                nse_ach_approved = mandate.getNse_ach_approved();
+                nse_ach_rej_reason = mandate.getNse_ach_rej_reason();
+                nse_ach_created_date = mandate.getNse_ach_created_date();
+            }
+
+            UsersMandateDetails mandate1 = mandateList.stream()
+                    .filter(x -> x.getBank_account_number().equalsIgnoreCase(bank_account_number2))
+                    .findFirst().orElse(null);
+
+            if (mandate1 != null) {
+                nse_ach_flag1 = mandate1.getNse_ach_flag();
+                nse_ach1 = mandate1.getNse_ach();
+                nse_ach_amount1 = mandate1.getNse_ach_amount();
+                nse_ach_approved1 = mandate1.getNse_ach_approved();
+                nse_ach_rej_reason1 = mandate1.getNse_ach_rej_reason();
+                nse_ach_created_date1 = mandate1.getNse_ach_created_date();
+            }
+
+            UsersMandateDetails mandate2 = mandateList.stream()
+                    .filter(x -> x.getBank_account_number().equalsIgnoreCase(bank_account_number3))
+                    .findFirst().orElse(null);
+
+            if (mandate2 != null) {
+                nse_ach_flag2 = mandate2.getNse_ach_flag();
+                nse_ach2 = mandate2.getNse_ach();
+                nse_ach_amount2 = mandate2.getNse_ach_amount();
+                nse_ach_approved2 = mandate2.getNse_ach_approved();
+                nse_ach_rej_reason2 = mandate2.getNse_ach_rej_reason();
+                nse_ach_created_date2 = mandate2.getNse_ach_created_date();
+            }
+
+            dto.setNse_ach_flag1(nse_ach_flag);
+            dto.setNse_ach1(nse_ach);
+            dto.setNse_ach_amount1(nse_ach_amount);
+            dto.setNse_ach_approved1(nse_ach_approved);
+            dto.setNse_ach_rej_reason1(nse_ach_rej_reason);
+            dto.setNse_ach_created_date1(nse_ach_created_date);
+
+            dto.setNse_ach_flag2(nse_ach_flag1);
+            dto.setNse_ach2(nse_ach1);
+            dto.setNse_ach_amount2(nse_ach_amount1);
+            dto.setNse_ach_approved2(nse_ach_approved1);
+            dto.setNse_ach_rej_reason2(nse_ach_rej_reason1);
+            dto.setNse_ach_created_date2(nse_ach_created_date1);
+
+            dto.setNse_ach_flag3(nse_ach_flag2);
+            dto.setNse_ach3(nse_ach2);
+            dto.setNse_ach_amount3(nse_ach_amount2);
+            dto.setNse_ach_approved3(nse_ach_approved2);
+            dto.setNse_ach_rej_reason3(nse_ach_rej_reason2);
+            dto.setNse_ach_created_date3(nse_ach_created_date2);
+
+            String nominee1_dob = "";
+            String nominee2_dob = "";
+            String nominee3_dob = "";
+
+            String number_of_nominee = "";
+            String nominee_soa = "";
+
+            String nominee1_type = "";
+            String nominee1_type_desc = "";
+            String nominee1_name = 	"";
+            String nominee1_pan = 	"";
+            String nominee1_date_of_birth = "";
+            String nominee1_relation = "";
+            String nominee1_percentage = "";
+            String nominee1_guard_name = "";
+            String nominee1_guard_pan = "";
+            String nominee1_guard_dob = "";
+            String nominee1_guard_relationship = "";
+            String nominee1_id_type = "";
+            String nominee1_id_no = "";
+            String nominee1_email = "";
+            String nominee1_mobile = "";
+            String nominee1_address1 = "";
+            String nominee1_address2 = "";
+            String nominee1_address3 = "";
+            String nominee1_city = "";
+            String nominee1_pincode = "";
+            String nominee1_country = "";
+            String nominee1_state = "";
+            String nominee1_state_code = "";
+
+            String nominee2_type = "";
+            String nominee2_type_desc = "";
+            String nominee2_name = 	"";
+            String nominee2_pan = 	"";
+            String nominee2_date_of_birth = "";
+            String nominee2_relation = "";
+            String nominee2_percentage = "";
+            String nominee2_guard_name = "";
+            String nominee2_guard_pan = "";
+            String nominee2_guard_dob = "";
+            String nominee2_guard_relationship = "";
+            String nominee2_id_type = "";
+            String nominee2_id_no = "";
+            String nominee2_email = "";
+            String nominee2_mobile = "";
+            String nominee2_address1 = "";
+            String nominee2_address2 = "";
+            String nominee2_address3 = "";
+            String nominee2_city = "";
+            String nominee2_pincode = "";
+            String nominee2_country = "";
+            String nominee2_state = "";
+            String nominee2_state_code = "";
+
+            String nominee3_type = "";
+            String nominee3_type_desc = "";
+            String nominee3_name = 	"";
+            String nominee3_pan = 	"";
+            String nominee3_date_of_birth = "";
+            String nominee3_relation = "";
+            String nominee3_percentage = "";
+            String nominee3_guard_name = "";
+            String nominee3_guard_pan = "";
+            String nominee3_guard_dob = "";
+            String nominee3_guard_relationship = "";
+            String nominee3_id_type = "";
+            String nominee3_id_no = "";
+            String nominee3_email = "";
+            String nominee3_mobile = "";
+            String nominee3_address1 = "";
+            String nominee3_address2 = "";
+            String nominee3_address3 = "";
+            String nominee3_city = "";
+            String nominee3_pincode = "";
+            String nominee3_country = "";
+            String nominee3_state = "";
+            String nominee3_state_code = "";
+
+            String nominee1_guard_dob_str = "";
+            String nominee2_guard_dob_str = "";
+            String nominee3_guard_dob_str = "";
+
+            Optional<UsersNomineeDetails> userNomineeDto = usersNomineeDetailsRepository.findByUserId(Integer.valueOf(userId),"NSE", String.valueOf(userOptional.get(0).getId()));
+
+            UsersNomineeDetails usernomineeList =null;
+
+            if(userNomineeDto.isPresent())
+            {
+                usernomineeList = userNomineeDto.get();
+            } else
+            {
+                usernomineeList = null;
+            }
+
+            if(usernomineeList != null){
+                number_of_nominee = usernomineeList.getNumber_of_nominee().trim();
+                if(StringHelper.isEmpty(number_of_nominee))
+                {
+                    number_of_nominee = "0";
+                }
+
+                String nomineeSoa = UserUtils.checkParameter(usernomineeList.getNominee_soa());
+                if(!nomineeSoa.isEmpty())
+                {
+                    nominee_soa = nomineeSoa;
+                }else {
+                    nominee_soa = "N";
+                }
+
+                nominee1_type = UserUtils.checkParameter(usernomineeList.getNominee1_type());
+                nominee1_type_desc = UserUtils.checkParameter(usernomineeList.getNominee1_type_desc());
+                nominee1_name = UserUtils.checkParameter(usernomineeList.getNominee1_name());
+                nominee1_pan =  UserUtils.checkParameter(usernomineeList.getNominee1_pan());
+                nominee1_relation =  UserUtils.checkParameter(usernomineeList.getNominee1_relation());
+                nominee1_id_type =  UserUtils.checkParameter(usernomineeList.getNominee1_id_type());
+                nominee1_id_no =  UserUtils.checkParameter(usernomineeList.getNominee1_id_no());
+                nominee1_email =  UserUtils.checkParameter(usernomineeList.getNominee1_email());
+                nominee1_mobile =  UserUtils.checkParameter(usernomineeList.getNominee1_mobile());
+                nominee1_address1 =  UserUtils.checkParameter(usernomineeList.getNominee1_address1());
+                nominee1_address2 = UserUtils.checkParameter(usernomineeList.getNominee1_address2());
+                nominee1_address3 =  UserUtils.checkParameter(usernomineeList.getNominee1_address3());
+                nominee1_percentage =  UserUtils.checkParameter(usernomineeList.getNominee1_percentage());
+                nominee1_guard_name =  UserUtils.checkParameter(usernomineeList.getNominee1_guard_name());
+                nominee1_guard_pan =  UserUtils.checkParameter(usernomineeList.getNominee1_guard_pan());
+                nominee1_guard_dob =  UserUtils.checkParameter(usernomineeList.getNominee1_guard_dob());
+                nominee1_guard_pan =  UserUtils.checkParameter(usernomineeList.getNominee1_guard_pan());
+                nominee1_guard_relationship =  UserUtils.checkParameter(usernomineeList.getNominee1_guard_relationship());
+                nominee1_city =  UserUtils.checkParameter(usernomineeList.getNominee1_city());
+                nominee1_pincode =  UserUtils.checkParameter(usernomineeList.getNominee1_pincode());
+                nominee1_country =  UserUtils.checkParameter(usernomineeList.getNominee1_country());
+                nominee1_state=  UserUtils.checkParameter(usernomineeList.getNominee1_state());
+                nominee1_state_code = UserUtils.checkParameter(usernomineeList.getNominee1_state_code());
+                nominee1_dob = UserUtils.checkParameter(usernomineeList.getNominee1_dob());
+
+                if(nominee1_percentage.contains("%") || nominee1_percentage.equalsIgnoreCase("percentage"))
+                {
+                    nominee1_percentage = nominee1_percentage.replaceAll("%", "");
+                    nominee1_percentage = nominee1_percentage.replaceAll("percentage", "");
+                }
+                dto.setNominee_soa(nominee_soa);
+                dto.setNominee1_name(nominee1_name);
+                dto.setNominee1_type(nominee1_type);
+                dto.setNominee1_type_desc(nominee1_type_desc);
+                dto.setNominee1_pan(nominee1_pan);
+                dto.setNominee1_dob(nominee1_dob);
+                dto.setNominee1_address1(nominee1_address1);
+                dto.setNominee1_address2(nominee1_address2);
+                dto.setNominee1_address3(nominee1_address3);
+                dto.setNominee1_pincode(nominee1_pincode);
+                dto.setNominee1_city(nominee1_city);
+                dto.setNominee1_state(nominee1_state);
+                dto.setNominee1_state_code(nominee1_state_code);
+                dto.setNominee1_country(nominee1_country);
+                dto.setNominee1_id_type(nominee1_id_type);
+                dto.setNominee1_id_no(nominee1_id_no);
+                dto.setNominee1_email(nominee1_email);
+                dto.setNominee1_mobile(nominee1_mobile);
+                dto.setNominee1_relation(nominee1_relation);
+                dto.setNominee1_guard_name(nominee1_guard_name);
+                dto.setNominee1_guard_pan(nominee1_guard_pan);
+                dto.setNominee1_guard_dob(nominee1_guard_dob);
+                dto.setNominee1_guard_relationship(nominee1_guard_relationship);
+                dto.setNominee1_percentage(nominee1_percentage);
+
+                nominee2_type =  UserUtils.checkParameter(usernomineeList.getNominee2_type());
+                nominee2_name =  UserUtils.checkParameter(usernomineeList.getNominee2_name());
+                nominee2_pan = UserUtils.checkParameter(usernomineeList.getNominee2_pan());
+                nominee2_relation =  UserUtils.checkParameter(usernomineeList.getNominee2_relation());
+                nominee2_percentage =  UserUtils.checkParameter(usernomineeList.getNominee2_percentage());
+                nominee2_guard_name =  UserUtils.checkParameter(usernomineeList.getNominee2_guard_name());
+                nominee2_guard_pan =  UserUtils.checkParameter(usernomineeList.getNominee2_guard_pan());
+                nominee2_guard_dob =  UserUtils.checkParameter(usernomineeList.getNominee2_guard_dob());
+                nominee2_guard_relationship =  UserUtils.checkParameter(usernomineeList.getNominee2_guard_relationship());
+                nominee2_id_type =  UserUtils.checkParameter(usernomineeList.getNominee2_id_type());
+                nominee2_id_no =  UserUtils.checkParameter(usernomineeList.getNominee2_id_no());
+                nominee2_email =  UserUtils.checkParameter(usernomineeList.getNominee2_email());
+                nominee2_mobile =  UserUtils.checkParameter(usernomineeList.getNominee2_mobile());
+                nominee2_address1 =   UserUtils.checkParameter(usernomineeList.getNominee2_address1());
+                nominee2_city =  UserUtils.checkParameter(usernomineeList.getNominee2_city());
+                nominee2_pincode =  UserUtils.checkParameter(usernomineeList.getNominee2_pincode());
+                nominee2_country =  UserUtils.checkParameter(usernomineeList.getNominee2_country());
+                nominee2_state= UserUtils.checkParameter(usernomineeList.getNominee2_state());
+                nominee2_state_code = UserUtils.checkParameter(usernomineeList.getNominee2_state_code());
+                nominee2_dob = UserUtils.checkParameter(usernomineeList.getNominee2_dob());
+                if(nominee2_percentage.contains("%") || nominee2_percentage.equalsIgnoreCase("percentage"))
+                {
+                    nominee2_percentage = nominee2_percentage.replaceAll("%", "");
+                    nominee2_percentage = nominee2_percentage.replaceAll("percentage", "");
+                }
+                dto.setNominee2_name(nominee2_name);
+                dto.setNominee2_type(nominee2_type);
+                dto.setNominee2_type_desc(nominee2_type_desc);
+                dto.setNominee2_pan(nominee2_pan);
+                dto.setNominee2_dob(nominee2_dob);
+                dto.setNominee2_address1(nominee2_address1);
+                dto.setNominee2_pincode(nominee2_pincode);
+                dto.setNominee2_city(nominee2_city);
+                dto.setNominee2_state(nominee2_state);
+                dto.setNominee2_state_code(nominee2_state_code);
+                dto.setNominee2_country(nominee2_country);
+                dto.setNominee2_id_type(nominee2_id_type);
+                dto.setNominee2_id_no(nominee2_id_no);
+                dto.setNominee2_email(nominee2_email);
+                dto.setNominee2_mobile(nominee2_mobile);
+                dto.setNominee2_relation(nominee2_relation);
+                dto.setNominee2_guard_name(nominee2_guard_name);
+                dto.setNominee2_guard_pan(nominee2_guard_pan);
+                dto.setNominee2_guard_dob(nominee2_guard_dob);
+                dto.setNominee2_guard_relationship(nominee2_guard_relationship);
+                dto.setNominee2_percentage(nominee2_percentage);
+
+                nominee3_type =  UserUtils.checkParameter(usernomineeList.getNominee3_type());
+                nominee3_name =  UserUtils.checkParameter(usernomineeList.getNominee3_name());
+                nominee3_pan =  UserUtils.checkParameter(usernomineeList.getNominee3_pan());
+                nominee3_dob =  UserUtils.checkParameter(usernomineeList.getNominee3_dob());
+                nominee3_relation =  UserUtils.checkParameter(usernomineeList.getNominee3_relation());
+                nominee3_percentage =  UserUtils.checkParameter(usernomineeList.getNominee3_percentage());
+                nominee3_guard_name =  UserUtils.checkParameter(usernomineeList.getNominee3_guard_name());
+                nominee3_guard_pan =  UserUtils.checkParameter(usernomineeList.getNominee3_guard_pan());
+                nominee3_guard_dob =  UserUtils.checkParameter(usernomineeList.getNominee3_guard_dob());
+                nominee3_guard_relationship = UserUtils.checkParameter(usernomineeList.getNominee3_guard_relationship());
+                nominee3_id_type = UserUtils.checkParameter(usernomineeList.getNominee3_id_type());
+                nominee3_id_no = UserUtils.checkParameter(usernomineeList.getNominee3_id_no());
+                nominee3_email = UserUtils.checkParameter(usernomineeList.getNominee3_email());
+                nominee3_mobile = UserUtils.checkParameter(usernomineeList.getNominee3_mobile());
+                nominee3_address1 =  UserUtils.checkParameter(usernomineeList.getNominee3_address1());
+                nominee3_city = UserUtils.checkParameter(usernomineeList.getNominee3_city());
+                nominee3_pincode = UserUtils.checkParameter(usernomineeList.getNominee3_pincode());
+                nominee3_country = UserUtils.checkParameter(usernomineeList.getNominee3_country());
+                nominee3_state=  UserUtils.checkParameter(usernomineeList.getNominee3_state());
+                nominee3_state_code = UserUtils.checkParameter(usernomineeList.getNominee3_state_code());
+
+                dto.setNominee3_name(nominee3_name);
+                dto.setNominee3_type(nominee3_id_type);
+                dto.setNominee3_type_desc(nominee3_type);
+                dto.setNominee3_pan(nominee3_pan);
+                dto.setNominee3_dob(nominee3_dob);
+                dto.setNominee3_address1(nominee3_address1);
+                dto.setNominee3_pincode(nominee3_pincode);
+                dto.setNominee3_city(nominee3_city);
+                dto.setNominee3_state(nominee3_state);
+                dto.setNominee3_state_code(nominee3_state_code);
+                dto.setNominee3_country(nominee3_country);
+                dto.setNominee3_id_type(nominee3_id_type);
+                dto.setNominee3_id_no(nominee3_id_no);
+                dto.setNominee3_email(nominee3_email);
+                dto.setNominee3_mobile(nominee3_mobile);
+                dto.setNominee3_relation(nominee3_relation);
+                dto.setNominee3_guard_name(nominee3_guard_name);
+                dto.setNominee3_guard_pan(nominee3_guard_pan);
+                dto.setNominee3_guard_dob(nominee3_guard_dob);
+                dto.setNominee3_guard_relationship(nominee3_guard_relationship);
+                dto.setNominee3_percentage(nominee3_percentage);
+
+                dto.set_purchase_allowed(userDto.is_purchase_allowed());
+                dto.set_redeem_allowed(userDto.is_redeem_allowed());
+                dto.set_switch_allowed(userDto.is_switch_allowed());
+                dto.set_stp_allowed(userDto.is_stp_allowed());
+                dto.set_swp_allowed(userDto.is_swp_allowed());
+
+                System.out.println("-----------------------------------------------------------------" + new Date());
+            }
+            return ResponseEntity.ok(dto);
+
+
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching user"));
         }
     }
 

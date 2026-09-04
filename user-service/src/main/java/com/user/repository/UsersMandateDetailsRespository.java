@@ -51,6 +51,11 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
             @Param("broker_code") String broker_code
     );
 
+    @Query(value = "SELECT * FROM users_mandate_details WHERE user_id = :userId and online_flag = 'NSE'", nativeQuery = true)
+    List<UsersMandateDetails> findByUserId(
+            @Param("userId") Integer userId
+    );
+
     @Query(
             value = "SELECT * FROM users_mandate_details " +
                     "WHERE client_name = :client_name " +

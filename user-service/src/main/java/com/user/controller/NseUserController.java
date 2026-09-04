@@ -5861,11 +5861,12 @@ public class NseUserController
     }
 
     @GetMapping("/getNomineeInfoByClientCodeAndBrokerCode")
-    public ResponseEntity<?> getNomineeInfoByClientCodeAndBrokerCode( @RequestParam String clientCode, @RequestParam String brokerCode, @RequestParam String clientName, @RequestHeader("Authorization") String token)
+    public ResponseEntity<?> getNomineeInfoByClientCodeAndBrokerCode( @RequestParam String clientCode, @RequestParam String brokerCode,@RequestHeader("Authorization") String token)
     {
         try
         {
-            UsersNomineeDetails nomineeDetails = usersNomineeDetailsRepository.getNomineeInfoByClientCodeAndBrokerCode(clientCode, brokerCode, "NSE", clientName);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+            UsersNomineeDetails nomineeDetails = usersNomineeDetailsRepository.getNomineeInfoByClientCodeAndBrokerCode(clientCode, brokerCode, "NSE", client_name);
             if(nomineeDetails == null){
                 return UserUtils.errorResponse("No nominee information found.", HttpStatus.NOT_FOUND);
             }

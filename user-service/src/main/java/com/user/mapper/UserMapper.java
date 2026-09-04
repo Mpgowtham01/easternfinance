@@ -460,48 +460,48 @@ public class UserMapper
 //        return entity;
 //    }
 //
-//    public static UserDto mapUserToDto(User user) {
-//        UserDto dto = new UserDto();
-//
-//        dto.setId(user.getId());
-//        dto.setName(user.getName());
-//        dto.setPan(user.getPan());
-//        dto.setMobile(user.getMobile());
-//        dto.setEmail(user.getEmail());
-//        dto.setGender(user.getGender());
+    public static UserDto mapUserToDto(User user) {
+        UserDto dto = new UserDto();
+
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setPan(user.getPan());
+        dto.setMobile(user.getMobile());
+        dto.setEmail(user.getEmail());
+        dto.setGender(user.getGender());
 //        dto.setAlter_email(user.getAlter_email());
 //        dto.setAlter_mobile(user.getAlter_mobile());
-//        dto.setType_id(user.getType_id());
-//        dto.setBranch(user.getBranch());
-//        dto.setRm_name(user.getRm_name());
-//        dto.setSubbroker_name(user.getSubbroker_name());
-//        dto.setSuper_subbroker_name(user.getSuper_subbroker_name());
-//        dto.setPayout(user.getPayout());
-//        dto.setActive(user.getActive());
-//        dto.setEmail_active(user.getEmail_active());
-//        dto.setStreet_1(user.getStreet_1());
-//        dto.setStreet_2(user.getStreet_2());
-//        dto.setStreet_3(user.getStreet_3());
-//        dto.setCity(user.getCity());
-//        dto.setPincode(user.getPincode());
-//        dto.setState(user.getState());
-//        dto.setCountry(user.getCountry());
-//        dto.setDate_of_birth(user.getDate_of_birth());
-//        dto.setAnniversary_date(user.getAnniversary_date());
-//        dto.setBroker_code(user.getBroker_code());
-//        dto.setClient_name(user.getClient_name());
+        dto.setType_id(user.getType_id());
+        dto.setBranch(user.getBranch());
+        dto.setRm_name(user.getRm_name());
+        dto.setSubbroker_name(user.getSubbroker_name());
+        dto.setSuper_subbroker_name(user.getSuper_subbroker_name());
+        dto.setPayout(user.getPayout());
+        dto.setActive(user.getActive());
+        dto.setEmail_active(user.getEmail_active());
+        dto.setStreet_1(user.getStreet_1());
+        dto.setStreet_2(user.getStreet_2());
+        dto.setStreet_3(user.getStreet_3());
+        dto.setCity(user.getCity());
+        dto.setPincode(user.getPincode());
+        dto.setState(user.getState());
+        dto.setCountry(user.getCountry());
+        dto.setDate_of_birth(user.getDate_of_birth());
+        dto.setAnniversary_date(user.getAnniversary_date());
+        dto.setBroker_code(user.getBroker_code());
+        dto.setClient_name(user.getClient_name());
 //        dto.setFirst_investment_date(user.getFirst_investment_date());
-//        dto.setMf_oneday_change(user.isMf_oneday_change());
-//        dto.setIs_purchase_allowed(user.is_purchase_allowed());
-//        dto.setIs_redeem_allowed(user.is_redeem_allowed());
-//        dto.setIs_switch_allowed(user.is_switch_allowed());
-//        dto.setIs_stp_allowed(user.is_stp_allowed());
-//        dto.setIs_swp_allowed(user.is_swp_allowed());
-//        dto.setMf_aum(user.getMf_aum());
-//        // Map any additional fields as needed
-//
-//        return dto;
-//    }
+        dto.setMf_oneday_change(user.isMf_oneday_change());
+        dto.set_purchase_allowed(user.is_purchase_allowed());
+        dto.set_redeem_allowed(user.is_redeem_allowed());
+        dto.set_switch_allowed(user.is_switch_allowed());
+        dto.set_stp_allowed(user.is_stp_allowed());
+        dto.set_swp_allowed(user.is_swp_allowed());
+        dto.setMf_aum(user.getMf_aum());
+        // Map any additional fields as needed
+
+        return dto;
+    }
 
     public static UserDto mapToUserDtoMappers(UsersOnlineRegDetails userDetails, List<UsersBankDetails> bankDetailsList, List<UsersMandateDetails> mandateDetailsList, UsersNomineeDetails nomineeDetails) {
         UserDto userDto = new UserDto();

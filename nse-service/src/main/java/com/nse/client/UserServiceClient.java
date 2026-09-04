@@ -550,4 +550,7 @@ public interface UserServiceClient {
     @PostMapping("/updateUser")
     ResponseEntity<String>  updateUser(@RequestBody UserDto userDto, @RequestHeader("Authorization") String token);
 
+    @GetMapping("/getDistinctBrokerCodes")
+    List<String> getDistinctBrokerCodes(@RequestParam("clientName") String clientName, @RequestHeader("Authorization") String token);
+
 }

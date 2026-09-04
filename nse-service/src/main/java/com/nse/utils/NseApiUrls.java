@@ -20,7 +20,7 @@ public class NseApiUrls
 
     public static String allotmentstatementReport_url = NSE_API_BASE_URL + "/reports/ALLOTMENT_STATEMENT";
 
-    public static String clientAuthorizationReportApi_url = NSE_API_BASE_URL + "/reports/client_authorization";
+    public static final String clientAuthorizationReportApi_url = NSE_API_BASE_URL + "/reports/client_authorization";
 
     public static String PurchaseOrdersPaymentApi_url = NSE_API_BASE_URL + "/payments/purchase_payment";
 
@@ -59,5 +59,7 @@ public class NseApiUrls
     public static final String MASTER_DOWNLOAD_URL = NSE_API_BASE_URL + "/reports/MASTER_DOWNLOAD";
 
     public static String order_lifecycle = NSE_API_BASE_URL + "/reports/order_lifecycle";
+
+    public static String sipRegReport = NSE_API_BASE_URL + "/reports/XSIP_REG_REPORT";
 
 }
