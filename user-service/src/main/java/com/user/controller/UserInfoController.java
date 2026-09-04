@@ -961,104 +961,82 @@ public class UserInfoController
     @GetMapping(value="/getCancelSipReason")
     public ResponseEntity<?> getCancelSipReason(@RequestHeader("Authorization") String token) throws Exception
     {
-        Optional<UsersOnlineRegDetails> user = null;
         List<CommonPojo> masterList = new ArrayList<CommonPojo>();
         CommonPojo pojo = null;
-        Integer log_id = null;
         try
         {
-            String user_id = TokenInterceptor.extractInvestorIdFromToken(token,secretKey);
-            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+            pojo = new CommonPojo();
+            pojo.setCode("SC1");
+            pojo.setDesc("Non availability of Funds");
+            masterList.add(pojo);
 
-            if(StringHelper.isEmpty(client_name))
-            {
-                return UserUtils.getCommonResponse(StatusMessage.ClientNameInvalidMessage, StatusMessage.FailureCode);
-            }
+            pojo = new CommonPojo();
+            pojo.setCode("SC2");
+            pojo.setDesc("Scheme not performing");
+            masterList.add(pojo);
 
-            if(StringHelper.isEmpty(user_id))
-            {
-                return UserUtils.getCommonResponse("Please provide the user id", StatusMessage.FailureCode);
-            }
+            pojo = new CommonPojo();
+            pojo.setCode("SC3");
+            pojo.setDesc("Service issue");
+            masterList.add(pojo);
 
-            user = userOnlineRegDetailsRespository.findInactiveNseByUserIdAndClientNameInActive(Integer.parseInt(user_id), client_name);
+            pojo = new CommonPojo();
+            pojo.setCode("SC4");
+            pojo.setDesc("Load Revised");
+            masterList.add(pojo);
 
-            if(user.isPresent())
-            {
-                pojo = new CommonPojo();
-                pojo.setCode("SC1");
-                pojo.setDesc("Non availability of Funds");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC5");
+            pojo.setDesc("Wish to invest in other schemes");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC2");
-                pojo.setDesc("Scheme not performing");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC6");
+            pojo.setDesc("Change in Fund Manager");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC3");
-                pojo.setDesc("Service issue");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC7");
+            pojo.setDesc("Goal Achieved");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC4");
-                pojo.setDesc("Load Revised");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC8");
+            pojo.setDesc("Not comfortable with market volatility");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC5");
-                pojo.setDesc("Wish to invest in other schemes");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC9");
+            pojo.setDesc("Will be restarting SIP after few months");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC6");
-                pojo.setDesc("Change in Fund Manager");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC10");
+            pojo.setDesc("Modifications in bank/mandate/date etc");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC7");
-                pojo.setDesc("Goal Achieved");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC11");
+            pojo.setDesc("I have decided to invest elsewhere");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC8");
-                pojo.setDesc("Not comfortable with market volatility");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC12");
+            pojo.setDesc("This is not the right time to invest");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC9");
-                pojo.setDesc("Will be restarting SIP after few months");
-                masterList.add(pojo);
+            pojo = new CommonPojo();
+            pojo.setCode("SC13");
+            pojo.setDesc("Others (pls specify the reason)");
+            masterList.add(pojo);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC10");
-                pojo.setDesc("Modifications in bank/mandate/date etc");
-                masterList.add(pojo);
+            TransactionCommonResponse apiResponse = new TransactionCommonResponse();
+            apiResponse.setStatus(StatusMessage.SuccessCode);
+            apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
+            apiResponse.setMsg(StatusMessage.SuccessMessage);
+            apiResponse.setList(masterList);
+            return new ResponseEntity<TransactionCommonResponse>(apiResponse, HttpStatus.OK);
 
-                pojo = new CommonPojo();
-                pojo.setCode("SC11");
-                pojo.setDesc("I have decided to invest elsewhere");
-                masterList.add(pojo);
-
-                pojo = new CommonPojo();
-                pojo.setCode("SC12");
-                pojo.setDesc("This is not the right time to invest");
-                masterList.add(pojo);
-
-                pojo = new CommonPojo();
-                pojo.setCode("SC13");
-                pojo.setDesc("Others (pls specify the reason)");
-                masterList.add(pojo);
-
-                TransactionCommonResponse apiResponse = new TransactionCommonResponse();
-                apiResponse.setStatus(StatusMessage.SuccessCode);
-                apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
-                apiResponse.setMsg(StatusMessage.SuccessMessage);
-                apiResponse.setList(masterList);
-                return new ResponseEntity<TransactionCommonResponse>(apiResponse, HttpStatus.OK);
-            }else
-            {
-                return UserUtils.getCommonResponse("User details not available.", StatusMessage.FailureCode);
-            }
         }
         catch(Exception ex)
         {
