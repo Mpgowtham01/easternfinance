@@ -7189,8 +7189,8 @@ public class NseSchemeController {
         resp.setClient_name(m.getClient_name());
         resp.setCreated_date(m.getCreated_date());
 
-//        resp.setNse_ach_start_date(m.getNse_ach_start_date());
-//        resp.setNse_ach_end_date(m.getNse_ach_end_date());
+        resp.setNse_ach_start_date(m.getNse_ach_start_date());
+        resp.setNse_ach_end_date(m.getNse_ach_end_date());
     }
 
     @GetMapping("/getSipSchemeByAmcOnline")
