@@ -36,7 +36,7 @@ public interface NseTransactionRepository extends JpaRepository<NseTransactions,
             @Param("transactionType") String transactionType
     );
 
-    @Query("FROM NseTransactions nt WHERE nt.user_id = :userId AND nt.client_name = :clientName AND nt.transaction_type NOT IN ('UCC Request','Fatca Request','Joint Holder1 Fatca Request','Joint Holder2 Fatca Request','ACH Mandate Request','Add Bank Details','Delete Bank Details') ORDER BY nt.transaction_date DESC")
+    @Query("FROM NseTransactions nt WHERE nt.user_id = :userId AND nt.client_name = :clientName ORDER BY nt.transaction_date DESC")
     List<NseTransactions> findNonRequestTransactionsOrderedByDate(
             @Param("userId") Integer userId,
             @Param("clientName") String clientName
