@@ -26,6 +26,29 @@ public class UsersOnlineRegDetailsService
     public UsersOnlineRegDetails saveOrUpdateUserOnlineReg(UsersOnlineRegDetails user)
     {
         System.out.println("saveOrUpdateUserOnlineRegd = " + user);
+
+        // uniq_userid_iin_brokercode_clientname : reuse the existing row instead of inserting a duplicate
+        if (user.getId() == null
+                && user.getUser_id() != null
+                && user.getNse_iin_number() != null
+                && user.getBroker_code() != null
+                && user.getClient_name() != null)
+        {
+            List<UsersOnlineRegDetails> existingList =
+                    userOnlineRegDetailsRepository.findByUserIdAndBseClientCodeAndBrokerCodeAndClientName(
+                            user.getUser_id(),
+                            user.getNse_iin_number(),
+                            user.getBroker_code(),
+                            user.getClient_name());
+
+            if (existingList != null && !existingList.isEmpty())
+            {
+                UsersOnlineRegDetails existing = existingList.get(0);
+                System.out.println("saveOrUpdateUserOnlineRegd::existing row found, updating id = " + existing.getId());
+                user.setId(existing.getId());
+                user.setCreated_date(existing.getCreated_date());
+            }
+        }
         return userOnlineRegDetailsRepository.save(user);
     }
 
@@ -83,11 +106,46 @@ public class UsersOnlineRegDetailsService
 //
     public UsersBankDetails saveOrUpdateUserBank(UsersBankDetails user)
     {
+        // same online_id + iin + broker + account number = same bank row, update instead of adding a duplicate
+        if (user.getId() == null
+                && user.getOnline_id() != null
+                && user.getOnline_code() != null
+                && user.getBroker_code() != null
+                && user.getBank_account_number() != null)
+        {
+            Optional<UsersBankDetails> existingOpt =
+                    userBankDetailsRepository.findByOnlineIdAndOnlineCodeAndBrokerCodeAndBankAccountNumber(
+                            user.getOnline_id(),
+                            user.getOnline_code(),
+                            user.getBroker_code(),
+                            user.getBank_account_number());
+
+            if (existingOpt.isPresent())
+            {
+                UsersBankDetails existing = existingOpt.get();
+                System.out.println("saveOrUpdateUserBank::existing row found, updating id = " + existing.getId());
+                user.setId(existing.getId());
+                user.setCreated_date(existing.getCreated_date());
+            }
+        }
         return userBankDetailsRepository.save(user);
     }
 
     public UsersNomineeDetails saveOrUpdateUserNominee(UsersNomineeDetails user)
     {
+        if (user.getId() == null && user.getOnline_id() != null)
+        {
+            Optional<UsersNomineeDetails> existingOpt =
+                    userNomineeDetailsRepository.findByOnlineId(user.getOnline_id());
+
+            if (existingOpt.isPresent())
+            {
+                UsersNomineeDetails existing = existingOpt.get();
+                System.out.println("saveOrUpdateUserNominee::existing row found, updating id = " + existing.getId());
+                user.setId(existing.getId());
+                user.setCreated_date(existing.getCreated_date());
+            }
+        }
         return userNomineeDetailsRepository.save(user);
     }
 //

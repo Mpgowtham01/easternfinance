@@ -96,10 +96,10 @@ public interface UsersBankDetailsRepository extends JpaRepository<UsersBankDetai
 
     @Query("FROM UsersBankDetails u WHERE u.online_id = :onlineId AND u.online_flag = 'NSE' AND u.online_code = :onlineCode AND u.bank_account_number = :bankAccountNumber AND u.broker_code = :brokerCode")
     Optional<UsersBankDetails> findByOnlineIdAndOnlineCodeAndBrokerCodeAndBankAccountNumber(
-            Integer onlineId,
-            String onlineCode,
-            String brokerCode,
-            String bankAccountNumber
+            @Param("onlineId") Integer onlineId,
+            @Param("onlineCode") String onlineCode,
+            @Param("brokerCode") String brokerCode,
+            @Param("bankAccountNumber") String bankAccountNumber
     );
 
 

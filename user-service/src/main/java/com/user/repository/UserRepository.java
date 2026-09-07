@@ -58,6 +58,9 @@ public interface UserRepository extends JpaRepository<User, Integer>
             @Param("clientName") String clientName
     );
 
+    @Query("FROM User u WHERE u.id = :id AND active = 1 AND u.client_name = :client_name")
+    Optional<User> findBseUserById(@Param("id") Integer id, @Param("client_name") String client_name);
+
     //
 //    @Query("SELECT u FROM User u WHERE u.client_name = :clientName AND u.nse_iin_number = :nseIinNumber")
 //    Optional<User> findByClientNameAndNseIinNumber(@Param("clientName") String clientName, @Param("nseIinNumber") String nseIinNumber);
