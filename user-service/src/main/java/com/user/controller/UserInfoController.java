@@ -1061,16 +1061,19 @@ public class UserInfoController
 
             System.out.println("------------------------------------------------------" + new Date());
             String userId = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
-
             Optional<User> userList = userRepository.findUSerByIdAndActive(Integer.valueOf(userId));
-            User userDto = userList.get();
-            System.out.println(userDto);
+            User userDto = new User();
+            if(userList.isPresent())
+            {
+                userDto = userList.get();
+            }
 
             List<UsersOnlineRegDetails> userOptional = userOnlineRegDetailsRespository.findNseUserByUserId(Integer.valueOf(userId));
             UserDto dto = UserMapper.mapUserToDto(userDto);
 
             UsersOnlineRegDetails user = userOptional.stream().findFirst().orElse(null);
-            if (user == null) {
+            if (user == null)
+            {
                 return ResponseEntity.ok(dto);
             }
             user = userOptional.get(0);

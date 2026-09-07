@@ -498,6 +498,8 @@ public class UserMapper
         dto.set_stp_allowed(user.is_stp_allowed());
         dto.set_swp_allowed(user.is_swp_allowed());
         dto.setMf_aum(user.getMf_aum());
+        dto.setGuard_name(user.getGuard_name());
+        dto.setGuard_pan(user.getGuard_pan());
         // Map any additional fields as needed
 
         return dto;
