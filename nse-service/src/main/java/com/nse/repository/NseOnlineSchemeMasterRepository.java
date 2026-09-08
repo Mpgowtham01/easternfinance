@@ -596,4 +596,7 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
     @Query(value = "SELECT scheme_name,scheme,scheme_category,amc_code,amc_name FROM nse_online_scheme_master WHERE div_reinvest_flag = :option AND scheme_name IS NOT NULL AND scheme_name != '' AND scheme_amfi_code IS NOT NULL AND scheme_amfi_code != '' AND plan_type = 'NORMAL' AND redemption_allowed = 'Y' AND purchase_transaction_mode IN ('P','DP') AND settlement_type NOT IN ('L1','L0') AND scheme NOT LIKE '%INSURED%' AND scheme_category != 'ETFs' group by scheme_amfi_code", nativeQuery = true)
     List<Object[]> getAllRedemptionSchemesByOption(@Param("option") String option);
 
+    @Query(value = "SELECT distinct amc_code FROM nse_online_scheme_master WHERE scheme_name = :scheme_name group by scheme_name LIMIT 1", nativeQuery = true)
+    String getSchemeBasedAmcName(@Param("scheme_name") String scheme_name);
+
 }

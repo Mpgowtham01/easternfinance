@@ -430,9 +430,8 @@ public class NseServiceDAO {
     //getSchemeFolioNumbers
 
     public List<String> getSchemeFolioNumbers(String client_name, Integer user_id, String scheme_name,
-                                                        String holding_nature_code, String tax_status_code,
-                                                        String joint_holder_pan1, String joint_holder_pan2,@RequestHeader("Authorization") String token) {
-        List<String> result = new ArrayList<>();
+                                              String holding_nature_code, String tax_status_code,
+                                              String joint_holder_pan1, String joint_holder_pan2,String broker_code,@RequestHeader("Authorization") String token) {
         System.out.println("Fetching folio numbers for AMC: " + scheme_name + ", Client: " + client_name + ", User ID: " + user_id);
 
         String registrar = "";
@@ -444,21 +443,29 @@ public class NseServiceDAO {
         List<String> list = new ArrayList<String>();
         try {
 
-            List<UsersPortfolioSchemewiseDto> schemeCodes = userServiceClient.getUsersPortfolioSchemewiseUser(user_id, client_name, scheme_name,token);
+            String amc_name = nseOnlineSchemeMasterRepository.getSchemeBasedAmcName(scheme_name);
+            System.out.println("amc_name = " + amc_name);
+            List<UsersPortfolioSchemewiseDto> schemeCodes = null;
+            try
+            {
+                schemeCodes = userServiceClient.getSchemeBasedAmcName(user_id, client_name, scheme_name,token);
+            }
+            catch (FeignException.NotFound e)
+            {
+                // no schemes in the portfolio for this user - fall through to the AMFI product code mapping below
+                System.out.println("No schemes found for " + scheme_name + ", falling back to AMFI scheme mapping");
+            }
+            List<String> folio_array;
+            if (schemeCodes != null && !schemeCodes.isEmpty())
+            {
+                scheme_code = schemeCodes.get(0).getScheme_code();
+                registrar = schemeCodes.get(0).getRegistrar();
+                amc_code = schemeCodes.get(0).getAmc_code();
 
-            List<UsersPortfolioSchemewiseDto> scheme_list = schemeCodes;
-
-            System.out.println("Scheme Codes: " + scheme_list);
-
-
-            if(scheme_list != null && scheme_list.size() > 0) {
-                scheme_code = scheme_list.get(0).getScheme_code();
-                registrar = scheme_list.get(0).getRegistrar();
-                amc_code = scheme_list.get(0).getAmc_code();
+                folio_array = schemeCodes.stream().map(UsersPortfolioSchemewiseDto::getFolio_no).collect(Collectors.toList());
 
                 List<String> productList = new ArrayList<>();
                 productList.add(scheme_code);
-
 
                 System.out.println("registrar Code: " + registrar);
 
@@ -466,21 +473,22 @@ public class NseServiceDAO {
                     List<InvestorMasterCamsDto> camsList = userServiceClient.getProductCode(user_id, client_name, productList,token);
                     if (camsList.size() > 0) {
                         for (InvestorMasterCamsDto camsScheme : camsList) {
-                            String holding = camsScheme.getHolding_na();
-                            String joint1_pan = camsScheme.getJoint1_pan();
-                            String joint2_pan = camsScheme.getJoint2_pan();
-                            String bank_acc_type = camsScheme.getAc_type();
-                            if (holding == null) {
-                                holding = "";
+                            String holding = Objects.toString(camsScheme.getHolding_na(), "").trim();
+                            String joint1_pan = Objects.toString(camsScheme.getJoint1_pan(), "").trim();
+                            String joint2_pan = Objects.toString(camsScheme.getJoint2_pan(), "").trim();
+                            String bank_acc_type = Objects.toString(camsScheme.getAc_type(), "").trim();
+                            String folioNo = Objects.toString(camsScheme.getFoliochk(), "").trim();
+
+                            Boolean statusCheck = schemeCodes.stream().anyMatch(x -> x.getFolio_no().equalsIgnoreCase(folioNo));
+
+                            if(!statusCheck)
+                            {
+                                continue;
                             }
-                            if (joint1_pan == null) {
-                                joint1_pan = "";
-                            }
-                            if (joint2_pan == null) {
-                                joint2_pan = "";
-                            }
-                            if (bank_acc_type == null) {
-                                bank_acc_type = "";
+
+                            if(!broker_code.equalsIgnoreCase(camsScheme.getBroker_cod()))
+                            {
+                                continue;
                             }
 
                             if (tax_status_code.equalsIgnoreCase("01")) {
@@ -489,36 +497,28 @@ public class NseServiceDAO {
                                         list.add(camsScheme.getFoliochk());
                                     }
                                 } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
-                                    if (holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES")) {
-                                        if (joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
-                                            list.add(camsScheme.getFoliochk());
-                                        }
-                                    }
-                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")) {
-                                    if (joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                    if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                            && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
                                         list.add(camsScheme.getFoliochk());
                                     }
-                                } else {
-
+                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                        && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                    list.add(camsScheme.getFoliochk());
                                 }
-                            } else if (tax_status_code.equalsIgnoreCase("11") || tax_status_code.equalsIgnoreCase("21")) {
-                                if (tax_status_code.equalsIgnoreCase("11") && bank_acc_type.equalsIgnoreCase("NRO")) {
+                            } else if (tax_status_code.equalsIgnoreCase("24") || tax_status_code.equalsIgnoreCase("21")) {
+                                if (tax_status_code.equalsIgnoreCase("24") && bank_acc_type.equalsIgnoreCase("NRO")) {
                                     if (holding_nature_code.equalsIgnoreCase("SI")) {
                                         if (holding.equalsIgnoreCase("SI")) {
                                             list.add(camsScheme.getFoliochk());
                                         }
                                     } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
-                                        if (holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES")) {
-                                            if (joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
-                                                list.add(camsScheme.getFoliochk());
-                                            }
-                                        }
-                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")) {
-                                        if (joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                        if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
                                             list.add(camsScheme.getFoliochk());
                                         }
-                                    } else {
-
+                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                            && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                        list.add(camsScheme.getFoliochk());
                                     }
                                 } else if (tax_status_code.equalsIgnoreCase("21") && bank_acc_type.equalsIgnoreCase("NRE")) {
                                     if (holding_nature_code.equalsIgnoreCase("SI")) {
@@ -526,20 +526,14 @@ public class NseServiceDAO {
                                             list.add(camsScheme.getFoliochk());
                                         }
                                     } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
-                                        if (holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES")) {
-                                            if (joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
-                                                list.add(camsScheme.getFoliochk());
-                                            }
-                                        }
-                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")) {
-                                        if (joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                        if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
                                             list.add(camsScheme.getFoliochk());
                                         }
-                                    } else {
-
+                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                            && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                        list.add(camsScheme.getFoliochk());
                                     }
-                                } else {
-
                                 }
 
                             } else {
@@ -551,21 +545,28 @@ public class NseServiceDAO {
 
                 if (StringHelper.isNotEmpty(registrar) && registrar.equalsIgnoreCase("KARVY")) {
                     List<InvestorMasterKarvyDto> karvyList = null;
-
+                    System.out.println("amc_code = " + amc_code);
                     if (amc_code.equalsIgnoreCase("103")) {
                         karvyList = userServiceClient.getinvestorMasterKarvyScheme(user_id, client_name, scheme_name,token);
                     } else {
-                        karvyList = userServiceClient.getinvestorMasterKarvySchemes(user_id, client_name, productList,token);
+                        karvyList = userServiceClient.getinvestorMasterKarvySchemes(user_id, client_name, scheme_name,token);
                     }
-
+                    System.out.println("karvyList = " + karvyList.size());
                     if (karvyList.size() > 0) {
 
-                        for (InvestorMasterKarvyDto karvyScheme : karvyList) {
+                        for (InvestorMasterKarvyDto karvyScheme : karvyList)
+                        {
+
+                            if(!folio_array.contains(karvyScheme.getFolio()))
+                            {
+                                continue;
+                            }
 
                             String holding = karvyScheme.getMode_of_holding();
                             String pan2 = karvyScheme.getPan2();
                             String pan3 = karvyScheme.getPan3();
                             String bank_acc_type = karvyScheme.getAccount_type();
+
                             if (holding == null) {
                                 holding = "";
                             }
@@ -578,20 +579,32 @@ public class NseServiceDAO {
                             if (bank_acc_type == null) {
                                 bank_acc_type = "";
                             }
+                            System.out.println("broker_code = " + broker_code + " karvyScheme.getBroker_code() = " + karvyScheme.getBroker_code());
+                            if(!broker_code.equalsIgnoreCase(karvyScheme.getBroker_code()))
+                            {
+                                continue;
+                            }
+
+                            System.out.println("tax_status_code = " + tax_status_code);
+                            System.out.println("holding = " + holding);
+                            System.out.println("holding_nature_code = " + holding_nature_code);
+                            System.out.println("bank_acc_type = " + bank_acc_type);
 
                             if (tax_status_code.equalsIgnoreCase("01")) {
-                                if (holding.equalsIgnoreCase("1")) {
+
+                                if ((holding.equalsIgnoreCase("1")) || (holding.equalsIgnoreCase("SINGLE")) || (holding.equalsIgnoreCase("SINGLY"))) {
                                     holding = "SI";
-                                } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J")) {
+                                } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J") || holding.equalsIgnoreCase("JOINT")) {
                                     holding = "JO";
-                                } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5")) {
+                                } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5") || holding.equalsIgnoreCase("EITHER OR SURVIVOR")) {
                                     holding = "ES";
-                                } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7")) {
+                                } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7") || holding.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
                                     holding = "AS";
                                 }
 
                                 if (holding.isEmpty()) {
                                     String holding_des = karvyScheme.getMode_of_holding_description();
+                                    System.out.println("holding_des = " + holding_des);
                                     if (holding_des == null) {
                                         holding_des = "";
                                     }
@@ -612,27 +625,26 @@ public class NseServiceDAO {
                                         list.add(karvyScheme.getFolio());
                                     }
                                 } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
-                                    if (holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES")) {
-                                        if (joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
-                                            list.add(karvyScheme.getFolio());
-                                        }
-                                    }
-                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")) {
-                                    if (joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                    if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                            && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
                                         list.add(karvyScheme.getFolio());
                                     }
-                                } else {
-
+                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                        && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                    list.add(karvyScheme.getFolio());
                                 }
-                            } else if (tax_status_code.equalsIgnoreCase("11") || tax_status_code.equalsIgnoreCase("21")) {
-                                if (tax_status_code.equalsIgnoreCase("11") && bank_acc_type.equalsIgnoreCase("NRO")) {
-                                    if (holding.equalsIgnoreCase("1")) {
+                            }
+                            else if (tax_status_code.equalsIgnoreCase("24") || tax_status_code.equalsIgnoreCase("21"))
+                            {
+                                if (tax_status_code.equalsIgnoreCase("24") && bank_acc_type.equalsIgnoreCase("NRO"))
+                                {
+                                    if ((holding.equalsIgnoreCase("1")) || (holding.equalsIgnoreCase("SINGLE")) || (holding.equalsIgnoreCase("SINGLY"))) {
                                         holding = "SI";
-                                    } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J")) {
+                                    } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J") || holding.equalsIgnoreCase("JOINT")) {
                                         holding = "JO";
-                                    } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5")) {
+                                    } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5") || holding.equalsIgnoreCase("EITHER OR SURVIVOR")) {
                                         holding = "ES";
-                                    } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7")) {
+                                    } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7") || holding.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
                                         holding = "AS";
                                     }
 
@@ -658,26 +670,24 @@ public class NseServiceDAO {
                                             list.add(karvyScheme.getFolio());
                                         }
                                     } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
-                                        if (holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES")) {
-                                            if (joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
-                                                list.add(karvyScheme.getFolio());
-                                            }
-                                        }
-                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")) {
-                                        if (joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                        if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
                                             list.add(karvyScheme.getFolio());
                                         }
-                                    } else {
-
+                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                            && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                        list.add(karvyScheme.getFolio());
                                     }
-                                } else if (tax_status_code.equalsIgnoreCase("21") && bank_acc_type.equalsIgnoreCase("NRE")) {
-                                    if (holding.equalsIgnoreCase("1")) {
+                                }
+                                else if (tax_status_code.equalsIgnoreCase("21") && bank_acc_type.equalsIgnoreCase("NRE"))
+                                {
+                                    if ((holding.equalsIgnoreCase("1")) || (holding.equalsIgnoreCase("SINGLE")) || (holding.equalsIgnoreCase("SINGLY"))) {
                                         holding = "SI";
-                                    } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J")) {
+                                    } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J") || holding.equalsIgnoreCase("JOINT")) {
                                         holding = "JO";
-                                    } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5")) {
+                                    } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5") || holding.equalsIgnoreCase("EITHER OR SURVIVOR")) {
                                         holding = "ES";
-                                    } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7")) {
+                                    } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7") || holding.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
                                         holding = "AS";
                                     }
 
@@ -703,20 +713,14 @@ public class NseServiceDAO {
                                             list.add(karvyScheme.getFolio());
                                         }
                                     } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
-                                        if (holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES")) {
-                                            if (joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
-                                                list.add(karvyScheme.getFolio());
-                                            }
-                                        }
-                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")) {
-                                        if (joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                        if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
                                             list.add(karvyScheme.getFolio());
                                         }
-                                    } else {
-
+                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                            && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                        list.add(karvyScheme.getFolio());
                                     }
-                                } else {
-
                                 }
                             } else {
                                 list.add(karvyScheme.getFolio());
@@ -727,14 +731,14 @@ public class NseServiceDAO {
             }else
             {
                 List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.findBySchemeAmfiAndActive(scheme_name,token);
-
+                System.out.println("schemeMappingList = " + schemeMappingList);
                 if(schemeMappingList != null && schemeMappingList.size() > 0)
                 {
                     cams = schemeMappingList.get(0).getScheme_cams_productcode();
                     karvy = schemeMappingList.get(0).getScheme_karvy_productcode();
                 }
 
-                List<String> prodcodeList = new ArrayList<String>();
+                List<String> prodcodeList;
 
                 if(StringHelper.isNotEmpty(cams))
                 {
@@ -766,22 +770,15 @@ public class NseServiceDAO {
                                     }
                                 }else if(holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES"))
                                 {
-                                    if(holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
-                                    {
-                                        if(joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan))
-                                        {
-                                            list.add(camsScheme.getFoliochk());
-                                        }
-                                    }
-                                }else if(holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO"))
-                                {
-                                    if(joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan))
+                                    if((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                            && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan))
                                     {
                                         list.add(camsScheme.getFoliochk());
                                     }
-                                }else
+                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                        && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan))
                                 {
-
+                                    list.add(camsScheme.getFoliochk());
                                 }
                             }else
                             {
@@ -828,7 +825,7 @@ public class NseServiceDAO {
                                     holding = "AS";
                                 }
 
-                                if(holding == null || holding.isEmpty())
+                                if(holding.isEmpty())
                                 {
                                     String holding_des = karvyScheme.getMode_of_holding_description();
 
@@ -856,22 +853,441 @@ public class NseServiceDAO {
                                     }
                                 }else if(holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES"))
                                 {
-                                    if(holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
-                                    {
-                                        if(joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3))
-                                        {
-                                            list.add(karvyScheme.getFolio());
-                                        }
-                                    }
-                                }else if(holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO"))
-                                {
-                                    if(joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3))
+                                    if((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                            && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3))
                                     {
                                         list.add(karvyScheme.getFolio());
                                     }
-                                }else
+                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                        && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3))
                                 {
+                                    list.add(karvyScheme.getFolio());
+                                }
+                            }else
+                            {
+                                list.add(karvyScheme.getFolio());
+                            }
+                        }
+                    }
+                }
+            }
 
+            list = new ArrayList<String>(new LinkedHashSet<String>(list));
+
+
+
+        } catch (Exception ex) {
+            System.err.println("Error fetching folio numbers: " + ex.getMessage());
+        }
+
+        return list;
+    }
+
+    public List<String> getSchemeFolioNumbersList(String client_name, Integer user_id, String scheme_name, String holding_nature_code, String tax_status_code, String joint_holder_pan1, String joint_holder_pan2,@RequestHeader("Authorization") String token)
+    {
+        System.out.println("Fetching folio numbers for AMC: " + scheme_name + ", Client: " + client_name + ", User ID: " + user_id);
+
+        String registrar = "";
+        String amc_code = "";
+        String scheme_code = "";
+        String cams = "";
+        String karvy = "";
+
+        List<String> list = new ArrayList<String>();
+        try
+        {
+            String amc_name = nseOnlineSchemeMasterRepository.getSchemeBasedAmcName(scheme_name);
+            System.out.println("amc_name = " + amc_name);
+            List<UsersPortfolioSchemewiseDto> scheme_list = userServiceClient.getSchemeBasedAmcName(user_id, client_name, amc_name,token);
+
+            System.out.println("Scheme Codes: " + scheme_list);
+
+            if(scheme_list != null && scheme_list.size() > 0)
+            {
+                for (UsersPortfolioSchemewiseDto scheme : scheme_list)
+                {
+                    scheme_code = scheme.getScheme_code();
+                    registrar = scheme.getRegistrar();
+                    amc_code = scheme.getAmc_code();
+
+                    List<String> productList = new ArrayList<>();
+                    productList.add(scheme_code);
+                    System.out.println("productList = " + productList);
+
+                    System.out.println("registrar Code: " + registrar);
+
+                    if (StringHelper.isNotEmpty(registrar) && registrar.equalsIgnoreCase("CAMS"))
+                    {
+                        List<InvestorMasterCamsDto> camsList = userServiceClient.getProductCode(user_id, client_name, productList,token);
+                        System.out.println(" camsList = " + camsList.size());
+                        if (camsList.size() > 0) {
+                            for (InvestorMasterCamsDto camsScheme : camsList) {
+                                String holding = Objects.toString(camsScheme.getHolding_na(), "").trim();
+                                String joint1_pan = Objects.toString(camsScheme.getJoint1_pan(), "").trim();
+                                String joint2_pan = Objects.toString(camsScheme.getJoint2_pan(), "").trim();
+                                String bank_acc_type = Objects.toString(camsScheme.getAc_type(), "").trim();
+
+                                if (tax_status_code.equalsIgnoreCase("01")) {
+                                    if (holding_nature_code.equalsIgnoreCase("SI")) {
+                                        if (holding.equalsIgnoreCase("SI")) {
+                                            list.add(camsScheme.getFoliochk());
+                                        }
+                                    } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
+                                        if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                            list.add(camsScheme.getFoliochk());
+                                        }
+                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                            && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                        list.add(camsScheme.getFoliochk());
+                                    }
+                                } else if (tax_status_code.equalsIgnoreCase("24") || tax_status_code.equalsIgnoreCase("21")) {
+                                    if (tax_status_code.equalsIgnoreCase("24") && bank_acc_type.equalsIgnoreCase("NRO")) {
+                                        if (holding_nature_code.equalsIgnoreCase("SI")) {
+                                            if (holding.equalsIgnoreCase("SI")) {
+                                                list.add(camsScheme.getFoliochk());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
+                                            if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                    && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                                list.add(camsScheme.getFoliochk());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                                && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                            list.add(camsScheme.getFoliochk());
+                                        }
+                                    } else if (tax_status_code.equalsIgnoreCase("21") && bank_acc_type.equalsIgnoreCase("NRE")) {
+                                        if (holding_nature_code.equalsIgnoreCase("SI")) {
+                                            if (holding.equalsIgnoreCase("SI")) {
+                                                list.add(camsScheme.getFoliochk());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
+                                            if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                    && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                                list.add(camsScheme.getFoliochk());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                                && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan)) {
+                                            list.add(camsScheme.getFoliochk());
+                                        }
+                                    }
+
+                                } else {
+                                    list.add(camsScheme.getFoliochk());
+                                }
+                            }
+                        }
+                    }
+
+                    if (StringHelper.isNotEmpty(registrar) && registrar.equalsIgnoreCase("KARVY"))
+                    {
+                        List<InvestorMasterKarvyDto> karvyList = null;
+                        System.out.println("amc_code = " + amc_code);
+                        if (amc_code.equalsIgnoreCase("103")) {
+                            karvyList = userServiceClient.getinvestorMasterKarvySchemes(user_id, client_name, amc_name,token);
+                        } else {
+                            karvyList = userServiceClient.getinvestorMasterKarvySchemesList(user_id, client_name, amc_name,token);
+                        }
+                        System.out.println("karvyList = " + karvyList);
+                        if (karvyList.size() > 0) {
+
+                            for (InvestorMasterKarvyDto karvyScheme : karvyList) {
+
+                                String holding = karvyScheme.getMode_of_holding();
+                                String pan2 = karvyScheme.getPan2();
+                                String pan3 = karvyScheme.getPan3();
+                                String bank_acc_type = karvyScheme.getAccount_type();
+                                if (holding == null) {
+                                    holding = "";
+                                }
+                                if (pan2 == null) {
+                                    pan2 = "";
+                                }
+                                if (pan3 == null) {
+                                    pan3 = "";
+                                }
+                                if (bank_acc_type == null) {
+                                    bank_acc_type = "";
+                                }
+
+                                System.out.println("tax_status_code = " + tax_status_code);
+                                System.out.println("holding = " + holding);
+                                System.out.println("holding_nature_code = " + holding_nature_code);
+                                System.out.println("bank_acc_type = " + bank_acc_type);
+
+                                if (tax_status_code.equalsIgnoreCase("01")) {
+
+                                    if ((holding.equalsIgnoreCase("1")) || (holding.equalsIgnoreCase("SINGLE")) || (holding.equalsIgnoreCase("SINGLY"))) {
+                                        holding = "SI";
+                                    } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J") || holding.equalsIgnoreCase("JOINT")) {
+                                        holding = "JO";
+                                    } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5") || holding.equalsIgnoreCase("EITHER OR SURVIVOR")) {
+                                        holding = "ES";
+                                    } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7") || holding.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
+                                        holding = "AS";
+                                    }
+
+                                    if (holding.isEmpty()) {
+                                        String holding_des = karvyScheme.getMode_of_holding_description();
+                                        System.out.println("holding_des = " + holding_des);
+                                        if (holding_des == null) {
+                                            holding_des = "";
+                                        }
+
+                                        if (holding_des.equalsIgnoreCase("SINGLE") || holding_des.equalsIgnoreCase("SINGLY")) {
+                                            holding = "SI";
+                                        } else if (holding_des.equalsIgnoreCase("JOINT") || holding_des.equalsIgnoreCase("JOINTLY")) {
+                                            holding = "JO";
+                                        } else if (holding_des.equalsIgnoreCase("EITHER OR SURVIVOR")) {
+                                            holding = "ES";
+                                        } else if (holding_des.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
+                                            holding = "AS";
+                                        }
+                                    }
+
+                                    if (holding_nature_code.equalsIgnoreCase("SI")) {
+                                        if (holding.equalsIgnoreCase("SI")) {
+                                            list.add(karvyScheme.getFolio());
+                                        }
+                                    } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
+                                        if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                            list.add(karvyScheme.getFolio());
+                                        }
+                                    } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                            && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                        list.add(karvyScheme.getFolio());
+                                    }
+                                }
+                                else if (tax_status_code.equalsIgnoreCase("24") || tax_status_code.equalsIgnoreCase("21"))
+                                {
+                                    if (tax_status_code.equalsIgnoreCase("24") && bank_acc_type.equalsIgnoreCase("NRO"))
+                                    {
+                                        if ((holding.equalsIgnoreCase("1")) || (holding.equalsIgnoreCase("SINGLE")) || (holding.equalsIgnoreCase("SINGLY"))) {
+                                            holding = "SI";
+                                        } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J") || holding.equalsIgnoreCase("JOINT")) {
+                                            holding = "JO";
+                                        } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5") || holding.equalsIgnoreCase("EITHER OR SURVIVOR")) {
+                                            holding = "ES";
+                                        } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7") || holding.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
+                                            holding = "AS";
+                                        }
+
+                                        if (holding.isEmpty()) {
+                                            String holding_des = karvyScheme.getMode_of_holding_description();
+                                            if (holding_des == null) {
+                                                holding_des = "";
+                                            }
+
+                                            if (holding_des.equalsIgnoreCase("SINGLE") || holding_des.equalsIgnoreCase("SINGLY")) {
+                                                holding = "SI";
+                                            } else if (holding_des.equalsIgnoreCase("JOINT") || holding_des.equalsIgnoreCase("JOINTLY")) {
+                                                holding = "JO";
+                                            } else if (holding_des.equalsIgnoreCase("EITHER OR SURVIVOR")) {
+                                                holding = "ES";
+                                            } else if (holding_des.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
+                                                holding = "AS";
+                                            }
+                                        }
+
+                                        if (holding_nature_code.equalsIgnoreCase("SI")) {
+                                            if (holding.equalsIgnoreCase("SI")) {
+                                                list.add(karvyScheme.getFolio());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
+                                            if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                    && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                                list.add(karvyScheme.getFolio());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                                && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                            list.add(karvyScheme.getFolio());
+                                        }
+                                    }
+                                    else if (tax_status_code.equalsIgnoreCase("21") && bank_acc_type.equalsIgnoreCase("NRE"))
+                                    {
+                                        if ((holding.equalsIgnoreCase("1")) || (holding.equalsIgnoreCase("SINGLE")) || (holding.equalsIgnoreCase("SINGLY"))) {
+                                            holding = "SI";
+                                        } else if (holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J") || holding.equalsIgnoreCase("JOINT")) {
+                                            holding = "JO";
+                                        } else if (holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5") || holding.equalsIgnoreCase("EITHER OR SURVIVOR")) {
+                                            holding = "ES";
+                                        } else if (holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7") || holding.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
+                                            holding = "AS";
+                                        }
+
+                                        if (holding.isEmpty()) {
+                                            String holding_des = karvyScheme.getMode_of_holding_description();
+                                            if (holding_des == null) {
+                                                holding_des = "";
+                                            }
+
+                                            if (holding_des.equalsIgnoreCase("SINGLE") || holding_des.equalsIgnoreCase("SINGLY")) {
+                                                holding = "SI";
+                                            } else if (holding_des.equalsIgnoreCase("JOINT") || holding_des.equalsIgnoreCase("JOINTLY")) {
+                                                holding = "JO";
+                                            } else if (holding_des.equalsIgnoreCase("EITHER OR SURVIVOR")) {
+                                                holding = "ES";
+                                            } else if (holding_des.equalsIgnoreCase("ANYONE OR SURVIVOR")) {
+                                                holding = "AS";
+                                            }
+                                        }
+
+                                        if (holding_nature_code.equalsIgnoreCase("SI")) {
+                                            if (holding.equalsIgnoreCase("SI")) {
+                                                list.add(karvyScheme.getFolio());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES")) {
+                                            if ((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                                    && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                                list.add(karvyScheme.getFolio());
+                                            }
+                                        } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                                && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3)) {
+                                            list.add(karvyScheme.getFolio());
+                                        }
+                                    }
+                                } else {
+                                    list.add(karvyScheme.getFolio());
+                                }
+                            }
+                        }
+                    }
+                }
+            }else
+            {
+                List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.findBySchemeAmfiAndActive(scheme_name,token);
+
+                if(schemeMappingList != null && schemeMappingList.size() > 0)
+                {
+                    cams = schemeMappingList.get(0).getScheme_cams_productcode();
+                    karvy = schemeMappingList.get(0).getScheme_karvy_productcode();
+                }
+
+                List<String> prodcodeList;
+
+                if(StringHelper.isNotEmpty(cams))
+                {
+                    prodcodeList = Arrays.asList(cams.split(","));
+                    prodcodeList = prodcodeList.stream().filter(item-> !item.trim().isEmpty()).collect(Collectors.toList());
+                    HashSet<Object> seen = new HashSet<>();
+                    prodcodeList.removeIf(c -> !seen.add(Arrays.asList(c)));
+
+                    List<InvestorMasterCamsDto> camsList = userServiceClient.getProductCode(user_id, client_name, prodcodeList,token);
+
+                    if(camsList.size() > 0)
+                    {
+                        for (InvestorMasterCamsDto camsScheme : camsList)
+                        {
+                            if(tax_status_code.equalsIgnoreCase("01") || tax_status_code.equalsIgnoreCase("11") || tax_status_code.equalsIgnoreCase("21"))
+                            {
+                                String holding = camsScheme.getHolding_na();
+                                String joint1_pan = camsScheme.getJoint1_pan();
+                                String joint2_pan = camsScheme.getJoint2_pan();
+                                if(holding == null){holding = "";}
+                                if(joint1_pan == null){joint1_pan = "";}
+                                if(joint2_pan == null){joint2_pan = "";}
+
+                                if(holding_nature_code.equalsIgnoreCase("SI"))
+                                {
+                                    if(holding.equalsIgnoreCase("SI"))
+                                    {
+                                        list.add(camsScheme.getFoliochk());
+                                    }
+                                }else if(holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES"))
+                                {
+                                    if((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                            && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan))
+                                    {
+                                        list.add(camsScheme.getFoliochk());
+                                    }
+                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                        && joint_holder_pan1.equalsIgnoreCase(joint1_pan) && joint_holder_pan2.equalsIgnoreCase(joint2_pan))
+                                {
+                                    list.add(camsScheme.getFoliochk());
+                                }
+                            }else
+                            {
+                                list.add(camsScheme.getFoliochk());
+                            }
+                        }
+                    }
+                }
+
+                if(StringHelper.isNotEmpty(karvy))
+                {
+                    prodcodeList = Arrays.asList(karvy.split(","));
+                    prodcodeList = prodcodeList.stream().filter(item-> !item.trim().isEmpty()).collect(Collectors.toList());
+                    HashSet<Object> seen = new HashSet<>();
+                    prodcodeList.removeIf(c -> !seen.add(Arrays.asList(c)));
+
+
+                    List<InvestorMasterKarvyDto> karvyList = userServiceClient.getProductCodes(user_id, client_name, prodcodeList,token);
+
+                    if(karvyList.size() > 0)
+                    {
+                        for (InvestorMasterKarvyDto karvyScheme : karvyList)
+                        {
+                            if(tax_status_code.equalsIgnoreCase("01") || tax_status_code.equalsIgnoreCase("11") || tax_status_code.equalsIgnoreCase("21"))
+                            {
+                                String holding = karvyScheme.getMode_of_holding();
+                                String pan2 = karvyScheme.getPan2();
+                                String pan3 = karvyScheme.getPan3();
+                                if(holding == null){holding = "";}
+                                if(pan2 == null){pan2 = "";}
+                                if(pan3 == null){pan3 = "";}
+
+                                if(holding.equalsIgnoreCase("1"))
+                                {
+                                    holding = "SI";
+                                }else if(holding.equalsIgnoreCase("2") || holding.equalsIgnoreCase("J"))
+                                {
+                                    holding = "JO";
+                                }else if(holding.equalsIgnoreCase("3") || holding.equalsIgnoreCase("5"))
+                                {
+                                    holding = "ES";
+                                }else if(holding.equalsIgnoreCase("4") || holding.equalsIgnoreCase("7"))
+                                {
+                                    holding = "AS";
+                                }
+
+                                if(holding.isEmpty())
+                                {
+                                    String holding_des = karvyScheme.getMode_of_holding_description();
+
+                                    if(holding_des.equalsIgnoreCase("SINGLE") || holding_des.equalsIgnoreCase("SINGLY"))
+                                    {
+                                        holding = "SI";
+                                    }else if(holding_des.equalsIgnoreCase("JOINT") || holding_des.equalsIgnoreCase("JOINTLY"))
+                                    {
+                                        holding = "JO";
+                                    }else if(holding.equalsIgnoreCase("EITHER OR SURVIVOR"))
+                                    {
+                                        holding = "ES";
+                                    }else if(holding_des.equalsIgnoreCase("ANYONE OR SURVIVOR"))
+                                    {
+                                        holding = "AS";
+                                    }
+                                }
+
+
+                                if(holding_nature_code.equalsIgnoreCase("SI"))
+                                {
+                                    if(holding.equalsIgnoreCase("SI"))
+                                    {
+                                        list.add(karvyScheme.getFolio());
+                                    }
+                                }else if(holding_nature_code.equalsIgnoreCase("AS") || holding_nature_code.equalsIgnoreCase("ES"))
+                                {
+                                    if((holding.equalsIgnoreCase("AS") || holding.equalsIgnoreCase("ES"))
+                                            && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3))
+                                    {
+                                        list.add(karvyScheme.getFolio());
+                                    }
+                                } else if (holding_nature_code.equalsIgnoreCase("JO") && holding.equalsIgnoreCase("JO")
+                                        && joint_holder_pan1.equalsIgnoreCase(pan2) && joint_holder_pan2.equalsIgnoreCase(pan3))
+                                {
+                                    list.add(karvyScheme.getFolio());
                                 }
                             }else
                             {

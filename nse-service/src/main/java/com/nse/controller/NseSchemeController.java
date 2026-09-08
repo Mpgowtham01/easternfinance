@@ -3313,7 +3313,9 @@ public class NseSchemeController {
     @GetMapping("/getSchemeFolioNumbers")
     public ResponseEntity<?> getSchemeFolioNumbers(@RequestHeader("Authorization") String token,
                                                    @RequestParam String scheme_name,
-                                                   @RequestParam String iin_number)
+                                                   @RequestParam String iin_number,
+                                                   @RequestParam(required = false) String broker_code,
+                                                   @RequestParam(required = false) String purchase_type)
     {
         try
         {
@@ -3390,15 +3392,17 @@ public class NseSchemeController {
             if(joint_holder_pan1 == null){joint_holder_pan1 = "";}
             if(joint_holder_pan2 == null){joint_holder_pan2 = "";}
 
-            List<String> folioList = nseService.getSchemeFolioNumbers(
-                    client_name,
-                    Integer.valueOf(userid),
-                    scheme_name,
-                    holding_nature_code,
-                    tax_status_code,
-                    joint_holder_pan1,
-                    joint_holder_pan2,token
-            );
+            List<String> folioList = null;
+
+            if ("fresh".equalsIgnoreCase(purchase_type))
+            {
+                System.out.println("CAME 1");
+                folioList = nseService.getSchemeFolioNumbersList(client_name, Integer.valueOf(userid), scheme_name, holding_nature_code, tax_status_code, joint_holder_pan1, joint_holder_pan2,token);
+            }else
+            {
+                System.out.println("CAME 2");
+                folioList = nseService.getSchemeFolioNumbers(client_name, Integer.valueOf(userid), scheme_name, holding_nature_code, tax_status_code, joint_holder_pan1, joint_holder_pan2,broker_code,token);
+            }
 
 
             return ResponseEntity.ok(folioList);

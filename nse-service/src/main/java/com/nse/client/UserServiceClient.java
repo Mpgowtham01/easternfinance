@@ -105,6 +105,14 @@ public interface UserServiceClient {
             @RequestParam("scheme_name") String scheme_name, @RequestHeader("Authorization") String token
     );
 
+    @GetMapping("/getSchemeBasedAmcName")
+    List<UsersPortfolioSchemewiseDto> getSchemeBasedAmcName(
+            @RequestParam("user_id") Integer userId,
+            @RequestParam("client_name") String client_name,
+            @RequestParam("amc_name") String amc_name, @RequestHeader("Authorization") String token
+    );
+
+
     @GetMapping("/getinvestorMasterCams")
     List<InvestorMasterCamsDto> getinvestorMasterCams(
             @RequestParam("user_id") Integer user_id,
@@ -243,7 +251,14 @@ public interface UserServiceClient {
     List<InvestorMasterKarvyDto> getinvestorMasterKarvySchemes(
             @RequestParam("user_id") Integer user_id,
             @RequestParam("client_name") String client_name,
-            @RequestParam("productList") List<String> productList, @RequestHeader("Authorization") String token
+            @RequestParam("scheme_name") String scheme_name, @RequestHeader("Authorization") String token
+    );
+
+    @GetMapping("/getinvestorMasterKarvySchemesList")
+    List<InvestorMasterKarvyDto> getinvestorMasterKarvySchemesList(
+            @RequestParam("user_id") Integer user_id,
+            @RequestParam("client_name") String client_name,
+            @RequestParam("amc_name") String amc_name, @RequestHeader("Authorization") String token
     );
 
     @GetMapping("/getAllTransactionType")
@@ -552,5 +567,12 @@ public interface UserServiceClient {
 
     @GetMapping("/getDistinctBrokerCodes")
     List<String> getDistinctBrokerCodes(@RequestParam("clientName") String clientName, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/getSchemeCodesBySchemeName")
+    List<UsersPortfolioSchemewiseDto> getSchemeCodesBySchemeName(
+            @RequestParam("user_id") Integer userId,
+            @RequestParam("client_name") String client_name,
+            @RequestParam("scheme_name") String scheme_name, @RequestHeader("Authorization") String token
+    );
 
 }

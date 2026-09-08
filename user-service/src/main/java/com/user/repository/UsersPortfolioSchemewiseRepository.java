@@ -126,4 +126,25 @@ public interface UsersPortfolioSchemewiseRepository extends JpaRepository<UsersP
             @Param("amc_name") String amc_name
     );
 
+    @Query("FROM UsersPortfolioSchemewise u WHERE u.user_id = :user_id AND u.client_name = :client_name AND u.amc_name = :amc_name AND u.registrar <> 'Manual'")
+    List<UsersPortfolioSchemewise> findSchemeBasedAmcName(
+            @Param("user_id") Integer user_id,
+            @Param("client_name") String client_name,
+            @Param("amc_name") String amc_name
+    );
+
+    @Query("FROM UsersPortfolioSchemewise u WHERE u.user_id = :user_id AND u.client_name = :client_name AND u.scheme_name = :scheme_name AND u.total_units > 0")
+    List<UsersPortfolioSchemewise> getSchemeCodesBySchemeName(
+            @Param("user_id") Integer user_id,
+            @Param("client_name") String client_name,
+            @Param("scheme_name") String scheme_name
+    );
+
+    @Query("FROM UsersPortfolioSchemewise u WHERE u.scheme_name = :scheme_name AND u.user_id = :user_id and u.client_name = :client_name and u.total_units > 0")
+    List<UsersPortfolioSchemewise> findFirstBySchemeNameAndClientNameAndUserId(@Param("scheme_name") String schemeName, @Param("client_name") String clientName,@Param("user_id") Integer userId);
+
+    @Query("FROM UsersPortfolioSchemewise u WHERE u.amc_name = :amc_name AND u.user_id = :user_id and u.client_name = :client_name")
+    List<UsersPortfolioSchemewise> findFirstBySchemeNameAndClientNameAndUserIdList(@Param("amc_name") String amc_name, @Param("client_name") String clientName,@Param("user_id") Integer userId);
+
+
 }

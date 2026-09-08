@@ -1140,27 +1140,58 @@ public class FeignClientUserController
 	public ResponseEntity<?> getinvestorMasterKarvySchemes(
 			@RequestParam Integer user_id,
 			@RequestParam String client_name,
-			@RequestParam List<String> productList) {
+			@RequestParam String scheme_name) {
 		try
 		{
-			List<InvestorMasterKarvy> schemeCodes = investorMasterKarvyRepository.findByUserIdAndClientNameAndProductCode(user_id, client_name, productList);
+			List<UsersPortfolioSchemewise> usersPortfolioSchemewiseOpt = usersPortfolioSchemewiseRepository.findFirstBySchemeNameAndClientNameAndUserId(scheme_name, client_name, user_id);
+			if (usersPortfolioSchemewiseOpt == null || usersPortfolioSchemewiseOpt.isEmpty()) {
+				return new ResponseEntity<>("no records found!", HttpStatus.NOT_FOUND);
+			}
+			List<InvestorMasterKarvy> schemeCodes = investorMasterKarvyRepository.findByUserIdAndClientNameAndProductCode(user_id, client_name, usersPortfolioSchemewiseOpt.get(0).getScheme_code());
 
-			if (schemeCodes.isEmpty())
-			{
+			if (schemeCodes.isEmpty()) {
 				Map<String, Object> errorResponse = new HashMap<>();
 				errorResponse.put("status", "error");
 				errorResponse.put("message", "No schemes found for the given parameters in Karvy data");
 				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-			}
-			else
-			{
+			} else {
 				return ResponseEntity.ok(schemeCodes);
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving Karvy data");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getinvestorMasterKarvySchemesList")
+	public ResponseEntity<?> getinvestorMasterKarvySchemesList(
+			@RequestParam Integer user_id,
+			@RequestParam String client_name,
+			@RequestParam String amc_name) {
+		try
+		{
+			List<UsersPortfolioSchemewise> usersPortfolioSchemewiseOpt = usersPortfolioSchemewiseRepository.findFirstBySchemeNameAndClientNameAndUserIdList(amc_name, client_name, user_id);
+			if (usersPortfolioSchemewiseOpt == null || usersPortfolioSchemewiseOpt.isEmpty()) {
+				return new ResponseEntity<>("no records found!", HttpStatus.NOT_FOUND);
+			}
+			List<InvestorMasterKarvy> schemeCodes = new ArrayList<>();
+			for(int k = 0; k < usersPortfolioSchemewiseOpt.size(); k++){
+				List<InvestorMasterKarvy> schemeCode = investorMasterKarvyRepository.findByUserIdAndClientNameAndProductCode(user_id, client_name, usersPortfolioSchemewiseOpt.get(k).getScheme_code());
+				schemeCodes.addAll(schemeCode);
+			}
+
+			if (schemeCodes.isEmpty()) {
+				Map<String, Object> errorResponse = new HashMap<>();
+				errorResponse.put("status", "error");
+				errorResponse.put("message", "No schemes found for the given parameters in Karvy data");
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+			} else {
+				return ResponseEntity.ok(schemeCodes);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 		}
 	}
 
@@ -4168,6 +4199,46 @@ public class FeignClientUserController
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching user details"));
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getSchemeBasedAmcName")
+	public ResponseEntity<?> getSchemeBasedAmcName(
+			@RequestParam Integer user_id,
+			@RequestParam String client_name,
+			@RequestParam String amc_name) {
+		try {
+//            System.out.println("Fetching all schemes for user_id: " + user_id + ", client_name: " + client_name + ", scheme_name: " + amc_name);
+			List<UsersPortfolioSchemewise> schemeCode = usersPortfolioSchemewiseRepository.findSchemeBasedAmcName(user_id, client_name, amc_name);
+
+			return ResponseEntity.ok(schemeCode);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving Karvy data");
+		}
+	}
+	@Hidden
+	@GetMapping("/getSchemeCodesBySchemeName")
+	public ResponseEntity<?> getSchemeCodesBySchemeName(
+			@RequestParam Integer user_id,
+			@RequestParam String client_name,
+			@RequestParam String scheme_name) {
+		try {
+//            System.out.println("Fetching all schemes for user_id: " + user_id + ", client_name: " + client_name + ", scheme_name: " + scheme_name);
+			List<UsersPortfolioSchemewise> schemeCode = usersPortfolioSchemewiseRepository.getSchemeCodesBySchemeName(user_id, client_name, scheme_name);
+
+			if (schemeCode.isEmpty()) {
+				Map<String, Object> errorResponse = new HashMap<>();
+				errorResponse.put("status", "error");
+				errorResponse.put("message", "No schemes found for the given parameters in Karvy data");
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+			} else {
+				return ResponseEntity.ok(schemeCode);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving Karvy data");
 		}
 	}
 
