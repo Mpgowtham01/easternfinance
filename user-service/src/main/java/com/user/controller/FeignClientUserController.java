@@ -498,21 +498,42 @@ public class FeignClientUserController
     {
         try
         {
-            Optional<UsersOnlineRegDetails> onlineRegDetailsList = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(userDto.getUser_id(), userDto.getClient_name());
-			System.out.println("onlineRegDetailsList = " + onlineRegDetailsList);
-			UsersOnlineRegDetails users = null;
-			if(onlineRegDetailsList.isPresent())
-			{
-				users = onlineRegDetailsList.get();
+            UsersOnlineRegDetails users = null;
 
-//                users.setId(userDto.getId());
-                users.setNse_customer(1);
-                users.setNse_iin_number(userDto.getNse_iin_number());
-                users.setBroker_code(userDto.getBroker_code());
-                users.setEuin(userDto.getEuin());
-                users.setNse_active(1);
+            // uniq_userid_iin_brokercode_clientname : if a row already holds this IIN, activate that row
+            List<UsersOnlineRegDetails> iinOwners = userOnlineRegDetailsRespository.findByUserIdAndBseClientCodeAndBrokerCodeAndClientName(
+                    userDto.getUser_id(), userDto.getNse_iin_number(), userDto.getBroker_code(), userDto.getClient_name());
+
+            if (iinOwners != null && !iinOwners.isEmpty())
+            {
+                users = iinOwners.get(0);
             }
-            assert users != null;
+
+            // otherwise userDto.getId() is the users_online_reg_details row this registration was started from,
+            // so target it directly - user_id + client_name alone is ambiguous for multiple registrations
+            if (users == null && userDto.getId() != null && userDto.getId() != 0)
+            {
+                users = userOnlineRegDetailsRespository.findUSerByOnlineIdAndActive(userDto.getId()).orElse(null);
+            }
+
+            if (users == null)
+            {
+                users = userOnlineRegDetailsRespository.findNseUserByUserIdAndClientName(userDto.getUser_id(), userDto.getClient_name()).orElse(null);
+            }
+
+            System.out.println("saveUserNseSuccessResponse::users = " + users);
+
+            if (users == null)
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User registration not found");
+            }
+
+            users.setNse_customer(1);
+            users.setNse_iin_number(userDto.getNse_iin_number());
+            users.setBroker_code(userDto.getBroker_code());
+            users.setEuin(userDto.getEuin());
+            users.setNse_active(1);
+
             userOnlineRegDetailsRespository.save(users);
 
             return ResponseEntity.ok("User saved successfully");

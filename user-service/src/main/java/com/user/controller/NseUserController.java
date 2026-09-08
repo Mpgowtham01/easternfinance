@@ -4430,7 +4430,7 @@ public class NseUserController
                 user.setClient_name(client_name);
                 user.setCreated_date(new Date());
 
-                user = userOnlineRegDetailsRespository.save(user);
+                user = usersOnlineRegDetailsService.saveOrUpdateUserOnlineReg(user);
             }catch (DataIntegrityViolationException e)
             {
                 String message = "Duplicate entry found";

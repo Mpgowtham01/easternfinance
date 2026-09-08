@@ -1510,8 +1510,9 @@ public class NseAdminReportController
                 String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
                 String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
                 String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
-
+                System.out.println("nse_memberid = " + nse_memberid);
                 String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+                System.out.println("base64Encoded = " + base64Encoded);
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 headers.set("memberId", nse_memberid);
