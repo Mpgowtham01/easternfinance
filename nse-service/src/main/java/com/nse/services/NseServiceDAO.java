@@ -448,7 +448,7 @@ public class NseServiceDAO {
             List<UsersPortfolioSchemewiseDto> schemeCodes = null;
             try
             {
-                schemeCodes = userServiceClient.getSchemeBasedAmcName(user_id, client_name, scheme_name,token);
+                schemeCodes = userServiceClient.getUsersPortfolioSchemewiseUser(user_id, client_name, scheme_name,token);
             }
             catch (FeignException.NotFound e)
             {
