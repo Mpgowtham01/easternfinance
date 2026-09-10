@@ -536,6 +536,21 @@ public interface UserServiceClient {
                             @RequestParam("accountNo") String accountNo,
                             @RequestHeader("Authorization") String token);
 
+    @PostMapping("/updateMandateStatusDetails")
+    int updateMandateStatus1(@RequestParam("status") Integer status,
+                            @RequestParam("remark") String remark,
+                            @RequestParam("broker_code") String broker_code,
+                            @RequestParam("clientName") String clientName,
+                            @RequestParam("online_code") String online_code,
+                            @RequestParam("orderId") String orderId,
+                            @RequestParam("accountNo") String accountNo,
+                            @RequestParam("amount") String amount,
+                            @RequestParam("umrnNo") String umrnNo,
+                            @RequestParam("startDate") String startDate,
+                            @RequestParam("endDate") String endDate,
+                            @RequestParam("dateOfUpload") String dateOfUpload,
+                            @RequestHeader("Authorization") String token);
+
     @GetMapping("/getUserDetailByUserIdAndIinNumberBrokerCode")
     List<UserDto> getUserDetailByUserIdAndIinNumberBrokerCode(@RequestParam("clientName") String clientName,
                                                               @RequestParam("IinNumber") String IinNumber,

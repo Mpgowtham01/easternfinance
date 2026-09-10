@@ -28,8 +28,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.*;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -2662,6 +2665,100 @@ public class FeignClientUserController
 			e.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body("Error saving Bank details: " + e.getMessage());
+		}
+	}
+
+	@PostMapping("/updateMandateStatusDetails")
+	public int updateMandateStatusDetails(@RequestParam("status") int status,
+										  @RequestParam("remark") String remark,
+										  @RequestParam("broker_code") String broker_code,
+										  @RequestParam("clientName") String clientName,
+										  @RequestParam("online_code") String online_code,
+										  @RequestParam("orderId") String orderId,
+										  @RequestParam("accountNo") String accountNo,
+										  @RequestParam("amount") String amount,
+										  @RequestParam("umrnNo") String umrnNo,
+										  @RequestParam("startDate") String startDate,
+										  @RequestParam("endDate") String endDate,
+										  @RequestParam("dateOfUpload") String dateOfUpload) throws ParseException
+	{
+
+		Date start = StringUtils.hasText(startDate) ? new SimpleDateFormat("dd/MM/yyyy").parse(startDate) : null;
+		Date end = StringUtils.hasText(endDate) ? new SimpleDateFormat("dd/MM/yyyy").parse(endDate) : null;
+		Date upload = StringUtils.hasText(dateOfUpload) ? new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").parse(dateOfUpload) : null;
+		System.out.println("broker_code" + broker_code);
+		System.out.println("online_code" + online_code);
+		System.out.println("accountNo" + accountNo);
+		System.out.println("orderId" + orderId);
+		System.out.println("remark" + remark);
+		List<UsersMandateDetails> existingList =
+				usersMandateDetailsRespository.findByBrokerCodeAndOnlineCodeAndAccountNo(
+						broker_code, online_code, accountNo, orderId);
+
+		if (!existingList.isEmpty()) {
+			UsersMandateDetails mandate = existingList.get(0);
+
+			if (mandate.getNse_ach().equals(orderId)) {
+				return usersMandateDetailsRespository.updateMandateStatus(
+						status, remark, broker_code, clientName, online_code, orderId, accountNo, amount, umrnNo, start, end
+				);
+			} else {
+				if (status == 1) {
+					Optional<UsersOnlineRegDetails> userDetails = userOnlineRegDetailsRespository.findByIinumberAndBrokerCode(online_code, broker_code, clientName);
+
+					UsersMandateDetails newMandate = new UsersMandateDetails();
+					newMandate.setNse_ach_approved(status);
+					newMandate.setNse_ach_rej_reason(remark);
+					newMandate.setBroker_code(broker_code);
+					newMandate.setClient_name(clientName);
+					newMandate.setOnline_code(online_code);
+					newMandate.setNse_ach(orderId);
+					newMandate.setBank_account_number(accountNo);
+					newMandate.setOnline_id(userDetails.get().getId());
+					newMandate.setOnline_flag("NSE");
+					newMandate.setUser_id(userDetails.get().getUser_id());
+					newMandate.setNse_ach_amount(amount);
+					newMandate.setNse_ach_start_date(start);
+					newMandate.setNse_ach_end_date(end);
+					newMandate.setNse_umrn_no(umrnNo);
+					newMandate.setNse_ach_created_date(upload);
+					newMandate.setCreated_date(upload);
+					newMandate.setNse_ach_flag(1);
+
+					usersMandateDetailsRespository.save(newMandate);
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		} else {
+			if (status == 1) {
+				Optional<UsersOnlineRegDetails> userDetails = userOnlineRegDetailsRespository.findByIinumberAndBrokerCode(online_code, broker_code, clientName);
+
+				UsersMandateDetails newMandate = new UsersMandateDetails();
+				newMandate.setNse_ach_approved(status);
+				newMandate.setNse_ach_rej_reason(remark);
+				newMandate.setBroker_code(broker_code);
+				newMandate.setClient_name(clientName);
+				newMandate.setOnline_code(online_code);
+				newMandate.setNse_ach(orderId);
+				newMandate.setBank_account_number(accountNo);
+				newMandate.setOnline_id(userDetails.get().getId());
+				newMandate.setOnline_flag("NSE");
+				newMandate.setUser_id(userDetails.get().getUser_id());
+				newMandate.setNse_ach_amount(amount);
+				newMandate.setNse_ach_start_date(start);
+				newMandate.setNse_ach_end_date(end);
+				newMandate.setNse_umrn_no(umrnNo);
+				newMandate.setNse_ach_created_date(upload);
+				newMandate.setCreated_date(upload);
+				newMandate.setNse_ach_flag(1);
+
+				usersMandateDetailsRespository.save(newMandate);
+				return 1;
+			} else {
+				return 0;
+			}
 		}
 	}
 

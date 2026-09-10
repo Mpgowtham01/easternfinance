@@ -3380,4 +3380,138 @@ public class NseAdminReportController
             return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/updateMandateStatus")
+    public ResponseEntity<?> updateMandateStatus(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = true) String broker_code,
+            @RequestParam(required = true) String client_code,
+            @RequestParam(required = false) String source) throws Exception
+    {
+        try
+        {
+            client_code = NseUtils.checkParem(client_code);
+            broker_code = NseUtils.checkParem(broker_code);
+            //source = NseUtils.checkParem(source);
+
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+            try
+            {
+                JSONObject requestDetails = new JSONObject();
+                requestDetails.put("client_code", client_code);
+                requestDetails.put("from_date", "");
+                requestDetails.put("to_date", "");
+                requestDetails.put("mandate_id", "");
+                requestDetails.put("memberMandateIds", "");
+
+                System.out.println("clientName = " + client_name + "af" + broker_code);
+
+                BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+                if(online_access == null)
+                {
+                    return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST);
+                }
+                String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+                String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+                String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+                String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+                String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+                System.out.println("orderStatusReportApi::requestBody: " + requestDetails.toString());
+                System.out.println("orderStatusReportApi::authorization: " + base64Encoded);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("memberId", nse_memberid);
+                headers.set("Authorization", "Basic "+base64Encoded);
+                headers.set("User-Agent", "PostmanRuntime/7.43.3");
+                headers.set("Accept-Encoding", "gzip, deflate, br");
+                headers.set("Accept-Language", "en-US");
+                headers.set("Connection", "keep-alive");
+                headers.set("Referer", "");
+
+                HttpEntity<String> entity = new HttpEntity<>(requestDetails.toString(), headers);
+
+                String orderStatus_url= "";
+                orderStatus_url = NseApiUrls.mandateStatusReport_url;
+
+                ResponseEntity<String> orderStatusresponse = restTemplate.postForEntity(orderStatus_url, entity, String.class);
+                System.out.println("orderStatusReportApi::Response Code: " + orderStatusresponse.getStatusCode());
+
+                JSONObject jsonResponse = new JSONObject(orderStatusresponse.getBody());
+                String responseStatus = jsonResponse.optString("response_status");
+                String error_remark = jsonResponse.optString("error_remark");
+
+                JSONArray ordersArray = jsonResponse.optJSONArray("report_data");
+                System.out.println("ordersArray = " + ordersArray);
+
+                if (ordersArray != null) {
+                    //int limit = Math.min(ordersArray.length(), 2);
+
+                    for (int i = 0; i < ordersArray.length(); i++)
+                    {
+                        JSONObject order = ordersArray.getJSONObject(i);
+                        String mandateId     = order.optString("mandateId");
+                        String orderStatus = order.optString("status");
+                        String orderRemark = order.optString("rejectReason");
+                        String accountNo   = order.optString("bankAccountNumber");
+                        String amount      = order.optString("amount");
+                        String online_code = order.optString("clientCode");
+                        String umrnNo = order.optString("umrnNo");
+                        String startDate = order.optString("startDate");
+                        String endDate = order.optString("endDate");
+                        String dateOfUpload = order.optString("dateOfUpload");
+
+
+                        int statusValue = "APPROVED".equalsIgnoreCase(orderStatus) ? 1 : 0;
+
+                        try {
+                            int rows = userServiceClient.updateMandateStatus1(
+                                    statusValue,
+                                    orderStatus,
+                                    broker_code,
+                                    client_name,
+                                    online_code,
+                                    mandateId,
+                                    accountNo,
+                                    amount,
+                                    umrnNo,startDate,endDate,dateOfUpload,
+                                    token
+                            );
+
+                            if (rows > 0)
+                            {
+                                System.out.println("✅ Updated mandate for account " + accountNo + " with status " + orderStatus);
+                            } else {
+                                System.out.println("⚠️ No matching mandate found for account " + accountNo);
+                            }
+                        } catch (Exception mandateEx) {
+                            System.out.println("❌ Failed to update mandate for account " + accountNo
+                                    + " (mandateId=" + mandateId + "): " + mandateEx.getMessage());
+                        }
+                    }
+                }
+
+                if (!responseStatus.equalsIgnoreCase("S"))
+                {
+                    return NseUtils.commonResponse(error_remark, HttpStatus.BAD_REQUEST);
+                }
+
+                return NseUtils.commonResponse("Mandate Update Successfully",HttpStatus.OK);
+
+            }catch (Exception ex)
+            {
+                System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+                ex.printStackTrace();
+                return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

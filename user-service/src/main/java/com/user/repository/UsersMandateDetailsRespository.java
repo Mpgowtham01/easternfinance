@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -145,5 +146,32 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
                              @Param("online_code") String online_code,
                              @Param("orderId") String orderId,
                              @Param("accountNo") String accountNo);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UsersMandateDetails u " +
+            "SET u.nse_ach_approved = :status, " +
+            "u.nse_ach_rej_reason = :remark, " +
+            "u.nse_ach_amount = :amount, " +
+            "u.nse_ach_start_date = :startDate, " +
+            "u.nse_ach_end_date = :endDate, " +
+            "u.nse_umrn_no = :umrnNo " +
+            "WHERE u.broker_code = :brokerCode " +
+            "AND u.client_name = :clientName " +
+            "AND u.online_flag = 'NSE' " +
+            "AND u.online_code = :onlineCode " +
+            "AND u.nse_ach = :orderId " +
+            "AND u.bank_account_number = :accountNo")
+    int updateMandateStatus(@Param("status") int status,
+                            @Param("remark") String remark,
+                            @Param("brokerCode") String brokerCode,
+                            @Param("clientName") String clientName,
+                            @Param("onlineCode") String onlineCode,
+                            @Param("orderId") String orderId,
+                            @Param("accountNo") String accountNo,
+                            @Param("amount") String amount,
+                            @Param("umrnNo") String umrnNo,
+                            @Param("startDate") Date startDate,
+                            @Param("endDate") Date endDate);
 
 }
