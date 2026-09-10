@@ -1795,7 +1795,7 @@ public class NseTransactionController {
                 int successCount = 0;
                 int failureCount = 0;
                 List<String> failedSchemes = new ArrayList<>();
-                String lastSuccessRegId = "";
+                List<String> lastSuccessRegId = new ArrayList<>();
 
                 String res_scheme_name = "";
                 List<CartDto> master_cart_list = new ArrayList<>();
@@ -2042,7 +2042,7 @@ public class NseTransactionController {
                     if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
                         successCount++;
-                        lastSuccessRegId = res_reg_id;
+                        lastSuccessRegId.add(res_reg_id);
                         resMap.put(nseOnlineSchemeMaster.getSchemeName(), "REG_SUCCESS");
                     }
                     else
@@ -2092,7 +2092,7 @@ public class NseTransactionController {
                 }
                 else if (successCount > 0)
                 {
-                    return NseUtils.transactionResponse(HttpStatus.OK,"Your SIP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                    return NseUtils.transactionResponse(HttpStatus.OK,"Your SIP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }
                 else
                 {
@@ -2562,7 +2562,7 @@ public class NseTransactionController {
             int successCount = 0;
             int failureCount = 0;
             List<String> failedSchemes = new ArrayList<>();
-            String lastSuccessRegId = "";
+            List<String> lastSuccessRegId = new ArrayList<>();
 
             Map<String, String> resMap = new HashMap<String, String>();
             List<NseOnlineSchemeMaster> nseOnlineSchemeMasters = nseOnlineSchemeMasterRepository.getSchemeBySchemeCode(scheme_code_array);
@@ -2751,7 +2751,7 @@ public class NseTransactionController {
                     if(trxn_status.equalsIgnoreCase("TRXN SUCCESS"))
                     {
                         successCount++;
-                        lastSuccessRegId = res_trxn_order_id;
+                        lastSuccessRegId.add(res_trxn_order_id);
                         resMap.put(nseOnlineSchemeMaster.getSchemeName(), "TRXN SUCCESS");
                     }
                     else
@@ -2820,7 +2820,7 @@ public class NseTransactionController {
                 }
                 else if (successCount > 0)
                 {
-                    return NseUtils.transactionResponse(HttpStatus.OK,"All Redemption Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                    return NseUtils.transactionResponse(HttpStatus.OK,"All Redemption Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }
                 else
                 {
@@ -3365,7 +3365,7 @@ public class NseTransactionController {
             int successCount = 0;
             int failureCount = 0;
             List<String> failedSchemes = new ArrayList<>();
-            String lastSuccessRegId = "";
+            List<String> lastSuccessRegId = new ArrayList<>();
 
             Map<String, String> resMap = new HashMap<>();
             List<NseOnlineSchemeMaster> fromSchemeOnlineMasterList = nseOnlineSchemeMasterRepository.getNFOSchemeBySchemeCode(from_scheme_code_array);
@@ -3548,7 +3548,7 @@ public class NseTransactionController {
                     if(trxn_status.equalsIgnoreCase("TRXN SUCCESS"))
                     {
                         successCount++;
-                        lastSuccessRegId = res_trxn_so_order_id;
+                        lastSuccessRegId.add(res_trxn_so_order_id);
                         resMap.put(fromSchemeMaster.getSchemeName(), "TRXN SUCCESS");
                     }
                     else
@@ -3634,7 +3634,7 @@ public class NseTransactionController {
             }
             else if (successCount > 0)
             {
-                return NseUtils.transactionResponse(HttpStatus.OK,"All Switch Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                return NseUtils.transactionResponse(HttpStatus.OK,"All Switch Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
             }
             else
             {
@@ -4203,7 +4203,7 @@ public class NseTransactionController {
             int successCount = 0;
             int failureCount = 0;
             List<String> failedSchemes = new ArrayList<>();
-            String lastSuccessRegId = "";
+            List<String> lastSuccessRegId = new ArrayList<>();
 
             Map<String, String> resMap = new HashMap<>();
             List<NseOnlineSchemeMaster> fromSchemeOnlineMasterList = nseOnlineSchemeMasterRepository.getSchemeBySchemeCode(from_scheme_code_array);
@@ -4450,7 +4450,7 @@ public class NseTransactionController {
                     if(res_reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
                         successCount++;
-                        lastSuccessRegId = res_reg_id;
+                        lastSuccessRegId.add(res_reg_id);
                         resMap.put(fromSchemeName, "REG_SUCCESS");
                     }
                     else
@@ -4478,7 +4478,7 @@ public class NseTransactionController {
             }
             else if (successCount > 0)
             {
-                return NseUtils.transactionResponse(HttpStatus.OK,"All STP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                return NseUtils.transactionResponse(HttpStatus.OK,"All STP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
             }
             else
             {
@@ -4811,7 +4811,7 @@ public class NseTransactionController {
             int successCount = 0;
             int failureCount = 0;
             List<String> failedSchemes = new ArrayList<>();
-            String lastSuccessRegId = "";
+            List<String> lastSuccessRegId = new ArrayList<>();
 
             String reg_id = "";
             String reg_status = "";
@@ -5139,7 +5139,7 @@ public class NseTransactionController {
                             if(res_reg_status.equalsIgnoreCase("REG_SUCCESS"))
                             {
                                 successCount++;
-                                lastSuccessRegId = res_reg_id;
+                                lastSuccessRegId.add(res_reg_id);
                                 resMap.put(schemeName, "REG_SUCCESS");
                             }
                             else
@@ -5184,9 +5184,9 @@ public class NseTransactionController {
             {
                 if(source.equalsIgnoreCase("Mobile"))
                 {
-                    return NseUtils.transactionMobileResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                    return NseUtils.transactionMobileResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }else{
-                    return NseUtils.transactionResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
+                    return NseUtils.transactionResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }
             }
             else
