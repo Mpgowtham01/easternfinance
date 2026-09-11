@@ -6935,12 +6935,12 @@ public class NseSchemeController {
             System.out.println("bankDetails " + gson.toJson(bankDetails));
             Set<String> mandateAccounts = mandateDetails.stream()
                     .map(UserMandateDetailsDto::getBank_account_number)
-                    .filter(Objects::nonNull)
+                    .filter(acc -> acc != null && !acc.trim().isEmpty())
                     .collect(Collectors.toSet());
             System.out.println("mandateAccounts " + mandateAccounts);
             Set<String> bankAccounts = bankDetails.stream()
                     .map(UsersBankDetailsDTO::getBank_account_number)
-                    .filter(Objects::nonNull)
+                    .filter(acc -> acc != null && !acc.trim().isEmpty())
                     .collect(Collectors.toSet());
             System.out.println("bankAccounts " + bankAccounts);
             Set<String> missingAccounts = new HashSet<>(mandateAccounts);
@@ -7068,12 +7068,14 @@ public class NseSchemeController {
                 );
             }
 
-            // Group mandates by bank account number
+            // Group mandates by bank account number, ignoring rows without an account number
             Map<String, List<UserMandateDetailsDto>> mandatesByAccount = mandateDetails.stream()
+                    .filter(m -> m.getBank_account_number() != null && !m.getBank_account_number().trim().isEmpty())
                     .collect(Collectors.groupingBy(UserMandateDetailsDto::getBank_account_number));
             System.out.println("mandatesByAccount = " + mandatesByAccount);
 
             List<UserMandateDetailsResponse> responseList = bankDetails.stream()
+                    .filter(b -> b.getBank_account_number() != null && !b.getBank_account_number().trim().isEmpty())
                     .flatMap(b -> {
                         // Get mandates for this bank account
                         List<UserMandateDetailsDto> matchingMandates =

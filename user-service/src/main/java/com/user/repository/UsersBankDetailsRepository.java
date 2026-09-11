@@ -41,7 +41,11 @@ public interface UsersBankDetailsRepository extends JpaRepository<UsersBankDetai
             "WHERE u.online_code = :onlineCode " +
             "AND u.client_name = :clientName " +
             "AND u.broker_code = :broker_code " +
-            "AND u.online_flag = :onlineFlag")
+            "AND u.online_flag = :onlineFlag " +
+            "AND u.bank_account_number IS NOT NULL " +
+            "AND TRIM(u.bank_account_number) <> '' " +
+            "AND u.bank_name IS NOT NULL " +
+            "AND TRIM(u.bank_name) <> ''")
     List<UsersBankDetails> getBankDetailsByIINNumber(@Param("broker_code") String broker_code,
                                                      @Param("onlineCode") String onlineCode,
                                                      @Param("clientName") String clientName,
