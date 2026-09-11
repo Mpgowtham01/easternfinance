@@ -2556,19 +2556,19 @@ public class FeignClientUserController
 						dto.setBroker_code(d.getBroker_code());
 						dto.setBank_account_number(d.getBank_account_number());
 
-						dto.setXsip_otm_flag(d.getXsip_otm_flag());
-						dto.setXsip_otm(d.getXsip_otm());
-						dto.setXsip_otm_amount(d.getXsip_otm_amount());
-						dto.setXsip_otm_approved(d.getXsip_otm_approved());
-						dto.setXsip_otm_rej_reason(d.getXsip_otm_rej_reason());
-//                        dto.setXsip_otm_created_date(d.getXsip_otm_created_date() != null
-//                                ? d.getXsip_otm_created_date().toLocalDate() : null);
-
-						dto.setEmandate_otm_flag(d.getEmandate_otm_flag());
-						dto.setEmandate_otm(d.getEmandate_otm());
-						dto.setEmandate_otm_amount(d.getEmandate_otm_amount());
-						dto.setEmandate_otm_approved(d.getEmandate_otm_approved());
-						dto.setEmandate_otm_rej_reason(d.getEmandate_otm_rej_reason());
+//						dto.setXsip_otm_flag(d.getXsip_otm_flag());
+//						dto.setXsip_otm(d.getXsip_otm());
+//						dto.setXsip_otm_amount(d.getXsip_otm_amount());
+//						dto.setXsip_otm_approved(d.getXsip_otm_approved());
+//						dto.setXsip_otm_rej_reason(d.getXsip_otm_rej_reason());
+////                        dto.setXsip_otm_created_date(d.getXsip_otm_created_date() != null
+////                                ? d.getXsip_otm_created_date().toLocalDate() : null);
+//
+//						dto.setEmandate_otm_flag(d.getEmandate_otm_flag());
+//						dto.setEmandate_otm(d.getEmandate_otm());
+//						dto.setEmandate_otm_amount(d.getEmandate_otm_amount());
+//						dto.setEmandate_otm_approved(d.getEmandate_otm_approved());
+//						dto.setEmandate_otm_rej_reason(d.getEmandate_otm_rej_reason());
 //                        dto.setEmandate_otm_created_date(d.getEmandate_otm_created_date() != null
 //                                ? d.getEmandate_otm_created_date().toLocalDate() : null);
 
@@ -2975,16 +2975,16 @@ public class FeignClientUserController
 
 			// xsip_otm / emandate_otm are NOT NULL columns - Hibernate sends an explicit
 			// NULL for them on insert unless they are populated here.
-			entity.setXsip_otm("");
-			entity.setXsip_otm_flag(0);
-			entity.setXsip_otm_amount("");
-			entity.setXsip_otm_approved(0);
-			entity.setXsip_otm_rej_reason("");
-			entity.setEmandate_otm("");
-			entity.setEmandate_otm_flag(0);
-			entity.setEmandate_otm_amount("");
-			entity.setEmandate_otm_approved(0);
-			entity.setEmandate_otm_rej_reason("");
+//			entity.setXsip_otm("");
+//			entity.setXsip_otm_flag(0);
+//			entity.setXsip_otm_amount("");
+//			entity.setXsip_otm_approved(0);
+//			entity.setXsip_otm_rej_reason("");
+//			entity.setEmandate_otm("");
+//			entity.setEmandate_otm_flag(0);
+//			entity.setEmandate_otm_amount("");
+//			entity.setEmandate_otm_approved(0);
+//			entity.setEmandate_otm_rej_reason("");
 
 			entity.setNse_ach_flag(1);
 			entity.setNse_ach(userMandate.getNse_ach() == null ? "" : userMandate.getNse_ach());

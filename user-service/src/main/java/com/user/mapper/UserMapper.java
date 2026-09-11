@@ -152,19 +152,19 @@ public class UserMapper
 
                     if(userMandate != null)
                     {
-                        userDto.setXsip_otm_flag1(userMandate.getXsip_otm_flag());
-                        userDto.setXsip_otm1(UserUtils.checkParem(userMandate.getXsip_otm()));
-                        userDto.setXsip_otm_approved1(userMandate.getXsip_otm_approved());
-                        userDto.setXsip_otm_rej_reason1(UserUtils.checkParem(userMandate.getXsip_otm_rej_reason()));
-                        userDto.setXsip_otm_created_date1(userMandate.getXsip_otm_created_date());
-                        userDto.setXsip_otm_amount1(UserUtils.checkParem(userMandate.getXsip_otm_amount()));
-
-                        userDto.setEmandate_otm_flag1(userMandate.getEmandate_otm_flag());
-                        userDto.setEmandate_otm1(UserUtils.checkParem(userMandate.getEmandate_otm()));
-                        userDto.setEmandate_otm_approved1(userMandate.getEmandate_otm_approved());
-                        userDto.setEmandate_otm_rej_reason1(UserUtils.checkParem(userMandate.getEmandate_otm_rej_reason()));
-                        userDto.setEmandate_otm_created_date1(userMandate.getEmandate_otm_created_date());
-                        userDto.setEmandate_otm_amount1(UserUtils.checkParem(userMandate.getEmandate_otm_amount()));
+//                        userDto.setXsip_otm_flag1(userMandate.getXsip_otm_flag());
+//                        userDto.setXsip_otm1(UserUtils.checkParem(userMandate.getXsip_otm()));
+//                        userDto.setXsip_otm_approved1(userMandate.getXsip_otm_approved());
+//                        userDto.setXsip_otm_rej_reason1(UserUtils.checkParem(userMandate.getXsip_otm_rej_reason()));
+//                        userDto.setXsip_otm_created_date1(userMandate.getXsip_otm_created_date());
+//                        userDto.setXsip_otm_amount1(UserUtils.checkParem(userMandate.getXsip_otm_amount()));
+//
+//                        userDto.setEmandate_otm_flag1(userMandate.getEmandate_otm_flag());
+//                        userDto.setEmandate_otm1(UserUtils.checkParem(userMandate.getEmandate_otm()));
+//                        userDto.setEmandate_otm_approved1(userMandate.getEmandate_otm_approved());
+//                        userDto.setEmandate_otm_rej_reason1(UserUtils.checkParem(userMandate.getEmandate_otm_rej_reason()));
+//                        userDto.setEmandate_otm_created_date1(userMandate.getEmandate_otm_created_date());
+//                        userDto.setEmandate_otm_amount1(UserUtils.checkParem(userMandate.getEmandate_otm_amount()));
 
                         userDto.setNse_ach_flag1(userMandate.getNse_ach_flag());
                         userDto.setNse_ach1(UserUtils.checkParem(userMandate.getNse_ach()));
@@ -197,19 +197,6 @@ public class UserMapper
 
                     if(userMandate != null)
                     {
-                        userDto.setXsip_otm_flag2(userMandate.getXsip_otm_flag());
-                        userDto.setXsip_otm2(UserUtils.checkParem(userMandate.getXsip_otm()));
-                        userDto.setXsip_otm_approved2(userMandate.getXsip_otm_approved());
-                        userDto.setXsip_otm_rej_reason2(UserUtils.checkParem(userMandate.getXsip_otm_rej_reason()));
-                        userDto.setXsip_otm_created_date2(userMandate.getXsip_otm_created_date());
-                        userDto.setXsip_otm_amount2(UserUtils.checkParem(userMandate.getXsip_otm_amount()));
-
-                        userDto.setEmandate_otm_flag2(userMandate.getEmandate_otm_flag());
-                        userDto.setEmandate_otm2(UserUtils.checkParem(userMandate.getEmandate_otm()));
-                        userDto.setEmandate_otm_approved2(userMandate.getEmandate_otm_approved());
-                        userDto.setEmandate_otm_rej_reason2(UserUtils.checkParem(userMandate.getEmandate_otm_rej_reason()));
-                        userDto.setEmandate_otm_created_date2(userMandate.getEmandate_otm_created_date());
-                        userDto.setEmandate_otm_amount2(UserUtils.checkParem(userMandate.getEmandate_otm_amount()));
 
                         userDto.setNse_ach_flag2(userMandate.getNse_ach_flag());
                         userDto.setNse_ach2(UserUtils.checkParem(userMandate.getNse_ach()));
@@ -242,19 +229,6 @@ public class UserMapper
 
                     if(userMandate != null)
                     {
-                        userDto.setXsip_otm_flag3(userMandate.getXsip_otm_flag());
-                        userDto.setXsip_otm3(UserUtils.checkParem(userMandate.getXsip_otm()));
-                        userDto.setXsip_otm_approved3(userMandate.getXsip_otm_approved());
-                        userDto.setXsip_otm_rej_reason3(UserUtils.checkParem(userMandate.getXsip_otm_rej_reason()));
-                        userDto.setXsip_otm_created_date3(userMandate.getXsip_otm_created_date());
-                        userDto.setXsip_otm_amount3(UserUtils.checkParem(userMandate.getXsip_otm_amount()));
-
-                        userDto.setEmandate_otm_flag3(userMandate.getEmandate_otm_flag());
-                        userDto.setEmandate_otm3(UserUtils.checkParem(userMandate.getEmandate_otm()));
-                        userDto.setEmandate_otm_approved3(userMandate.getEmandate_otm_approved());
-                        userDto.setEmandate_otm_rej_reason3(UserUtils.checkParem(userMandate.getEmandate_otm_rej_reason()));
-                        userDto.setEmandate_otm_created_date3(userMandate.getEmandate_otm_created_date());
-                        userDto.setEmandate_otm_amount3(UserUtils.checkParem(userMandate.getEmandate_otm_amount()));
 
                         userDto.setNse_ach_flag3(userMandate.getNse_ach_flag());
                         userDto.setNse_ach3(UserUtils.checkParem(userMandate.getNse_ach()));
@@ -716,19 +690,6 @@ public class UserMapper
             if (mandateDetailsList.size() >= 1) {
                 String finalBankAcc1 = bankAcc1;
                 UsersMandateDetails userMandate = mandateDetailsList.stream().filter(mandate-> finalBankAcc1.equalsIgnoreCase(mandate.getBank_account_number())).findFirst().orElse(new UsersMandateDetails());
-                userDto.setXsip_otm_flag1(userMandate.getXsip_otm_flag());
-                userDto.setXsip_otm1(UserUtils.checkParem(userMandate.getXsip_otm()));
-                userDto.setXsip_otm_approved1(userMandate.getXsip_otm_approved());
-                userDto.setXsip_otm_rej_reason1(UserUtils.checkParem(userMandate.getXsip_otm_rej_reason()));
-                userDto.setXsip_otm_created_date1(userMandate.getXsip_otm_created_date());
-                userDto.setXsip_otm_amount1(UserUtils.checkParem(userMandate.getXsip_otm_amount()));
-
-                userDto.setEmandate_otm_flag1(userMandate.getEmandate_otm_flag());
-                userDto.setEmandate_otm1(UserUtils.checkParem(userMandate.getEmandate_otm()));
-                userDto.setEmandate_otm_approved1(userMandate.getEmandate_otm_approved());
-                userDto.setEmandate_otm_rej_reason1(UserUtils.checkParem(userMandate.getEmandate_otm_rej_reason()));
-                userDto.setEmandate_otm_created_date1(userMandate.getEmandate_otm_created_date());
-                userDto.setEmandate_otm_amount1(UserUtils.checkParem(userMandate.getEmandate_otm_amount()));
 
                 userDto.setNse_ach_flag1(userMandate.getNse_ach_flag());
                 userDto.setNse_ach1(UserUtils.checkParem(userMandate.getNse_ach()));
@@ -742,19 +703,6 @@ public class UserMapper
             if (mandateDetailsList.size() >= 2) {
                 String finalBankAcc2 = bankAcc2;
                 UsersMandateDetails userMandate1 = mandateDetailsList.stream().filter(mandate-> finalBankAcc2.equalsIgnoreCase(mandate.getBank_account_number())).findFirst().orElse(new UsersMandateDetails());
-                userDto.setXsip_otm_flag2(userMandate1.getXsip_otm_flag());
-                userDto.setXsip_otm2(UserUtils.checkParem(userMandate1.getXsip_otm()));
-                userDto.setXsip_otm_approved2(userMandate1.getXsip_otm_approved());
-                userDto.setXsip_otm_rej_reason2(UserUtils.checkParem(userMandate1.getXsip_otm_rej_reason()));
-                userDto.setXsip_otm_created_date2(userMandate1.getXsip_otm_created_date());
-                userDto.setXsip_otm_amount2(UserUtils.checkParem(userMandate1.getXsip_otm_amount()));
-
-                userDto.setEmandate_otm_flag2(userMandate1.getEmandate_otm_flag());
-                userDto.setEmandate_otm2(UserUtils.checkParem(userMandate1.getEmandate_otm()));
-                userDto.setEmandate_otm_approved2(userMandate1.getEmandate_otm_approved());
-                userDto.setEmandate_otm_rej_reason2(UserUtils.checkParem(userMandate1.getEmandate_otm_rej_reason()));
-                userDto.setEmandate_otm_created_date2(userMandate1.getEmandate_otm_created_date());
-                userDto.setEmandate_otm_amount2(UserUtils.checkParem(userMandate1.getEmandate_otm_amount()));
 
                 userDto.setNse_ach_flag2(userMandate1.getNse_ach_flag());
                 userDto.setNse_ach2(UserUtils.checkParem(userMandate1.getNse_ach()));
@@ -768,19 +716,6 @@ public class UserMapper
             if (mandateDetailsList.size() >= 3) {
                 String finalBankAcc3 = bankAcc3;
                 UsersMandateDetails userMandate3 = mandateDetailsList.stream().filter(mandate-> finalBankAcc3.equalsIgnoreCase(mandate.getBank_account_number())).findFirst().orElse(new UsersMandateDetails());
-                userDto.setXsip_otm_flag3(userMandate3.getXsip_otm_flag());
-                userDto.setXsip_otm3(UserUtils.checkParem(userMandate3.getXsip_otm()));
-                userDto.setXsip_otm_approved3(userMandate3.getXsip_otm_approved());
-                userDto.setXsip_otm_rej_reason3(UserUtils.checkParem(userMandate3.getXsip_otm_rej_reason()));
-                userDto.setXsip_otm_created_date3(userMandate3.getXsip_otm_created_date());
-                userDto.setXsip_otm_amount3(UserUtils.checkParem(userMandate3.getXsip_otm_amount()));
-
-                userDto.setEmandate_otm_flag3(userMandate3.getEmandate_otm_flag());
-                userDto.setEmandate_otm3(UserUtils.checkParem(userMandate3.getEmandate_otm()));
-                userDto.setEmandate_otm_approved3(userMandate3.getEmandate_otm_approved());
-                userDto.setEmandate_otm_rej_reason3(UserUtils.checkParem(userMandate3.getEmandate_otm_rej_reason()));
-                userDto.setEmandate_otm_created_date3(userMandate3.getEmandate_otm_created_date());
-                userDto.setEmandate_otm_amount3(UserUtils.checkParem(userMandate3.getEmandate_otm_amount()));
 
                 userDto.setNse_ach_flag3(userMandate3.getNse_ach_flag());
                 userDto.setNse_ach3(UserUtils.checkParem(userMandate3.getNse_ach()));
