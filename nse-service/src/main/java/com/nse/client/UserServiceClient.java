@@ -178,7 +178,9 @@ public interface UserServiceClient {
     @PostMapping("/deleteAllCart")
     boolean deleteAllCart(
             @RequestParam("userid") Integer userid,
-            @RequestParam("purchaseType") String purchaseType,@RequestParam("clientName") String clientName,
+            @RequestParam("purchaseType") String purchaseType,
+            @RequestParam("clientName") String clientName,
+            @RequestParam("investor_code") String investor_code,
             @RequestParam("vendor") String vendor,
             @RequestHeader("Authorization") String token
     );

@@ -117,9 +117,9 @@ public class CartService
         }
     }
 
-    public boolean deleteAllCart(Integer userId,String purchaseType, String clientName,String vendor) {
+    public boolean deleteAllCart(Integer userId,String purchaseType, String clientName,String investor_code,String vendor) {
         try {
-            cartRepository.deleteActiveCartsByUserIdAndPurchaseTypeAndClientName(userId, purchaseType,clientName,vendor);
+            cartRepository.deleteActiveCartsByUserIdAndPurchaseTypeAndClientName(userId, purchaseType,clientName,investor_code,vendor);
             return true;
         } catch (Exception ex) {
             System.out.println("Exception Date & Time = " + new Date());

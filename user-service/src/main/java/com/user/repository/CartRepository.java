@@ -60,11 +60,12 @@ public interface CartRepository extends JpaRepository<Cart, Integer>
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM Cart c WHERE c.user_id = :userId AND c.purchase_type = :purchaseType AND c.client_name = :clientName AND c.vendor = :vendor AND c.active = true")
+    @Query("DELETE FROM Cart c WHERE c.user_id = :userId AND c.purchase_type = :purchaseType AND c.client_name = :clientName AND c.vendor = :vendor AND c.investor_code = :investor_code AND c.active = true")
     void deleteActiveCartsByUserIdAndPurchaseTypeAndClientName(
             @Param("userId") Integer userId,
             @Param("purchaseType") String purchaseType,
             @Param("clientName") String clientName,
+            @Param("investor_code") String investor_code,
             @Param("vendor") String vendor
     );
 

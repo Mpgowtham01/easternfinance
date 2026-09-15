@@ -194,11 +194,12 @@ public class CartController
             @RequestParam Integer userid,
             @RequestParam String purchaseType,
             @RequestParam String clientName,
+            @RequestParam String investor_code,
             @RequestParam String vendor
     ) {
-        System.out.println("userid = " + userid + " purchaseType = " + purchaseType + " clientName = " + clientName);
+        System.out.println("userid = " + userid + " purchaseType = " + purchaseType + " investor_code = " + investor_code + " clientName = " + clientName);
         try {
-            return cartService.deleteAllCart(userid,purchaseType, clientName,vendor);
+            return cartService.deleteAllCart(userid,purchaseType, clientName,investor_code,vendor);
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;

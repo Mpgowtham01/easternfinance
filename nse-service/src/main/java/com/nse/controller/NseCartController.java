@@ -1770,7 +1770,8 @@ public class NseCartController {
     @PostMapping("/deleteAllCart")
     public ResponseEntity<?> deleteAllCart(HttpServletRequest request,
                                            @RequestHeader("Authorization") String token,
-                                           @RequestParam String cart_type)
+                                           @RequestParam String cart_type,
+                                           @RequestParam(required = false) String investor_code)
     {
         String userid = "";
         String client_name = "";
@@ -1783,6 +1784,7 @@ public class NseCartController {
                 return NseUtils.commonResponse("User not found", HttpStatus.BAD_REQUEST);
             }
             client_name = user.getClient_name();
+            String nse_iin_number = user.getNse_iin_number();
 
             if(StringHelper.isEmpty(client_name))
             {
@@ -1805,7 +1807,7 @@ public class NseCartController {
 
             if(user != null)
             {
-                boolean isDeleted = userServiceClient.deleteAllCart(Integer.parseInt(userid),cart_type,client_name,"NSE",token);
+                boolean isDeleted = userServiceClient.deleteAllCart(Integer.parseInt(userid),cart_type,client_name,investor_code,"NSE",token);
 
                 if(isDeleted)
                 {
