@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class MandateDetailsPojo
 {
+    public Integer id = 0;
     public String bank_name = "";
     public String bank_account_holder_name = "";
     public String bank_account_number = "";

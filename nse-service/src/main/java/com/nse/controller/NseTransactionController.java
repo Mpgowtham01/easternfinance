@@ -1206,7 +1206,7 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid),"NSE",iin_number, "SIP Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
-                        return NseUtils.commonResponse("No cart found", HttpStatus.BAD_REQUEST);
+                        return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     }
                 }
 
@@ -2248,6 +2248,9 @@ public class NseTransactionController {
             broker_code = NseUtils.checkParem(broker_code);
             euin_code = NseUtils.checkParem(euin_code);
             source = NseUtils.checkParem(source);
+            cartid = NseUtils.checkParem(cartid);
+            subbroker_arn = NseUtils.checkParem(subbroker_arn);
+            subbroker_code = NseUtils.checkParem(subbroker_code);
 
             if(StringHelper.isEmpty(all_units)){all_units = "N";};
 
@@ -2284,7 +2287,13 @@ public class NseTransactionController {
                 redem_type_array = new ArrayList<String>();
                 folio_array = new ArrayList<String>();
 
-                cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "Redemption Purchase",token);
+                try {
+                    cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "Redemption Purchase",token);
+                } catch (FeignException e) {
+                    if (e.status() == 400) {
+                        return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    }
+                }
 
                 if (cartList.isEmpty())
                 {
@@ -2450,6 +2459,19 @@ public class NseTransactionController {
             appln_id = nsekey.getNse_appln_id();
             password = nsekey.getNse_password();
 
+            if(!subbroker_arn.isEmpty())
+            {
+                subbroker_arn = subbroker_arn;
+            }else{
+                subbroker_arn = "";
+            }
+
+            if(!subbroker_code.isEmpty())
+            {
+                subbroker_code = subbroker_code;
+            }else{
+                subbroker_code = "";
+            }
 
             if(broker_code.isEmpty())
             {
@@ -2472,7 +2494,7 @@ public class NseTransactionController {
                 regObject.put("folio_no", folio_array.get(i));
                 regObject.put("remarks", "");
                 regObject.put("kyc_flag", "Y");
-                regObject.put("sub_broker_code", "");
+                regObject.put("sub_broker_code", subbroker_code);
                 regObject.put("euin_number", euin_code);
                 regObject.put("euin_declaration", "Y");
                 regObject.put("min_redemption_flag", "N");
@@ -2501,7 +2523,7 @@ public class NseTransactionController {
                     }
                 }
 
-                regObject.put("sub_broker_arn", subbroker_code);
+                regObject.put("sub_broker_arn", subbroker_arn);
                 regObject.put("bank_ref_no", "");
                 regObject.put("account_no", user.getBank_account_number1());
                 regObject.put("mobile_no", mobile);
@@ -2824,7 +2846,7 @@ public class NseTransactionController {
                 }
                 else
                 {
-                    return NseUtils.commonResponse(trxn_remark, HttpStatus.BAD_REQUEST);
+                    return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST,trxn_remark);
                 }
             } catch (HttpClientErrorException | HttpServerErrorException ex) {
 
@@ -3074,7 +3096,13 @@ public class NseTransactionController {
                 redem_type_array = new ArrayList<String>();
                 folio_array = new ArrayList<String>();
 
-                cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "Switch Purchase",token);
+                try {
+                    cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "Switch Purchase",token);
+                } catch (FeignException e) {
+                    if (e.status() == 400) {
+                        return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    }
+                }
 
                 if (cartList.isEmpty())
                 {
@@ -4668,7 +4696,13 @@ public class NseTransactionController {
                 install_count_array = new ArrayList<>();
                 first_order_flag_array = new ArrayList<>();
 
-                cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "SWP Purchase",token);
+                try {
+                    cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "SWP Purchase",token);
+                } catch (FeignException e) {
+                    if (e.status() == 400) {
+                        return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    }
+                }
 
                 if (cartList.isEmpty())
                 {
@@ -8553,7 +8587,7 @@ public class NseTransactionController {
                 {
                     if (e.status() == 400)
                     {
-                        return NseUtils.commonResponse("No cart found", HttpStatus.BAD_REQUEST);
+                        return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     }else
                     {
                         return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);

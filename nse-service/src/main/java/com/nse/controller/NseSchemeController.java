@@ -5077,7 +5077,12 @@ public class NseSchemeController {
 
             if ("MOBILE".equalsIgnoreCase(source))
             {
-                Pageable pageable = PageRequest.of(page, size);
+                // page is 1-based for the caller; PageRequest counts from 0. page=1 used to
+                // land on the second page and hide the 25 most recent orders.
+                int page_index = page > 0 ? page - 1 : 0;
+                if (size < 1) {size = 25;}
+
+                Pageable pageable = PageRequest.of(page_index, size);
 
                 Page<NseTransactions> transactionsPage =
                         nseTransactionRepository.findByUserIdAndClientNameOrderByTxnDateDesc(

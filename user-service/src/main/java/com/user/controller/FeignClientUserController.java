@@ -2972,20 +2972,6 @@ public class FeignClientUserController
 			entity.setOnline_code(userMandate.getOnline_code() == null ? "" : userMandate.getOnline_code());
 			entity.setBroker_code(userMandate.getBroker_code() == null ? "" : userMandate.getBroker_code());
 			entity.setBank_account_number(userMandate.getBank_account_number());
-
-			// xsip_otm / emandate_otm are NOT NULL columns - Hibernate sends an explicit
-			// NULL for them on insert unless they are populated here.
-//			entity.setXsip_otm("");
-//			entity.setXsip_otm_flag(0);
-//			entity.setXsip_otm_amount("");
-//			entity.setXsip_otm_approved(0);
-//			entity.setXsip_otm_rej_reason("");
-//			entity.setEmandate_otm("");
-//			entity.setEmandate_otm_flag(0);
-//			entity.setEmandate_otm_amount("");
-//			entity.setEmandate_otm_approved(0);
-//			entity.setEmandate_otm_rej_reason("");
-
 			entity.setNse_ach_flag(1);
 			entity.setNse_ach(userMandate.getNse_ach() == null ? "" : userMandate.getNse_ach());
 			entity.setNse_ach_amount(userMandate.getNse_ach_amount());
@@ -2998,8 +2984,6 @@ public class FeignClientUserController
 			entity.setNse_ach_end_date(userMandate.getNse_ach_end_date());
 			entity.setNse_ach_created_date(new Date());
 			entity.setClient_name(userMandate.getClient_name() == null ? "" : userMandate.getClient_name());
-
-			// Save to DB
 			UsersMandateDetails saved = usersMandateDetailsRespository.save(entity);
 			// convert back to DTO if needed
 			UserMandateDetailsDto response = new UserMandateDetailsDto();

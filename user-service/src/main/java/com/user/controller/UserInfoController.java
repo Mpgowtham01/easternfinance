@@ -6,9 +6,11 @@ import com.user.config.TokenInterceptor;
 import com.user.dto.UserDto;
 import com.user.mapper.UserMapper;
 import com.user.model.*;
+import com.user.pojo.BankMandateInfoPojo;
 import com.user.pojo.CommonPojo;
 import com.user.pojo.InvestorClientCodePojo;
 import com.user.pojo.MandateDetailsPojo;
+import com.user.pojo.MandateInfoResponsePojo;
 import com.user.repository.*;
 import com.user.response.IfscCodeResponse;
 import com.user.response.InvestorClientCodeResponse;
@@ -359,14 +361,21 @@ public class UserInfoController
             }
 
             boolean include_pending = mandate_flag != null && mandate_flag.equalsIgnoreCase("Y");
+            boolean is_mobile = source != null && source.equalsIgnoreCase("Mobile");
 
-            List<MandateDetailsPojo> mandate_list = new ArrayList<MandateDetailsPojo>();
+            List<BankMandateInfoPojo> grouped_list = new ArrayList<BankMandateInfoPojo>();
 
             for (UsersBankDetails bank : bank_list)
             {
                 String bank_account_number = nvl(bank.getBank_account_number());
 
                 if (bank_account_number.isEmpty())
+                {
+                    continue;
+                }
+
+                if (account_number != null && !account_number.isEmpty()
+                        && !account_number.equalsIgnoreCase(bank_account_number))
                 {
                     continue;
                 }
@@ -381,31 +390,51 @@ public class UserInfoController
                     }
                 }
 
+                // resolved once per bank - buildMandateDetails used to hit the IFSC lookup
+                // again for every mandate row on the same account.
+                String bank_micr_code = resolveMicrCode(bank);
+
+                BankMandateInfoPojo bank_pojo = buildBankMandateInfo(bank, bank_micr_code);
+
                 if (bank_mandate_list.isEmpty())
                 {
                     if (include_pending)
                     {
-                        mandate_list.add(buildMandateDetails(bank, null, sdf));
+                        bank_pojo.getMandate_list().add(buildMandateDetails(bank, null, sdf, bank_micr_code, is_mobile));
                     }
-                    continue;
+                }
+                else
+                {
+                    for (UsersMandateDetails mandate : bank_mandate_list)
+                    {
+                        MandateDetailsPojo pojo = buildMandateDetails(bank, mandate, sdf, bank_micr_code, is_mobile);
+
+                        if (include_pending || "Approved".equals(pojo.getMandate_status()))
+                        {
+                            bank_pojo.getMandate_list().add(pojo);
+                        }
+                    }
                 }
 
-                for (UsersMandateDetails mandate : bank_mandate_list)
+                if (!bank_pojo.getMandate_list().isEmpty())
                 {
-                    MandateDetailsPojo pojo = buildMandateDetails(bank, mandate, sdf);
-
-                    if (include_pending || "Approved".equals(pojo.getMandate_status()))
-                    {
-                        mandate_list.add(pojo);
-                    }
+                    grouped_list.add(bank_pojo);
                 }
             }
 
-            if (account_number != null && !account_number.isEmpty())
+            if (is_mobile)
             {
-                mandate_list = mandate_list.stream()
-                        .filter(mandate -> account_number.equalsIgnoreCase(mandate.getBank_account_number()))
-                        .collect(Collectors.toList());
+                MandateInfoResponsePojo response = new MandateInfoResponsePojo();
+                response.setBank_list(grouped_list);
+
+                return ResponseEntity.ok(response);
+            }
+
+            List<MandateDetailsPojo> mandate_list = new ArrayList<MandateDetailsPojo>();
+
+            for (BankMandateInfoPojo bank_pojo : grouped_list)
+            {
+                mandate_list.addAll(bank_pojo.getMandate_list());
             }
 
             return ResponseEntity.ok(mandate_list);
@@ -419,10 +448,9 @@ public class UserInfoController
     }
 
     /**
-     * Builds one mandate row out of a users_bank_details record and the users_mandate_details
-     * record registered against it. A null mandate means the bank has no mandate yet.
+     * MICR is not always stored against the bank, so fall back to the IFSC lookup service.
      */
-    private MandateDetailsPojo buildMandateDetails(UsersBankDetails bank, UsersMandateDetails mandate, SimpleDateFormat sdf) throws UnirestException
+    private String resolveMicrCode(UsersBankDetails bank) throws UnirestException
     {
         String bank_name = nvl(bank.getBank_name());
         String bank_ifsc_code = nvl(bank.getBank_ifsc_code());
@@ -438,8 +466,38 @@ public class UserInfoController
             }
         }
 
+        return bank_micr_code;
+    }
+
+    /**
+     * Bank header for the Mobile response - the mandates registered against it are added
+     * by the caller.
+     */
+    private BankMandateInfoPojo buildBankMandateInfo(UsersBankDetails bank, String bank_micr_code)
+    {
+        BankMandateInfoPojo pojo = new BankMandateInfoPojo();
+        pojo.setBank_name(nvl(bank.getBank_name()));
+        pojo.setBank_code(nvl(bank.getBank_code()));
+        pojo.setBank_mode(nvl(bank.getBank_mode()));
+        pojo.setBank_branch(nvl(bank.getBank_branch()));
+        pojo.setBank_account_number(nvl(bank.getBank_account_number()));
+        pojo.setBank_account_holder_name(nvl(bank.getBank_account_holder_name()));
+        pojo.setBank_account_type(nvl(bank.getBank_account_type()));
+        pojo.setBank_ifsc_code(nvl(bank.getBank_ifsc_code()));
+        pojo.setBank_micr_code(nvl(bank_micr_code));
+        pojo.setDefault_bank(nvl(bank.getDefault_bank()));
+
+        return pojo;
+    }
+
+    /**
+     * Builds one mandate row out of a users_bank_details record and the users_mandate_details
+     * record registered against it. A null mandate means the bank has no mandate yet.
+     */
+    private MandateDetailsPojo buildMandateDetails(UsersBankDetails bank, UsersMandateDetails mandate, SimpleDateFormat sdf, String bank_micr_code, boolean is_mobile) throws UnirestException
+    {
         String default_bank = nvl(bank.getDefault_bank());
-        if (default_bank.isEmpty())
+        if (default_bank.isEmpty() && !is_mobile)
         {
             default_bank = "N";
         }
@@ -455,16 +513,17 @@ public class UserInfoController
         String mandate_status = resolveMandateStatus(nse_ach_flag, nse_ach, nse_ach_approved);
 
         MandateDetailsPojo pojo = new MandateDetailsPojo();
-        pojo.setBank_name(bank_name);
+        pojo.setId(mandate == null || mandate.getId() == null ? 0 : mandate.getId());
+        pojo.setBank_name(nvl(bank.getBank_name()));
         pojo.setBank_account_number(nvl(bank.getBank_account_number()));
         pojo.setBank_account_holder_name(nvl(bank.getBank_account_holder_name()));
-        pojo.setBank_ifsc_code(bank_ifsc_code);
-        pojo.setBank_micr_code(bank_micr_code);
+        pojo.setBank_ifsc_code(nvl(bank.getBank_ifsc_code()));
+        pojo.setBank_micr_code(nvl(bank_micr_code));
         pojo.setBank_code(nvl(bank.getBank_code()));
         pojo.setBank_branch(nvl(bank.getBank_branch()));
         pojo.setAccount_type(nvl(bank.getBank_account_type()));
         pojo.setDefault_bank(default_bank);
-        pojo.setMandate_type("ACH Mandate");
+        pojo.setMandate_type(is_mobile ? "E-Mandate" : "ACH Mandate");
         pojo.setMandate_flag(nse_ach_flag);
         pojo.setMandate_id(nse_ach);
         pojo.setMandate_amount(nse_ach_amount);
@@ -480,19 +539,15 @@ public class UserInfoController
 
     private String resolveMandateStatus(Integer nse_ach_flag, String nse_ach, Integer nse_ach_approved)
     {
-        if (nse_ach_flag.equals(0) && nse_ach.isEmpty() && nse_ach_approved.equals(0))
+        // Driven off the registration id rather than nse_ach_flag: rows created by the NSE
+        // status feed (/update-status) carry a valid nse_ach with the flag left unset, and
+        // those used to fall through to an empty status.
+        if (nse_ach.isEmpty())
         {
-            return "Generate";
+            return nse_ach_flag.equals(1) ? "Pending" : "Generate";
         }
-        if (nse_ach_flag.equals(1) && nse_ach_approved.equals(0))
-        {
-            return "Pending";
-        }
-        if (nse_ach_flag.equals(1) && !nse_ach.isEmpty() && nse_ach_approved.equals(1))
-        {
-            return "Approved";
-        }
-        return "";
+
+        return nse_ach_approved.equals(1) ? "Approved" : "Pending";
     }
 
     private String resolveMandateDesc(String mandate_status)
