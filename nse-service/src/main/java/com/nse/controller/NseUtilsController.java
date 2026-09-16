@@ -811,12 +811,12 @@ public class NseUtilsController {
         try
         {
             pojo = new CommonPojo();
-            pojo.setCode("P");
+            pojo.setCode("X");
             pojo.setDesc("Physical");
             masterList.add(pojo);
 
             pojo = new CommonPojo();
-            pojo.setCode("EMANDATE");
+            pojo.setCode("E");
             pojo.setDesc("E-Mandate");
             masterList.add(pojo);
 
