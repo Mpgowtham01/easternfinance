@@ -5998,20 +5998,30 @@ public class NseTransactionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
+            String default_iin = NseUtils.trimOrEmpty(user.getNse_iin_number());
+
             String nse_iin = null;
             if(iin_number.isEmpty())
             {
-                nse_iin = user.getNse_iin_number();
+                nse_iin = default_iin;
             }else{
                 nse_iin = iin_number;
             }
 
+            if(nse_iin.isEmpty())
+            {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "IIN Number not available for this user."));
+            }
 
-            if (!nse_iin.equalsIgnoreCase(iin_number))
+            // getUserById always returns the investor's first NSE registration record, so the
+            // mandate has to be filed against the registration that actually owns nse_iin.
+            Integer online_id = user.getId();
+
+            if (!default_iin.equalsIgnoreCase(nse_iin))
             {
                 UserDto nse = null;
                 try {
-                    nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name,iin_number,broker_code,token);
+                    nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name,nse_iin,broker_code,token);
                 }catch (FeignException e)
                 {
                     return FeignErrorHandler.handle(e, "User Service", "User not found");
@@ -6022,6 +6032,7 @@ public class NseTransactionController {
                 }
                 pan = nse.getPan();
                 name = nse.getName();
+                online_id = nse.getId();
             } else
             {
                 pan = user.getPan();
@@ -6160,7 +6171,7 @@ public class NseTransactionController {
                 nsetrans.setRm_name(user.getRm_name());
                 nsetrans.setSubbroker_name(user.getSubbroker_name());
                 nsetrans.setClient_name(client_name);
-                nsetrans.setIin_number(iin_number);
+                nsetrans.setIin_number(nse_iin);
                 nsetrans.setScheme_name("");
                 nsetrans.setScheme_code("");
                 nsetrans.setFolio_no("");
@@ -6206,24 +6217,24 @@ public class NseTransactionController {
                 nsetrans.setRefund_status("");
                 nsetrans.setRefund_amount("");
 
-                LocalDate localDate = LocalDate.parse(ach_from_date, formatter);
-                Date utilDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-
-                nsetrans.setStart_date(utilDate);
-
-                LocalDate localToDate = LocalDate.parse(ach_to_date, formatter);
-                Date utilToDate = Date.from(localToDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-                nsetrans.setEnd_date(utilToDate);
+                // achFromDateObj / achToDateObj are already parsed above; re-parsing ach_to_date
+                // here blew up with a DateTimeParseException when no end date was supplied, which
+                // aborted the request after NSE had already registered the mandate.
+                nsetrans.setStart_date(achFromDateObj);
+                if (achToDateObj != null)
+                {
+                    nsetrans.setEnd_date(achToDateObj);
+                }
                 nseTransactionService.save(nsetrans);
 
                 if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                 {
                     UserMandateDetailsDto mandate = new UserMandateDetailsDto();
                     mandate.setUser_id(Integer.parseInt(userid));
-                    mandate.setOnline_id(user.getId());
+                    mandate.setOnline_id(online_id);
                     mandate.setOnline_flag("NSE");
                     mandate.setOnline_code(nse_iin);
-                    mandate.setBroker_code(user.getBroker_code());
+                    mandate.setBroker_code(broker_code);
                     mandate.setBank_account_number(account_number);
                     mandate.setNse_ach_flag(1);
                     mandate.setNse_ach(reg_id);

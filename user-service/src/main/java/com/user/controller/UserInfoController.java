@@ -1502,4 +1502,16 @@ public class UserInfoController
         }
     }
 
+    @GetMapping("/getSubbrokerDetails")
+    public ResponseEntity<?> getSubbrokerDetails(@RequestHeader("Authorization") String token,@RequestParam String name) {
+        try {
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            Optional<User> userList = userRepository.findSubBrokerName(name,client_name);
+            return ResponseEntity.ok(userList);
+        }catch(Exception ex)
+        {
+            ex.printStackTrace();
+            return UserUtils.errorResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
