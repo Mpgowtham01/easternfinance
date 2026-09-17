@@ -51,6 +51,15 @@ public interface NseTransactionRepository extends JpaRepository<NseTransactions,
             @Param("paymentRefNo") String paymentRefNo
     );
 
+    @Query("FROM NseTransactions nt WHERE nt.user_id = :userId AND nt.client_name = :clientName AND nt.iin_number = :investor_code AND nt.broker_code = :broker_code ORDER BY nt.transaction_date DESC")
+    Page<NseTransactions> findByUserIdAndClientNameAndInvestorCodeOrderByTxnDateDesc(
+            @Param("userId") Integer userId,
+            @Param("clientName") String clientName,
+            @Param("investor_code") String investor_code,
+            @Param("broker_code") String broker_code,
+            Pageable pageable
+    );
+
     // id is the tie-breaker: several orders placed in the same second share a transaction_date,
     // and without it those rows can repeat or go missing across pages.
     @Query("FROM NseTransactions nt WHERE nt.user_id = :userId AND nt.client_name = :clientName ORDER BY nt.transaction_date DESC, nt.id DESC")

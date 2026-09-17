@@ -2899,6 +2899,36 @@ public class NseAdminReportController
             productRefId = productRefId.trim();
             broker_code = broker_code.trim();
 
+            if(productType.equalsIgnoreCase("Lumpsum Purchase")
+                    || productType.equalsIgnoreCase("Multiple Lumpsum Purchase")
+                    || productType.equalsIgnoreCase("Purchase orders payment")
+                    || productType.equalsIgnoreCase("PUR"))
+            {
+                productType = "PUR";
+            }
+            else if(productType.equalsIgnoreCase("Redemption Transaction")
+                    || productType.equalsIgnoreCase("RED"))
+            {
+                productType = "RED";
+            }
+            else if(productType.equalsIgnoreCase("Switch Transaction")
+                    || productType.equalsIgnoreCase("SWH_REG"))
+            {
+                productType = "SWH_REG";
+            }
+            else if(productType.equalsIgnoreCase("SIP Purchase")
+                    || productType.equalsIgnoreCase("Multiple SIP Purchase")
+                    || productType.equalsIgnoreCase("SIP_REG"))
+            {
+                productType = "SIP_REG";
+            }
+            else
+            {
+                return NseUtils.commonResponse("Email retrigger is not supported for " + productType, HttpStatus.BAD_REQUEST);
+            }
+
+            System.out.println("sendTransactionEmailRetrigger::productType = " + productType + " & productRefId = " + productRefId);
+
             String appln_id = "";
             String password = "";
 

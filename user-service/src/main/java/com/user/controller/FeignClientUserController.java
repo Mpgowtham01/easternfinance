@@ -1907,6 +1907,8 @@ public class FeignClientUserController
 		{
 			List<UsersPortfolioSchemewise> detailsOptional = usersPortfolioSchemewiseRepository.findActiveSchemesByUserAndClient(userid,clientName);
 
+			detailsOptional = dedupeHoldings(detailsOptional);
+
 			if (detailsOptional.size() > 0)
 			{
 				return ResponseEntity.ok(detailsOptional);
@@ -1919,6 +1921,65 @@ public class FeignClientUserController
 			ex.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
 		}
+	}
+
+	/**
+	 * users_portfolio_schemewise has no unique key, so a re-run of the portfolio loader can leave
+	 * more than one row for the same folio + scheme. Collapse them to a single holding and keep the
+	 * most complete row, otherwise the same scheme is listed twice on the transaction screens.
+	 */
+	private List<UsersPortfolioSchemewise> dedupeHoldings(List<UsersPortfolioSchemewise> holdings)
+	{
+		if (holdings == null || holdings.size() < 2)
+		{
+			return holdings;
+		}
+
+		Map<String, UsersPortfolioSchemewise> unique = new LinkedHashMap<>();
+		for (UsersPortfolioSchemewise holding : holdings)
+		{
+			String key = keyPart(holding.getFolio_no()) + "|" + keyPart(holding.getScheme_code())
+					+ "|" + keyPart(holding.getRegistrar()) + "|" + keyPart(holding.getBroker_code());
+
+			UsersPortfolioSchemewise existing = unique.get(key);
+			if (existing == null || isMoreComplete(holding, existing))
+			{
+				unique.put(key, holding);
+			}
+		}
+		return new ArrayList<>(unique.values());
+	}
+
+	private String keyPart(String value)
+	{
+		return value == null ? "" : value.trim().toUpperCase();
+	}
+
+	private boolean isMoreComplete(UsersPortfolioSchemewise candidate, UsersPortfolioSchemewise existing)
+	{
+		int diff = completenessScore(candidate) - completenessScore(existing);
+		if (diff != 0)
+		{
+			return diff > 0;
+		}
+		// Same quality: keep the row written by the main portfolio load, i.e. the earliest one.
+		Integer candidateId = candidate.getId();
+		Integer existingId = existing.getId();
+		if (candidateId == null || existingId == null)
+		{
+			return false;
+		}
+		return candidateId < existingId;
+	}
+
+	private int completenessScore(UsersPortfolioSchemewise holding)
+	{
+		int score = 0;
+		if (holding.getLatest_nav() != null && holding.getLatest_nav() > 0) score++;
+		if (holding.getInvested_amount() != null && holding.getInvested_amount() > 0) score++;
+		if (StringHelper.isNotEmpty(holding.getIsin())) score++;
+		if (StringHelper.isNotEmpty(holding.getScheme_amfi_code())) score++;
+		return score;
 	}
 
 	@Hidden

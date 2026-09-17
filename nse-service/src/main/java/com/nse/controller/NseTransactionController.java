@@ -249,7 +249,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+                return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
             System.out.println("usre = " + user);
 
@@ -324,17 +324,17 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid),"NSE",iin_number, "Lumpsum Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
-                        return NseUtils.commonResponse("No Cart found for the user.", HttpStatus.OK);
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.OK,"No Cart found for the user.");
                     } else if (e.status() == 404) {
                         return NseUtils.commonResponse("No Cart found for the user.", HttpStatus.OK);
                     } else {
-                        return NseUtils.commonResponse("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST);
+                        return NseUtils.commonResponse1("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching AMC details.");
                     }
                 }
 
                 if(cartList.isEmpty())
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
                 count = String.valueOf(cartList.size());
@@ -379,17 +379,17 @@ public class NseTransactionController {
                         cartList = userServiceClient.getCartDetailsByIds(ids,token);
                     } catch (FeignException e) {
                         if (e.status() == 400) {
-                            return NseUtils.commonResponse("No Cart found for the user.", HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                         } else if (e.status() == 404) {
-                            return NseUtils.commonResponse("No Cart found for the user.", HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                         } else {
-                            return NseUtils.commonResponse("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse1("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching AMC details.");
                         }
                     }
 
                     if(cartList.isEmpty())
                     {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
                     count = String.valueOf(cartList.size());
@@ -469,7 +469,7 @@ public class NseTransactionController {
                     nse = userServiceClient.getUserBseNseDetailsByIinNumber(client_name,iin_number,token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
-                        return NseUtils.commonResponse("No record found for the given IIN Number and Client Name.", HttpStatus.BAD_REQUEST);
+                        return NseUtils.commonResponse1("No record found for the given IIN Number and Client Name.", HttpStatus.BAD_REQUEST, "No record found for the given IIN Number and Client Name.");
                     } else if (e.status() == 404) {
                         return NseUtils.commonResponse("User not found.", HttpStatus.NOT_FOUND);
                     } else {
@@ -478,7 +478,7 @@ public class NseTransactionController {
                 }
                 if(nse == null)
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                    return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
                 pan = nse.getPan();
                 name = nse.getName();
@@ -888,7 +888,7 @@ public class NseTransactionController {
 
                 System.out.println("orderEntryFreshPurchase::Status Code: " + ex.getStatusCode());
                 System.out.println("orderEntryFreshPurchase::Response Body: " + ex.getResponseBodyAsString());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getResponseBodyAsString()));
+                return NseUtils.commonResponse1(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST, ex.getResponseBodyAsString());
             }
 
             if (source.equalsIgnoreCase("Mobile"))
@@ -956,7 +956,7 @@ public class NseTransactionController {
             }
             else
             {
-                return NseUtils.commonResponse(trxn_remark, HttpStatus.BAD_REQUEST);
+                return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST, trxn_remark);
             }
         } catch (Exception e)
         {
@@ -1212,7 +1212,7 @@ public class NseTransactionController {
 
                 if(cartList.isEmpty())
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
                 System.out.println("cartList = " + cartList);
@@ -1326,16 +1326,16 @@ public class NseTransactionController {
                     {
                         if (e.status() == 400)
                         {
-                            return NseUtils.commonResponse("No cart found", HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST, "No cart found");
                         }else
                         {
-                            return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);
+                            return NseUtils.commonResponse1(e.getMessage(), HttpStatus.BAD_REQUEST, e.getMessage());
                         }
                     }
 
                     if(cartList.isEmpty())
                     {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
                     for (CartDto cart : cartList)
@@ -1505,7 +1505,7 @@ public class NseTransactionController {
 
             if (mandate_id_array == null || mandate_id_array.isEmpty())
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "ACH MANDATE Code is empty. Please contact admin."));
+                return NseUtils.commonResponse1("ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST, "ACH MANDATE Code is empty. Please contact admin.");
             }
 
             UserDto nse = null;
@@ -1519,7 +1519,7 @@ public class NseTransactionController {
 
             if(nse == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
             }
 
             String appln_id = "";
@@ -1608,16 +1608,16 @@ public class NseTransactionController {
                 online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
             } catch (FeignException e) {
                 if (e.status() == 400) {
-                   return NseUtils.commonResponse("No record found in Bse Online Access Table", HttpStatus.BAD_REQUEST);
+                   return NseUtils.commonResponse1("No record found in Bse Online Access Table", HttpStatus.BAD_REQUEST, "No record found in Bse Online Access Table");
                 } else if (e.status() == 404) {
-                    return NseUtils.commonResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+                    return NseUtils.commonResponse1(e.getMessage(), HttpStatus.BAD_REQUEST, e.getMessage());
                 } else {
-                    return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);
+                    return NseUtils.commonResponse1(e.getMessage(), HttpStatus.BAD_REQUEST, e.getMessage());
                 }
             }
             if (online_access == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+                return NseUtils.commonResponse1("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST, "NSE Online Credentials Not available. Please contact your RM");
             }
 
             String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
@@ -2272,7 +2272,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+                return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
             if(source.equalsIgnoreCase("Mobile"))
@@ -2297,7 +2297,7 @@ public class NseTransactionController {
 
                 if (cartList.isEmpty())
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
                 for (CartDto cart : cartList)
@@ -2355,7 +2355,7 @@ public class NseTransactionController {
 
                     if (cartList.isEmpty())
                     {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
                     for (CartDto cart : cartList)
@@ -2431,7 +2431,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                    return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
                 pan = nse.getPan();
@@ -2856,7 +2856,7 @@ public class NseTransactionController {
 
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getResponseBodyAsString()));
+                    return NseUtils.commonResponse1(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST, ex.getResponseBodyAsString());
                 }
             } catch (Exception ex) {
 
@@ -2864,7 +2864,7 @@ public class NseTransactionController {
                 ex.printStackTrace();
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
+                    return NseUtils.commonResponse1(ex.getMessage(), HttpStatus.BAD_REQUEST, ex.getMessage());
                 }
             }
 
@@ -2895,7 +2895,7 @@ public class NseTransactionController {
             {
                 return NseUtils.transactionResponse(HttpStatus.OK, trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, resMap);
             }else{
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), trxn_remark));
+                return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST, trxn_remark);
             }
 
         }
@@ -3078,7 +3078,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+                return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
             if(source.equalsIgnoreCase("Mobile"))
@@ -3106,7 +3106,7 @@ public class NseTransactionController {
 
                 if (cartList.isEmpty())
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
                 System.out.println("cartList = " + cartList);
                 System.out.println("cartList = " + cartList.get(0).getAmount_type());
@@ -3170,7 +3170,7 @@ public class NseTransactionController {
 
                     if (cartList.isEmpty())
                     {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
                     for (CartDto cart : cartList)
@@ -3252,7 +3252,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                    return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
                 pan = nse.getPan();
@@ -3595,7 +3595,7 @@ public class NseTransactionController {
 
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getResponseBodyAsString()));
+                    return NseUtils.commonResponse1(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST, ex.getResponseBodyAsString());
                 }
             } catch (Exception ex) {
 
@@ -3603,7 +3603,7 @@ public class NseTransactionController {
                 ex.printStackTrace();
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
+                    return NseUtils.commonResponse1(ex.getMessage(), HttpStatus.BAD_REQUEST, ex.getMessage());
                 }
             }
             System.out.println("reg = " +  trxn_status);
@@ -3666,7 +3666,7 @@ public class NseTransactionController {
             }
             else
             {
-                return NseUtils.commonResponse(trxn_remark, HttpStatus.BAD_REQUEST);
+                return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST, trxn_remark);
             }
 
         }
@@ -3865,7 +3865,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+                return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
             if(source.equalsIgnoreCase("Mobile"))
@@ -3895,7 +3895,7 @@ public class NseTransactionController {
 
                 if (cartList.isEmpty())
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
                 for (CartDto cart : cartList)
@@ -3958,7 +3958,7 @@ public class NseTransactionController {
                     }
                     if (cartList.isEmpty())
                     {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
                     for (CartDto cart : cartList)
@@ -4034,7 +4034,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                    return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
                 pan = nse.getPan();
@@ -4671,7 +4671,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
+                return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
             List<String> scheme_name_array;
@@ -4706,7 +4706,7 @@ public class NseTransactionController {
 
                 if (cartList.isEmpty())
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                    return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
                 for (CartDto cart : cartList) {
@@ -4745,7 +4745,7 @@ public class NseTransactionController {
 
                     if (cartList.isEmpty())
                     {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
                     for (CartDto cart : cartList)
                     {
@@ -4760,7 +4760,7 @@ public class NseTransactionController {
                         cart_id_array.add(String.valueOf(cart.getId()));
                     }
                 }else{
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Cart ID missing."));
+                    return NseUtils.commonResponse1("Cart ID missing.", HttpStatus.BAD_REQUEST, "Cart ID missing.");
                 }
             }
 
@@ -4791,7 +4791,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
+                    return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
                 pan = nse.getPan();

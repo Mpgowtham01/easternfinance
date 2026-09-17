@@ -5060,36 +5060,47 @@ public class NseSchemeController {
 //    }
 
     @GetMapping("/getMyOrders")
-    public ResponseEntity<?> getMyOrders(@RequestHeader("Authorization") String token,@RequestParam(required = false) String source,
-                                         @RequestParam(defaultValue = "0") int page,
-                                         @RequestParam(required = false, defaultValue = "25") int size)
+    public ResponseEntity<?> getMyOrders(@RequestHeader("Authorization") String token,
+                                         @RequestParam(required = false) String source,
+                                         @RequestParam(defaultValue = "0") int page_id,
+                                         @RequestParam(required = false, defaultValue = "25") int size,
+                                         @RequestParam(required = false) String investor_code,
+                                         @RequestParam(required = false) String broker_code)
     {
         String userid;
         String client_name;
         try
         {
+
+            broker_code = NseUtils.checkParem(broker_code);
+            investor_code = NseUtils.checkParem(investor_code);
             userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
 
-            UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            UserDto users =null;
+
+            try {
+                users = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
             client_name = users.getClient_name();
 
             List<NseTransactions> list;
 
             if ("MOBILE".equalsIgnoreCase(source))
             {
-                // page is 1-based for the caller; PageRequest counts from 0. page=1 used to
-                // land on the second page and hide the 25 most recent orders.
-                int page_index = page > 0 ? page - 1 : 0;
-                if (size < 1) {size = 25;}
-
-                Pageable pageable = PageRequest.of(page_index, size);
-
-                Page<NseTransactions> transactionsPage =
-                        nseTransactionRepository.findByUserIdAndClientNameOrderByTxnDateDesc(
-                                Integer.valueOf(userid), client_name, pageable);
+                Pageable pageable = PageRequest.of(page_id > 0 ? page_id - 1 : 0, size);
+                Page<NseTransactions> transactionsPage = null;
+                if(!broker_code.isEmpty() && !investor_code.isEmpty())
+                {
+                    transactionsPage = nseTransactionRepository.findByUserIdAndClientNameAndInvestorCodeOrderByTxnDateDesc(
+                            Integer.valueOf(userid), client_name, investor_code,broker_code,pageable);
+                }else {
+                    transactionsPage = nseTransactionRepository.findByUserIdAndClientNameOrderByTxnDateDesc(
+                            Integer.valueOf(userid), client_name, pageable);
+                }
 
                 list = transactionsPage.getContent();
-
                 list.forEach(nse ->
                         nse.setLogo(amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(nse.getScheme_name()))
                 );
@@ -5102,11 +5113,16 @@ public class NseSchemeController {
                 list = nseTransactionRepository.findNonRequestTransactionsOrderedByDate(
                         Integer.valueOf(userid), client_name);
 
-                if (list != null && !list.isEmpty()) {
-                    list.forEach(nse ->
-                            nse.setLogo(amcLogoPath + NseUtils.getLogoByAmcNameOrSchemeName(nse.getScheme_name()))
-                    );
+                if (list == null)
+                {
+                    list = Collections.emptyList();
                 }
+
+                list.forEach(nse ->
+                        nse.setLogo(amcLogoPath +
+                                NseUtils.getLogoByAmcNameOrSchemeName(nse.getScheme_name()))
+                );
+
                 System.out.println("NseTransactionsList size (website): " + list.size());
                 return ResponseEntity.ok(list);
             }
