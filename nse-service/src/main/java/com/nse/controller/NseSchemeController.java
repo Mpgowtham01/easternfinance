@@ -7324,7 +7324,24 @@ public class NseSchemeController {
             System.out.println("client_name  = " + client_name);
 
             List<UsersPortfolioSchemewiseDto> amcList = null;
-            amcList = userServiceClient.getAllRedemptionAmcDetails(Integer.valueOf(userid), client_name,token);
+            try
+            {
+                amcList = userServiceClient.getAllRedemptionAmcDetails(Integer.valueOf(userid), client_name,token);
+            } catch (FeignException e)
+            {
+                if (e.status() == 404) {
+                    return ResponseEntity.ok(new ArrayList<SchemePojo>());
+                } else if (e.status() == 400) {
+                    return NseUtils.commonResponse("Invalid request for AMC details.", HttpStatus.BAD_REQUEST);
+                } else {
+                    return NseUtils.commonResponse("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (amcList == null || amcList.isEmpty()) {
+                return ResponseEntity.ok(new ArrayList<SchemePojo>());
+            }
+
             System.out.println("amcList = " + amcList.size());
 
             Set<String> amcCodeSet = amcList.stream()
