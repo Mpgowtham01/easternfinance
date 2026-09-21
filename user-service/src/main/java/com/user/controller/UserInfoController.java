@@ -363,6 +363,9 @@ public class UserInfoController
             boolean include_pending = mandate_flag != null && mandate_flag.equalsIgnoreCase("Y");
             boolean is_mobile = source != null && source.equalsIgnoreCase("Mobile");
 
+            // Mobile wants the mandate end date as dd/MM/yyyy; Web keeps dd-MMM-yyyy.
+            SimpleDateFormat end_date_sdf = is_mobile ? new SimpleDateFormat("dd/MM/yyyy") : sdf;
+
             List<BankMandateInfoPojo> grouped_list = new ArrayList<BankMandateInfoPojo>();
 
             for (UsersBankDetails bank : bank_list)
@@ -400,14 +403,14 @@ public class UserInfoController
                 {
                     if (include_pending)
                     {
-                        bank_pojo.getMandate_list().add(buildMandateDetails(bank, null, sdf, bank_micr_code, is_mobile));
+                        bank_pojo.getMandate_list().add(buildMandateDetails(bank, null, sdf, end_date_sdf, bank_micr_code, is_mobile));
                     }
                 }
                 else
                 {
                     for (UsersMandateDetails mandate : bank_mandate_list)
                     {
-                        MandateDetailsPojo pojo = buildMandateDetails(bank, mandate, sdf, bank_micr_code, is_mobile);
+                        MandateDetailsPojo pojo = buildMandateDetails(bank, mandate, sdf, end_date_sdf, bank_micr_code, is_mobile);
 
                         if (include_pending || "Approved".equals(pojo.getMandate_status()))
                         {
@@ -494,7 +497,7 @@ public class UserInfoController
      * Builds one mandate row out of a users_bank_details record and the users_mandate_details
      * record registered against it. A null mandate means the bank has no mandate yet.
      */
-    private MandateDetailsPojo buildMandateDetails(UsersBankDetails bank, UsersMandateDetails mandate, SimpleDateFormat sdf, String bank_micr_code, boolean is_mobile) throws UnirestException
+    private MandateDetailsPojo buildMandateDetails(UsersBankDetails bank, UsersMandateDetails mandate, SimpleDateFormat sdf, SimpleDateFormat end_date_sdf, String bank_micr_code, boolean is_mobile) throws UnirestException
     {
         String default_bank = nvl(bank.getDefault_bank());
         if (default_bank.isEmpty() && !is_mobile)
@@ -532,7 +535,7 @@ public class UserInfoController
         pojo.setMandate_status(mandate_status);
         pojo.setMandate_desc(resolveMandateDesc(mandate_status));
         pojo.setMandate_date(mandate_date == null ? "" : sdf.format(mandate_date));
-        pojo.setMandate_end_date(mandate_end_date == null ? "" : sdf.format(mandate_end_date));
+        pojo.setMandate_end_date(mandate_end_date == null ? "" : end_date_sdf.format(mandate_end_date));
 
         return pojo;
     }
