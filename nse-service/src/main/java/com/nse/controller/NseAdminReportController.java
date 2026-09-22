@@ -2920,7 +2920,7 @@ public class NseAdminReportController
                     || productType.equalsIgnoreCase("Multiple SIP Purchase")
                     || productType.equalsIgnoreCase("SIP_REG"))
             {
-                productType = "SIP_REG";
+                productType = "XSIP_REG";
             }
             else
             {

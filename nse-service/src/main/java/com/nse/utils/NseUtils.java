@@ -1046,6 +1046,31 @@ public class NseUtils
         return outputDf.format(parsedDate);
     }
 
+    /**
+     * Dates reach us in whichever format the caller or NSE happened to use - dd/MM/yyyy from
+     * the Web params, dd-MM-yyyy from the cart, dd-MMM-yyyy from the mandate feed. Parse
+     * against every known format instead of assuming one. Blank input returns null.
+     */
+    public static Date parseAnyDate(String inputDate) throws ParseException {
+
+        if (inputDate == null || inputDate.trim().isEmpty()) {
+            return null;
+        }
+
+        String value = inputDate.trim();
+
+        for (String format : INPUT_FORMATS) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat(format);
+                sdf.setLenient(false); // IMPORTANT
+                return sdf.parse(value);
+            } catch (ParseException ignored) {
+            }
+        }
+
+        throw new ParseException("Invalid date format: " + inputDate, 0);
+    }
+
     public static String encryptPassword(String password)
     {
         String hashed = BCrypt.hashpw(password, BCrypt.gensalt(9));

@@ -1207,10 +1207,14 @@ public class NseTransactionController {
                 } catch (FeignException e) {
                     if (e.status() == 400) {
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    } else if (e.status() == 404) {
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
+                    } else {
+                        return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
-                if(cartList.isEmpty())
+                if(cartList == null || cartList.isEmpty())
                 {
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
@@ -1232,9 +1236,15 @@ public class NseTransactionController {
 
                     String until_cancelledStr = cart.getUntil_cancel().equals(true) ? "Y" : "N";
 
+                    // These are read back by cart index further down, so every cart has to
+                    // contribute a row - a conditional add shifts every later cart's values.
                     if(!cart.getInstallment().isEmpty())
                     {
                         sip_installment_array.add(cart.getInstallment());
+                    }
+                    else
+                    {
+                        sip_installment_array.add("");
                     }
 
                     if(!cart.getFolio_no().isEmpty())
@@ -1246,6 +1256,10 @@ public class NseTransactionController {
                     if(!cart.getEnd_date().isEmpty())
                     {
                         end_date_array.add(cart.getEnd_date());
+                    }
+                    else
+                    {
+                        end_date_array.add("");
                     }
 
                     if(!until_cancelledStr.isEmpty())
@@ -1638,11 +1652,6 @@ public class NseTransactionController {
                 {
                     start_date_str = start_date_str.replace("-", "/");
                 }
-                String sip_install = "";
-                if(sip_installment_array.size() > 0){
-                    sip_install = sip_installment_array.get(i);
-                }
-
                 regObject = new JSONObject();
                 regObject.put("amc_code", amc_code_array.get(i));
                 regObject.put("sch_code", scheme_code_array.get(i));
@@ -1685,7 +1694,8 @@ public class NseTransactionController {
 
                 if ("DAILY".equalsIgnoreCase(frequency_array.get(i)))
                 {
-                    String endDate = end_date_array.get(i);
+                    // end_date is optional, so the array can be shorter than the scheme list.
+                    String endDate = end_date_array.size() > i ? end_date_array.get(i) : "";
 
                     if (endDate != null && !endDate.trim().isEmpty())
                     {
@@ -1713,6 +1723,12 @@ public class NseTransactionController {
                 regObject.put("installment_amount", amount_array.get(i));
 
                 regObject.put("convenience_fee", "0");
+                // mandate_id_array only gets a row for carts that carried a mandate, so a short
+                // list means this cart has none - same failure the check above guards against.
+                if (mandate_id_array.size() <= i)
+                {
+                    return NseUtils.commonResponse1("ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST, "ACH MANDATE Code is empty. Please contact admin.");
+                }
                 regObject.put("xsip_mandate_id", mandate_id_array.get(i));
                 regObject.put("sub_broker_code", subbroker_code);
                 regObject.put("euin_number", euin);
@@ -1906,14 +1922,9 @@ public class NseTransactionController {
                         resMap.put(nseOnlineSchemeMaster.getSchemeName(), reg_remark);
                     }
 
-                    SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
-                    Date res_start_dateDt = inputFormat.parse(res_start_date);
-                    Date res_end_dateDt = null;
-
-                    if(StringHelper.isNotEmpty(res_end_date))
-                    {
-                        res_end_dateDt = inputFormat.parse(res_end_date);
-                    }
+                    // NSE echoes the dates back in whatever format it received them in.
+                    Date res_start_dateDt = NseUtils.parseAnyDate(res_start_date);
+                    Date res_end_dateDt = NseUtils.parseAnyDate(res_end_date);
 
                     NseTransactions nsetrans = new NseTransactions();
                     nsetrans.setUrl(xSipRegistrationServiceApi_url);
@@ -2292,10 +2303,14 @@ public class NseTransactionController {
                 } catch (FeignException e) {
                     if (e.status() == 400) {
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    } else if (e.status() == 404) {
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
+                    } else {
+                        return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
-                if (cartList.isEmpty())
+                if (cartList == null || cartList.isEmpty())
                 {
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
@@ -2351,9 +2366,14 @@ public class NseTransactionController {
                             .map(Integer::parseInt)
                             .collect(Collectors.toList());
                     System.out.println("ids = " + ids);
-                    cartList = userServiceClient.getCartDetailsByIds(ids,token);
 
-                    if (cartList.isEmpty())
+                    try {
+                        cartList = userServiceClient.getCartDetailsByIds(ids, token);
+                    } catch (FeignException e) {
+                        return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
+                    }
+
+                    if (cartList == null || cartList.isEmpty())
                     {
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
@@ -3101,10 +3121,14 @@ public class NseTransactionController {
                 } catch (FeignException e) {
                     if (e.status() == 400) {
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    } else if (e.status() == 404) {
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
+                    } else {
+                        return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
-                if (cartList.isEmpty())
+                if (cartList == null || cartList.isEmpty())
                 {
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
@@ -3166,9 +3190,14 @@ public class NseTransactionController {
                             .map(Integer::parseInt)
                             .collect(Collectors.toList());
                     System.out.println("ids = " + ids);
-                    cartList = userServiceClient.getCartDetailsByIds(ids,token);
 
-                    if (cartList.isEmpty())
+                    try {
+                        cartList = userServiceClient.getCartDetailsByIds(ids, token);
+                    } catch (FeignException e) {
+                        return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
+                    }
+
+                    if (cartList == null || cartList.isEmpty())
                     {
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
@@ -3949,14 +3978,12 @@ public class NseTransactionController {
                             .map(Integer::parseInt)
                             .collect(Collectors.toList());
                     System.out.println("ids = " + ids);
-                    cartList = userServiceClient.getCartDetailsByIds(ids,token);
-
                     try {
                         cartList = userServiceClient.getCartDetailsByIds(ids, token);
                     }catch (FeignException e) {
                         return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
                     }
-                    if (cartList.isEmpty())
+                    if (cartList == null || cartList.isEmpty())
                     {
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
@@ -4319,14 +4346,9 @@ public class NseTransactionController {
                     fromSchemeName =  schemeMap.get(res_from_scheme_code);
                     toSchemeName =  schemeMap.get(res_to_scheme_code);
 
-                    SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
-                    Date res_start_dateDt = inputFormat.parse(res_start_date);
-                    Date res_end_dateDt = null;
-
-                    if(StringHelper.isNotEmpty(res_to_date))
-                    {
-                        res_end_dateDt = inputFormat.parse(res_to_date);
-                    }
+                    // NSE echoes the dates back in whatever format it received them in.
+                    Date res_start_dateDt = NseUtils.parseAnyDate(res_start_date);
+                    Date res_end_dateDt = NseUtils.parseAnyDate(res_to_date);
 
                     NseTransactions nsetrans = new NseTransactions();
                     nsetrans.setUrl(stpRegistrationService_url);
@@ -4701,10 +4723,14 @@ public class NseTransactionController {
                 } catch (FeignException e) {
                     if (e.status() == 400) {
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
+                    } else if (e.status() == 404) {
+                        return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
+                    } else {
+                        return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
-                if (cartList.isEmpty())
+                if (cartList == null || cartList.isEmpty())
                 {
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
@@ -4741,9 +4767,13 @@ public class NseTransactionController {
                             .collect(Collectors.toList());
                     System.out.println("ids = " + ids);
 
-                    cartList = userServiceClient.getCartDetailsByIds(ids,token);
+                    try {
+                        cartList = userServiceClient.getCartDetailsByIds(ids, token);
+                    } catch (FeignException e) {
+                        return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
+                    }
 
-                    if (cartList.isEmpty())
+                    if (cartList == null || cartList.isEmpty())
                     {
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
@@ -5051,8 +5081,8 @@ public class NseTransactionController {
 
                             schemeName =  schemeMap.get(res_scheme_code);
 
-                            SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
-                            Date res_start_dateDt = inputFormat.parse(res_start_date);
+                            // NSE echoes the date back in whatever format it received it in.
+                            Date res_start_dateDt = NseUtils.parseAnyDate(res_start_date);
 
                             NseTransactions nsetrans = new NseTransactions();
                             nsetrans.setUrl(swpRegistrationService_url);
@@ -9150,7 +9180,8 @@ public class NseTransactionController {
 
                 if ("DAILY".equalsIgnoreCase(frequency_array.get(i)))
                 {
-                    String endDate = end_date_array.get(i);
+                    // end_date is optional, so the array can be shorter than the scheme list.
+                    String endDate = end_date_array.size() > i ? end_date_array.get(i) : "";
 
                     if (endDate != null && !endDate.trim().isEmpty())
                     {
@@ -9372,14 +9403,9 @@ public class NseTransactionController {
                         resMap.put(nseOnlineSchemeMaster.getSchemeName(), reg_remark);
                     }
 
-                    SimpleDateFormat inputFormat = new SimpleDateFormat("dd/MM/yyyy");
-                    Date res_start_dateDt = inputFormat.parse(res_start_date);
-                    Date res_end_dateDt = null;
-
-                    if(StringHelper.isNotEmpty(res_end_date))
-                    {
-                        res_end_dateDt = inputFormat.parse(res_end_date);
-                    }
+                    // NSE echoes the dates back in whatever format it received them in.
+                    Date res_start_dateDt = NseUtils.parseAnyDate(res_start_date);
+                    Date res_end_dateDt = NseUtils.parseAnyDate(res_end_date);
 
                     NseTransactions nsetrans = new NseTransactions();
                     nsetrans.setUrl(xSipRegistrationServiceApi_url);
