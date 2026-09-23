@@ -1680,7 +1680,8 @@ public class NseTransactionController {
                 }
                 regObject.put("sip_remarks", "");
 
-                if(sip_installment_array!= null && sip_installment_array.size()> i){
+                if(sip_installment_array!= null && sip_installment_array.size()> i)
+                {
                     if ("DAILY".equalsIgnoreCase(frequency_array.get(i)))
                     {
                         regObject.put("installment_no", "");
@@ -1694,18 +1695,13 @@ public class NseTransactionController {
 
                 if ("DAILY".equalsIgnoreCase(frequency_array.get(i)))
                 {
-                    // end_date is optional, so the array can be shorter than the scheme list.
                     String endDate = end_date_array.size() > i ? end_date_array.get(i) : "";
 
                     if (endDate != null && !endDate.trim().isEmpty())
                     {
                         try
                         {
-
-//                          LocalDate date = LocalDate.parse(endDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-//                          String formattedEndDate = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-
-                            regObject.put("end_date", endDate);
+                            regObject.put("end_date", NseUtils.normalizeDateToDdMmYyyy(endDate));
 //                          regObject.put("installment_amount", "");
                         } catch (Exception e)
                         {
@@ -1721,10 +1717,7 @@ public class NseTransactionController {
                     regObject.put("end_date", "");
                 }
                 regObject.put("installment_amount", amount_array.get(i));
-
                 regObject.put("convenience_fee", "0");
-                // mandate_id_array only gets a row for carts that carried a mandate, so a short
-                // list means this cart has none - same failure the check above guards against.
                 if (mandate_id_array.size() <= i)
                 {
                     return NseUtils.commonResponse1("ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST, "ACH MANDATE Code is empty. Please contact admin.");
@@ -9187,11 +9180,10 @@ public class NseTransactionController {
                     {
                         try
                         {
-
-//                          LocalDate date = LocalDate.parse(endDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-//                          String formattedEndDate = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-
-                            regObject.put("end_date", endDate);
+                            // NSE only accepts dd/MM/yyyy and rejects anything else with
+                            // "INVALID END DATE". The cart can hold dd-MM-yyyy, yyyy-MM-dd,
+                            // dd-MMM-yyyy ... so normalise whatever we were given.
+                            regObject.put("end_date", NseUtils.normalizeDateToDdMmYyyy(endDate));
 //                          regObject.put("installment_amount", "");
                         } catch (Exception e)
                         {
