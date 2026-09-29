@@ -486,23 +486,6 @@ public class NseTransactionController {
                 email = nse.getEmail();
             }
 
-            String sub_broker_code = "";
-            String sub_code = "";
-
-            if(!subbroker_code.isEmpty())
-            {
-                sub_code = subbroker_code;
-            }else{
-                sub_code = "";
-            }
-
-            if(!subbroker_arn.isEmpty())
-            {
-                sub_broker_code = subbroker_arn;
-            }else{
-                sub_broker_code = "";
-            }
-
             String otm_flag = Integer.toString(otmflag);
 
             JSONArray regDetailsArray = new JSONArray();
@@ -572,19 +555,27 @@ public class NseTransactionController {
 
                 regObject.put("remarks", "");
                 regObject.put("kyc_flag","Y");
-                if(!sub_code.isEmpty())
+                if(StringHelper.isNotEmpty(subbroker_code))
                 {
-                    regObject.put("sub_broker_code",sub_code);
+                    regObject.put("sub_broker_code", subbroker_code);
                 }else{
                     regObject.put("sub_broker_code","");
                 }
+
+                if(StringHelper.isNotEmpty(subbroker_arn))
+                {
+                    regObject.put("sub_broker_arn", subbroker_arn);
+                }else
+                {
+                    regObject.put("sub_broker_arn","");
+                }
+
                 regObject.put("euin_number", euin);
                 regObject.put("euin_declaration", "Y");
                 regObject.put("min_redemption_flag", "N");
                 regObject.put("dpc_flag","Y");
                 regObject.put("all_units","N");
                 regObject.put("redemption_units","");
-                regObject.put("sub_broker_arn","");
                 regObject.put("bank_ref_no",""); //4651555
                 regObject.put("account_no", bank_account_number);
                 regObject.put("mobile_no",mobile);
@@ -4085,9 +4076,6 @@ public class NseTransactionController {
 
 
             if(broker_code1 == null){broker_code1 = "";};
-
-
-
                 broker_code = broker_code1;
                 appln_id = nsekey.getNse_appln_id();
                 password = nsekey.getNse_password();
@@ -4200,11 +4188,11 @@ public class NseTransactionController {
                     first_order_today = first_order_flag_array.get(i).equals(true) ? "Y" : "N";
                 }
                 
-                regObject.put("sub_broker_code", "");
+                regObject.put("sub_broker_code", subbroker_code);
                 regObject.put("euin_declaration","Y");
                 regObject.put("euin_number", euin);
                 regObject.put("remarks","");
-                regObject.put("sub_broker_arn_code","");
+                regObject.put("sub_broker_arn_code",subbroker_arn);
                 regObject.put("mobile", mobile);
                 regObject.put("email", email);
                 regObject.put("member_unique_id", memberUniqueId);

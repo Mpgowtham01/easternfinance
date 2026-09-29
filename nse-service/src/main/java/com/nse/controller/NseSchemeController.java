@@ -7349,6 +7349,8 @@ public class NseSchemeController {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
+            System.out.println("amcCodeSet = " + amcCodeSet.size());
+
             List<SchemePojo> masterList = new ArrayList<>();
             for(String amc_code: amcCodeSet)
             {
@@ -7513,7 +7515,6 @@ public class NseSchemeController {
                             if (bank_acc_type == null) {
                                 bank_acc_type = "";
                             }
-
                             if (tax_status_code.equalsIgnoreCase("01")) {
                                 if (holding_nature_code.equalsIgnoreCase("SI")) {
                                     if (holding.equalsIgnoreCase("SI")) {
