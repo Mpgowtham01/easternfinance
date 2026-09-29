@@ -21,7 +21,7 @@ public interface InvestorMasterCamsRepository extends JpaRepository<InvestorMast
             "WHERE i.user_id = :user_id AND i.client_name = :client_name AND i.product IN :product")
     List<InvestorMasterCams> findByUserIdClientNameAndProductIn(@Param("user_id") Integer userId,
                                                                 @Param("client_name") String clientName,
-                                                                @Param("product") String product);
+                                                                @Param("product") List<String> product);
 
     @Query("SELECT i FROM InvestorMasterCams i " +
             "WHERE i.user_id = :user_id AND i.client_name = :client_name")

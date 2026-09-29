@@ -973,9 +973,15 @@ public class FeignClientUserController
 	@GetMapping("/getProductCode")
 	public ResponseEntity<?> GetProductCode(
 			@RequestParam String clientName,
-			@RequestParam Integer userid,@RequestParam String product) {
+			@RequestParam Integer userid,@RequestParam List<String> product) {
 		try
 		{
+			if (product == null || product.isEmpty())
+			{
+				return ResponseEntity.status(HttpStatus.NOT_FOUND)
+						.body("No AMC details found for the given parameters.");
+			}
+
 			List<InvestorMasterCams> details = investorMasterCamsRepository.findByUserIdClientNameAndProductIn(userid,clientName,product);
 
 			if (!details.isEmpty())
