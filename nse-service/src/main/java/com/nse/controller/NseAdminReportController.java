@@ -2918,7 +2918,8 @@ public class NseAdminReportController
             }
             else if(productType.equalsIgnoreCase("SIP Purchase")
                     || productType.equalsIgnoreCase("Multiple SIP Purchase")
-                    || productType.equalsIgnoreCase("SIP_REG"))
+                    || productType.equalsIgnoreCase("SIP_REG")
+                    || productType.equalsIgnoreCase("XSIP_REG"))
             {
                 productType = "XSIP_REG";
             }
