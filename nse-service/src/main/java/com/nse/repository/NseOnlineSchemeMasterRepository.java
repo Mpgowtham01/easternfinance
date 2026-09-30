@@ -354,7 +354,6 @@ public interface NseOnlineSchemeMasterRepository extends JpaRepository<NseOnline
             "AND n.divReinvestFlag = :reinvestTag " +
             "AND n.amcActiveFlag = 'Y' " +
             "AND n.planType = 'NORMAL' " +
-            "AND n.purchaseAllowed = 'Y' " +
             "AND n.settlementType NOT IN ('L1', 'L0') " +
             "AND n.sipAllowed = 'Y'")
     List<NseOnlineSchemeMaster> findEligibleSipSchemes(

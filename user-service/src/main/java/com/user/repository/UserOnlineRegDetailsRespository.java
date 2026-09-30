@@ -236,4 +236,8 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("clientName") String clientName
     );
 
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND online_flag = :online_flag", nativeQuery = true)
+    List<UsersOnlineRegDetails> getMfuInactiveUsersRegDetailsAndOne(@Param("userId") Integer userid, @Param("clientName") String clientName, @Param("online_flag") String online_flag);
+
+
 }

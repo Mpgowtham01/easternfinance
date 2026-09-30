@@ -9,5 +9,7 @@ public class UserRegStatusResponse
     public int status;
     public String status_msg;
     public String msg;
+    public String title;
+    public String description;
     public UserRegStatusPojo result;
 }

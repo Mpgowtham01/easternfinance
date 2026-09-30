@@ -52,6 +52,17 @@ public class UsersOnlineRegDetailsService
         return userOnlineRegDetailsRepository.save(user);
     }
 
+    public UsersOnlineRegDetails getMfuInactiveUsersRegDetailsAndOne(Integer userId, String clientName, String online_flag)
+    {
+        List<UsersOnlineRegDetails> userDetails =  userOnlineRegDetailsRepository.getMfuInactiveUsersRegDetailsAndOne(userId, clientName, online_flag);
+        if(userDetails == null || userDetails.isEmpty())
+        {
+            return null;
+        }else{
+            return userDetails.get(0);
+        }
+    }
+
 
 
 //    public UsersOnlineRegDetails saveOrUpdatesUserOnlineReg(UsersOnlineRegDetails user) {

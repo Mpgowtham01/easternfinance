@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class UserRegStatusPojo {
+    public String vendor = "";
     public Boolean showCard = true;
     public String status = "";
     public String title = "";
