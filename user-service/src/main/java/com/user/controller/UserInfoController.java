@@ -985,6 +985,12 @@ public class UserInfoController
 
                 for(UsersBankDetails bankDetails : bankList)
                 {
+                    // Skip placeholder bank rows - no account number means there is nothing to show
+                    if(StringHelper.isEmpty(bankDetails.getBank_account_number()) || StringHelper.isEmpty(bankDetails.getBank_name()))
+                    {
+                        continue;
+                    }
+
                     MandateDetailsPojo mandate = new MandateDetailsPojo();
                     mandate.setBank_name(bankDetails.getBank_name());
                     mandate.setBank_account_number(bankDetails.getBank_account_number());
