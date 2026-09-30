@@ -3091,13 +3091,24 @@ public class NseServiceDAO {
 
         if(list != null && list.size() > 0)
         {
-            List<InvestorMasterCamsDto> camsList  = null;
+            List<InvestorMasterCamsDto> camsList  = new ArrayList<>();
 
-            List<InvestorMasterKarvyDto> karvyList  = null;
+            List<InvestorMasterKarvyDto> karvyList  = new ArrayList<>();
 
-            camsList  = userServiceClient.getByCamsUserIdAndClientName(userid,client_name,token);
+            try {
+                camsList  = userServiceClient.getByCamsUserIdAndClientName(userid,client_name,token);
+            } catch (FeignException e) {
+                // No CAMS record for this user/client - continue with an empty list
+                System.out.println("Feign error while fetching cams details: " + e.getMessage());
+                camsList = new ArrayList<>();
+            }
 
-            karvyList  = userServiceClient.getByKarvyUserIdAndClientName(userid,client_name,token);
+            try {
+                karvyList  = userServiceClient.getByKarvyUserIdAndClientName(userid,client_name,token);
+            } catch (FeignException e) {
+                System.out.println("Feign error while fetching karvy details: " + e.getMessage());
+                karvyList = new ArrayList<>();
+            }
 
             for (UsersPortfolioSchemewiseDto portfolio : list)
             {

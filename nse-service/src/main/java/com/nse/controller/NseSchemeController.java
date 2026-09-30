@@ -7858,9 +7858,24 @@ public class NseSchemeController {
 
             if(list != null && list.size() > 0)
             {
-                List<InvestorMasterCamsDto> camsList = userServiceClient.getByCamsUserIdAndClientName(userid,client_name,token);
+                List<InvestorMasterCamsDto> camsList = new ArrayList<>();
 
-                List<InvestorMasterKarvyDto> karvyList = userServiceClient.getByKarvyUserIdAndClientName(userid,client_name,token);
+                try {
+                    camsList = userServiceClient.getByCamsUserIdAndClientName(userid,client_name,token);
+                } catch (FeignException e)
+                {
+                    System.out.println("Feign error while fetching cams details: " + e.getMessage());
+                    camsList = new ArrayList<>();
+                }
+
+                List<InvestorMasterKarvyDto> karvyList = new ArrayList<>();
+
+                try {
+                    karvyList = userServiceClient.getByKarvyUserIdAndClientName(userid,client_name,token);
+                } catch (FeignException e) {
+                    System.out.println("Feign error while fetching karvy details: " + e.getMessage());
+                    karvyList = new ArrayList<>();
+                }
                 ////System.out.println("karvyList = " + karvyList);
                 for (UsersPortfolioSchemewiseDto portfolio : list)
                 {

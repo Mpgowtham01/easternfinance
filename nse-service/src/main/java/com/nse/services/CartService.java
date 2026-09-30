@@ -148,7 +148,7 @@ public class CartService {
                     current_value = Double.parseDouble(unit_decimal1.format(current_value));
 
                     values.setCurrent_value(current_value);
-                    values.setTotal_units(total_units);
+                    values.setTotal_units(load_free_units);
                 }else
                 {
                     total_units = scheme_list.get(0).getTotal_units();
