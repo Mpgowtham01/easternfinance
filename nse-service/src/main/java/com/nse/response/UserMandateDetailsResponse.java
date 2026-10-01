@@ -38,17 +38,8 @@ public class UserMandateDetailsResponse
     private String nse_ach_amount;
     private Integer nse_ach_approved;
     private String nse_ach_rej_reason;
+    private String nse_ach_type;
     private LocalDate nse_ach_created_date;
-
-    // MFU Mandate
-    private Integer mfu_mandate_flag;
-    private String mfu_mandate;
-    private String mfu_mandate_mode;
-    private String mfu_mmrn_no;
-    private String mfu_mandate_amount;
-    private Integer mfu_mandate_approved;
-    private String mfu_mandate_rej_reason;
-    private LocalDate mfu_mandate_created_date;
 
     private String client_name;
 

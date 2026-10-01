@@ -6289,6 +6289,8 @@ public class NseTransactionController {
                     mandate.setNse_ach_start_date(achFromDateObj);
                     mandate.setNse_ach_end_date(achToDateObj);
                     mandate.setNse_ach_rej_reason("");
+                    // "E" = E-Mandate, "X" = Physical (same codes sent to NSE in mandateReg)
+                    mandate.setNse_ach_type(mandate_type);
                     mandate.setNse_ach_created_date(new Date());
                     mandate.setCreated_date(new Date());
                     mandate.setClient_name(client_name);

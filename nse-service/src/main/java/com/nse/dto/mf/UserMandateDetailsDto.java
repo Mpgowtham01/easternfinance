@@ -37,6 +37,7 @@ public class UserMandateDetailsDto
     private Date nse_ach_start_date;
     private Date nse_ach_end_date;
     private String nse_ach_rej_reason = "";
+    private String nse_ach_type = "";
     private Date nse_ach_created_date;
 
     private String client_name = "";

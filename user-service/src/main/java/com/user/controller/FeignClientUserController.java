@@ -2645,6 +2645,7 @@ public class FeignClientUserController
 						dto.setNse_ach_amount(d.getNse_ach_amount());
 						dto.setNse_ach_approved(d.getNse_ach_approved());
 						dto.setNse_ach_rej_reason(d.getNse_ach_rej_reason());
+						dto.setNse_ach_type(d.getNse_ach_type() == null ? "" : d.getNse_ach_type());
 
 						dto.setClient_name(d.getClient_name());
 						dto.setCreated_date(d.getCreated_date());
@@ -3045,7 +3046,7 @@ public class FeignClientUserController
 			entity.setNse_ach_approved(0);
 			entity.setNse_ach_rej_reason("");
 			entity.setNse_umrn_no("");
-			entity.setNse_ach_type("");
+			entity.setNse_ach_type(userMandate.getNse_ach_type() == null ? "" : userMandate.getNse_ach_type());
 			entity.setCreated_date(new Date());
 			entity.setNse_ach_start_date(userMandate.getNse_ach_start_date());
 			entity.setNse_ach_end_date(userMandate.getNse_ach_end_date());
