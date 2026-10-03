@@ -7,7 +7,9 @@ import com.nse.dto.mf.*;
 import com.nse.mapper.NseRegistrationMapper;
 import com.nse.model.NsePincode;
 import com.nse.model.NseTransactions;
+import com.nse.pojo.CityStatePojo;
 import com.nse.repository.NseCountryRepository;
+import com.nse.response.CityStateByPincodeResponse;
 import com.nse.response.CommonResponse;
 import com.nse.response.StatusMessage;
 import com.nse.response.SuccessResponse;
@@ -3457,6 +3459,62 @@ public class NseOnboardingController {
                 return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
+    }
+
+    @Operation(
+            summary = "Get City / State Details By Pincode",
+            description = "Resolves the city, state name and NSE state code for the supplied pincode from the NSE pincode master. " +
+                    "Used to auto-fill address details during onboarding and address modification."
+    )
+
+    @ApiResponses(value =
+            {
+                    @ApiResponse(responseCode = "200", description = "Success Response", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = CityStateByPincodeResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Failure Response", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = CommonResponse.class))),
+            })
+
+    @GetMapping("/getCityStateDetailsByPincode")
+    public ResponseEntity<?> getCityStateDetailsByPincode(
+            @RequestHeader("Authorization") String token,
+            @RequestParam String pincode)
+    {
+        try
+        {
+            if (!TokenInterceptor.isValidToken(token, secretKey))
+            {
+                return NseUtils.commonResponse("token not valid or empty!", HttpStatus.UNAUTHORIZED);
+            }
+
+            pincode = NseUtils.checkParem(pincode);
+
+            if (StringHelper.isEmpty(pincode))
+            {
+                return NseUtils.commonResponse("Please provide the pincode", HttpStatus.BAD_REQUEST);
+            }
+
+            Optional<NsePincode> optionalPin = nsePincodeService.getPincodeDetails(pincode);
+
+            if (optionalPin.isEmpty())
+            {
+                return NseUtils.commonResponse("Pincode not found", HttpStatus.BAD_REQUEST);
+            }
+
+            NsePincode pin = optionalPin.get();
+
+            CityStatePojo result = new CityStatePojo(
+                    NseUtils.trimOrEmpty(pin.getCity()),
+                    NseUtils.trimOrEmpty(pin.getState_name()),
+                    NseUtils.trimOrEmpty(pin.getState_code())
+            );
+
+            return ResponseEntity.ok(new CityStateByPincodeResponse(HttpStatus.OK.value(), "Success", "Success", result));
+        }
+        catch (Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
 
