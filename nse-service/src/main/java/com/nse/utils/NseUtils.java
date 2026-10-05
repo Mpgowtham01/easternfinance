@@ -1047,6 +1047,39 @@ public class NseUtils
     }
 
     /**
+     * NSE report APIs want YYYY-MM-DD, but the caller may send any of the formats the UI
+     * uses. Accept whatever arrives and hand back the format NSE expects. Blank input
+     * returns an empty string so it can go straight into an optional request field.
+     */
+    public static String normalizeDateToYyyyMmDd(String inputDate) throws ParseException {
+
+        if (inputDate == null || inputDate.trim().isEmpty()) {
+            return "";
+        }
+
+        String value = inputDate.trim();
+
+        Date parsedDate = null;
+
+        for (String format : INPUT_FORMATS) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat(format);
+                sdf.setLenient(false); // IMPORTANT
+                parsedDate = sdf.parse(value);
+                break;
+            } catch (ParseException ignored) {
+            }
+        }
+
+        if (parsedDate == null) {
+            throw new ParseException("Invalid date format: " + inputDate, 0);
+        }
+
+        SimpleDateFormat outputDf = new SimpleDateFormat("yyyy-MM-dd");
+        return outputDf.format(parsedDate);
+    }
+
+    /**
      * Dates reach us in whichever format the caller or NSE happened to use - dd/MM/yyyy from
      * the Web params, dd-MM-yyyy from the cart, dd-MMM-yyyy from the mandate feed. Parse
      * against every known format instead of assuming one. Blank input returns null.

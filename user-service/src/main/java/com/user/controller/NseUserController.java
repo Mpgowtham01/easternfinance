@@ -9,6 +9,8 @@ import com.user.pojo.UserRegStatusPojo;
 import com.user.repository.*;
 import com.user.response.*;
 import com.user.service.*;
+import com.user.utils.AESEncryptionUtilV2;
+import com.user.utils.RestTemplateFactory;
 import com.user.utils.UserUtils;
 import com.user.validate.UserValidate;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,16 +25,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.internal.util.StringHelper;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
@@ -92,6 +95,9 @@ public class NseUserController
     @Autowired
     UsersOnlineRegDetailsService usersOnlineRegDetailsService;
 
+    @Autowired
+    UsersMandateDetailsRespository usersMandateDetailsRespository;
+
     @Operation
     (
         summary = "Save Investor Information, Specifically created for Mobile App",
@@ -118,62 +124,51 @@ public class NseUserController
     })
 
     @PostMapping("/saveInvestorInfo")
-    public ResponseEntity<?> saveInvestorInfo(@RequestBody InvestorInfoDTO dto, @RequestHeader("Authorization") String token,@RequestParam(required = false) String is_MultiReg)
+    public ResponseEntity<?> saveInvestorInfo(@RequestBody InvestorInfoDTO dto, @RequestHeader("Authorization") String token)
     {
-        try {
-            if (dto == null) {
+        try
+        {
+            if (dto == null)
+            {
                 return UserUtils.errorResponse("Investor cannot be empty", HttpStatus.BAD_REQUEST);
             }
 
             String error = UserValidate.validateInvestorInfo(dto);
 
-            if (error != null) {
+            if (error != null)
+            {
                 return UserUtils.errorResponse(error, HttpStatus.BAD_REQUEST);
             }
 
-            PanKYCResponse panStatus = UserUtils.checkPanKycStatus(dto.getPan());
+            //PanKYCResponse panStatus = UserUtils.checkPanKycStatus(dto.getPan());
 
-            if (panStatus != null && !panStatus.getKyc_status()) {
-                return UserUtils.errorResponse(panStatus.getMsg(), HttpStatus.BAD_REQUEST);
-            }
-            is_MultiReg = UserUtils.checkParem(is_MultiReg);
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
 
-            Optional<UsersOnlineRegDetails> userOpt = userOnlineRegDetailsRespository.findUSerByIdAndActive(userId);
-            System.out.println("useropt = " + userOpt);
-            if (userOpt.isEmpty()) {
+            Optional<User> userOpt = userService.getUserByIds(userId);
+
+            if (userOpt.isEmpty())
+            {
                 return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
 
-            UsersOnlineRegDetails user = userOpt.get();
+            User user = userOpt.get();
             UsersOnlineRegDetails userDetails = null;
 
-            Boolean isMultiReg = false;
-            if(is_MultiReg.equalsIgnoreCase("1"))
+            MymfboxOnboarding onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+
+            if(onboarding == null)
             {
-                isMultiReg = true;
-            }
-            System.out.println("isMultiReg = " + isMultiReg);
-
-            MymfboxOnboarding onboarding = null;
-
-            if(!is_MultiReg.isEmpty()) {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
-            }else{
-                onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
-            }
-
-            System.out.println("onboardi  = " + onboarding);
-            if (onboarding == null) {
                 return UserUtils.errorResponse("Onboarding Details not found.", HttpStatus.NOT_FOUND);
             }
 
             boolean taxStatusFlag = false;
 
-            if (!onboarding.getTax_status().equalsIgnoreCase(dto.getTaxStatusDesc())) {
+            if(!onboarding.getTax_status().equalsIgnoreCase(dto.getTaxStatusDesc()))
+            {
                 taxStatusFlag = true;
-            } else if (!onboarding.getHolding_nature().equalsIgnoreCase(dto.getHoldingNatureDesc())) {
+            } else if(!onboarding.getHolding_nature().equalsIgnoreCase(dto.getHoldingNatureDesc()))
+            {
                 taxStatusFlag = true;
             }
 
@@ -181,7 +176,8 @@ public class NseUserController
             onboarding.setTax_status(dto.getTaxStatusCode());
             onboarding.setHolding_nature(dto.getHoldingNatureCode());
 
-            if (taxStatusFlag) {
+            if(taxStatusFlag)
+            {
                 onboarding.setInvestor_info(true);
                 onboarding.setPersonal_info(false);
                 onboarding.setContact_info(false);
@@ -192,106 +188,84 @@ public class NseUserController
                 onboarding.setSignature_info(false);
                 onboarding.setIs_all_steps_completed(false);
                 onboarding.setIs_registration_completed(false);
-            } else {
+            } else
+            {
                 onboarding.setInvestor_info(true);
             }
 
-            if (Arrays.asList("01", "24", "21", "61", "62").contains(dto.getTaxStatusCode())) {
+            if(Arrays.asList("01","24","21","61","62").contains(dto.getTaxStatusCode()))
+            {
                 onboarding.setHas_nominee(true);
-            } else {
+            } else
+            {
                 onboarding.setHas_nominee(false);
             }
 
-            if (Arrays.asList("AS", "JO").contains(dto.getHoldingNatureCode())) {
+            if(Arrays.asList("AS","JO").contains(dto.getHoldingNatureCode()))
+            {
                 onboarding.setHas_joint_holder(true);
-            } else {
+            } else
+            {
                 onboarding.setHas_joint_holder(false);
             }
 
-            if (Arrays.asList("24", "21", "26", "28", "61", "62").contains(dto.getTaxStatusCode())) {
+            if(Arrays.asList("24","21","26","28","61","62").contains(dto.getTaxStatusCode()))
+            {
                 onboarding.setHas_nri(true);
-            } else {
+            } else
+            {
                 onboarding.setHas_nri(false);
             }
 
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(user.getId(), user.getClient_name());
+
+            if(userDetailsOpt != null && !userDetailsOpt.isEmpty())
             {
-                List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(user.getId(), user.getClient_name());
-
-                if (userDetailsOpt != null && !userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                } else {
-                    userDetails = new UsersOnlineRegDetails();
-                    userDetails.setUser_id(user.getId());
-                    userDetails.setClient_name(user.getClient_name());
-                    userDetails.setName(user.getName());
-                    userDetails.setEmail(user.getEmail());
-                    userDetails.setPan(user.getPan());
-                    userDetails.setMobile(user.getMobile());
-                    userDetails.setCreated_date(new Date());
-                    userDetails.setRegister_source("Mobile App");
-                    userDetails.setBroker_code(user.getBroker_code());
-                    userDetails.setNse_active(0);
-                    userDetails.setNse_customer(0);
-                }
-
-                userDetails = InvestorInfoMapper.mapDtoToUserBseNseDetails(dto, userDetails);
-
-                if(StringHelper.isNotEmpty(dto.getInvestorCode()))
-                {
-                    userDetails.setNse_iin_number(dto.getInvestorCode());
-                }
-                else if(StringHelper.isNotEmpty(dto.getPan()))
-                {
-                    List<UsersOnlineRegDetails> userList = userOnlineRegDetailsRespository.getUserDetailsByIinNumberAndClientName(dto.getPan().toUpperCase(), user.getClient_name());
-
-                    if(userList != null && !userList.isEmpty())
-                    {
-                        String iin_number_new = checkNseIinNumber.CheckNseIinNumbers(user.getClient_name());
-                        userDetails.setNse_iin_number(iin_number_new);
-                    }else
-                    {
-                        userDetails.setNse_iin_number(dto.getPan().toUpperCase());
-                    }
-                }
-                else
-                {
-                    String iin_number_new = checkNseIinNumber.CheckNseIinNumbers(user.getClient_name());
-                    userDetails.setNse_iin_number(iin_number_new.toUpperCase());
-                }
-
-                onboarding.setIs_multiple_registration(onboarding.getIs_multiple_registration());
-
-               userBseNseDetailsService.saveOrUpdateUserOnlineReg(userDetails);
+                userDetails = userDetailsOpt.get(0);
             }else
             {
-                user = InvestorInfoMapper.mapDtoToUser(dto, user);
+                userDetails = new UsersOnlineRegDetails();
+                userDetails.setUser_id(user.getId());
+                userDetails.setClient_name(user.getClient_name());
+                userDetails.setName(user.getName());
+                userDetails.setEmail(user.getEmail());
+                userDetails.setPan(user.getPan());
+                userDetails.setMobile(user.getMobile());
+                userDetails.setCreated_date(new Date());
+                userDetails.setRegister_source("Mobile App");
+                userDetails.setBroker_code(user.getBroker_code());
+                userDetails.setNse_active(0);
+                userDetails.setNse_customer(0);
+            }
 
-                if (StringHelper.isNotEmpty(dto.getInvestorCode()))
-                {
-                    user.setNse_iin_number(dto.getInvestorCode());
-                } else if (StringHelper.isNotEmpty(dto.getPan()))
-                {
-                    List<User> userList = userRepository.getUserDetailsByIinNumberAndClientName(dto.getPan().toUpperCase(), user.getClient_name());
+            userDetails.setOnline_flag("NSE");
+            userDetails = InvestorInfoMapper.mapDtoToUserBseNseDetails(dto, userDetails);
 
-                    if(userList != null && !userList.isEmpty())
-                    {
-                        String iin_number_new = checkNseIinNumber.CheckNseIinNumbers(user.getClient_name());
-                        user.setNse_iin_number(iin_number_new);
-                    }else
-                    {
-                        user.setNse_iin_number(dto.getPan().toUpperCase());
-                    }
-                } else
+            if(StringHelper.isNotEmpty(dto.getInvestorCode()))
+            {
+                userDetails.setNse_iin_number(dto.getInvestorCode());
+            }
+            else if(StringHelper.isNotEmpty(dto.getPan()))
+            {
+                List<UsersOnlineRegDetails> userList = userOnlineRegDetailsRespository.getUserDetailsByIinNumberAndClientName(dto.getPan().toUpperCase(), user.getClient_name());
+
+                if(userList != null && !userList.isEmpty())
                 {
                     String iin_number_new = checkNseIinNumber.CheckNseIinNumbers(user.getClient_name());
-                    user.setNse_iin_number(iin_number_new.toUpperCase());
+                    userDetails.setNse_iin_number(iin_number_new);
+                }else
+                {
+                    userDetails.setNse_iin_number(dto.getPan().toUpperCase());
                 }
-
-                onboarding.setIs_multiple_registration(false);
-
-                userService.saveOrUpdateUser(user);
             }
+            else
+            {
+                String iin_number_new = checkNseIinNumber.CheckNseIinNumbers(user.getClient_name());
+                userDetails.setNse_iin_number(iin_number_new.toUpperCase());
+            }
+
+            UsersOnlineRegDetails savedUserDetailsInfo = userOnlineRegDetailsRespository.save(userDetails);
+            onboardingService.saveOnboarding(onboarding);
 
             return UserUtils.successResponse("Investor information saved successfully.", HttpStatus.OK);
 
@@ -576,10 +550,10 @@ public class NseUserController
             MymfboxOnboarding onboarding = null;
 
             if(!is_MultiReg.isEmpty()) {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
+                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getUser_id(), user.getClient_name(), isMultiReg);
                 System.out.println("isMultiReg1 = " + isMultiReg);
             }else{
-                onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+                onboarding = onboardingService.getOrCreateOnboarding(user.getUser_id(), user.getClient_name());
                 System.out.println("isMultiReg2 = " + isMultiReg);
             }
 
@@ -695,9 +669,9 @@ public class NseUserController
             MymfboxOnboarding onboarding = null;
 
             if(!is_MultiReg.isEmpty()) {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
+                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getUser_id(), user.getClient_name(), isMultiReg);
             }else{
-                onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+                onboarding = onboardingService.getOrCreateOnboarding(user.getUser_id(), user.getClient_name());
             }
 
             if (onboarding == null)
@@ -882,10 +856,10 @@ public class NseUserController
 
             if(!is_MultiReg.isEmpty())
             {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
+                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getUser_id(), user.getClient_name(), isMultiReg);
             }else
             {
-                onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+                onboarding = onboardingService.getOrCreateOnboarding(user.getUser_id(), user.getClient_name());
             }
 
             if (onboarding == null)
@@ -1071,10 +1045,10 @@ public class NseUserController
 
             if(!is_MultiReg.isEmpty())
             {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
+                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getUser_id(), user.getClient_name(), isMultiReg);
             }else
             {
-                onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+                onboarding = onboardingService.getOrCreateOnboarding(user.getUser_id(), user.getClient_name());
             }
 
             if (onboarding == null)
@@ -1264,9 +1238,9 @@ public class NseUserController
             MymfboxOnboarding onboarding = null;
 
             if(!is_MultiReg.isEmpty()) {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getId(), user.getClient_name(), isMultiReg);
+                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getUser_id(), user.getClient_name(), isMultiReg);
             }else{
-                onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
+                onboarding = onboardingService.getOrCreateOnboarding(user.getUser_id(), user.getClient_name());
             }
 
             if (onboarding == null)
@@ -1359,7 +1333,7 @@ public class NseUserController
 
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             is_MultiReg = UserUtils.checkParem(is_MultiReg);
-            Optional<UsersOnlineRegDetails> userOpt = userService.getUserById(Integer.parseInt(userid));
+            Optional<User> userOpt = userService.getUserByIds(Integer.parseInt(userid));
 
             if (userOpt.isEmpty())
             {
@@ -1367,7 +1341,7 @@ public class NseUserController
             }
 
 
-            UsersOnlineRegDetails user = userOpt.get();
+            User user = userOpt.get();
 
             UsersOnlineRegDetails userDetails = null;
 
@@ -1405,12 +1379,17 @@ public class NseUserController
             UsersBankDetails userBankDetails = null;
             if(!usersBankDetailsOpt.isEmpty())
             {
-                userBankDetails = usersBankDetailsOpt.stream() .filter(bank -> bank.getBank_account_number().equals(dto.getAccountNumber())).findFirst() .orElse(null);
+                userBankDetails = usersBankDetailsOpt.stream() .filter(bank -> Objects.equals(bank.getBank_account_number(), dto.getAccountNumber())).findFirst() .orElse(null);
+            }
+
+            if(userBankDetails == null)
+            {
+                userBankDetails = new UsersBankDetails();
             }
 
             UsersBankDetails bankInfo = BankInfoMapper.dtoToUserBseNseDetails(dto, userBankDetails);
 
-            bankInfo.setUser_id(userDetails.getUser_id());
+            bankInfo.setUser_id(user.getId());
             bankInfo.setOnline_flag("NSE");
             bankInfo.setOnline_code(userDetails.getNse_iin_number());
             bankInfo.setOnline_id(userDetails.getId());
@@ -2021,16 +2000,16 @@ public class NseUserController
             {
                 return UserUtils.errorResponse("Could not create onboarding record", HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            List<BankInfoDTO> bank_info = null;
+            BankInfoDTO bank_info = null;
             System.out.println("ONLINE ID = " + onboarding.getUser_id());
 
             List<UsersBankDetails> usersBankDetailsOpt = usersBankDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
 
-            if(usersBankDetailsOpt != null)
+            if(usersBankDetailsOpt != null && !usersBankDetailsOpt.isEmpty())
             {
-                bank_info = BankInfoMapper.userBseNseDetailsToDto(usersBankDetailsOpt);
+                bank_info = BankInfoMapper.userBseNseDetailsToDto(usersBankDetailsOpt.get(0));
             }
-            
+
             return ResponseEntity.ok(bank_info);
         }catch(Exception ex)
         {
@@ -5829,7 +5808,13 @@ public class NseUserController
             UsersBankDetails userBankDetails = null;
             if(!usersBankDetailsOpt.isEmpty())
             {
-                userBankDetails = usersBankDetailsOpt.stream() .filter(bank -> bank.getBank_account_number().equals(dto.getAccountNumber())).findFirst() .orElse(null);
+                userBankDetails = usersBankDetailsOpt.stream() .filter(bank -> Objects.equals(bank.getBank_account_number(), dto.getAccountNumber())).findFirst() .orElse(null);
+            }
+
+            // no existing row for this account number means a new bank is being added
+            if(userBankDetails == null)
+            {
+                userBankDetails = new UsersBankDetails();
             }
 
             UsersBankDetails bankInfo = BankInfoMapper.dtoToUserBseNseDetails(dto, userBankDetails);
@@ -5928,7 +5913,7 @@ public class NseUserController
                             status = "Open";
                             title = "Open Mutual Fund Account";
                             description = "Start investing by Opening an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
-                            button_text = flag.toUpperCase();
+                            button_text = "Open Now";
                             call_back_url = "";
 
                         }else if(nse_customer.equals(1) && nse_active.equals(0) && nse_iin_number.isEmpty())
@@ -6049,7 +6034,7 @@ public class NseUserController
                         title = "Open Mutual Fund Account";
                         description =
                                 "Start investing by Opening an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.";
-                        button_text = flag.toUpperCase();
+                        button_text = "Open Now";
                         call_back_url = "";
                     }
 
@@ -6063,6 +6048,30 @@ public class NseUserController
                     pojo.setButton_text(button_text);
                     pojo.setCall_back_url(call_back_url);
 
+                    if(userDetails != null)
+                    {
+                        String online_code = UserUtils.checkParameter(userDetails.getNse_iin_number());
+
+                        pojo.setRegId(userDetails.getId() == null ? 0 : userDetails.getId());
+                        pojo.setOnline_code(online_code);
+                        pojo.setTax_status(UserUtils.checkParameter(userDetails.getTax_status()));
+                        pojo.setTax_status_code(UserUtils.checkParameter(userDetails.getTax_status_code()));
+                        pojo.setHolding_nature(UserUtils.checkParameter(userDetails.getHolding_nature()));
+                        pojo.setHolding_nature_code(UserUtils.checkParameter(userDetails.getHolding_nature_code()));
+                        pojo.setBroker_code(UserUtils.checkParameter(userDetails.getBroker_code()));
+
+                        // MFU registrations hold the CAN in the online code column, NSE/BSE hold the client code
+                        if(flag.equalsIgnoreCase("MFU"))
+                        {
+                            pojo.setMfuCanStatusFlag(!online_code.isEmpty());
+                            pojo.setClientCodeStatusFlag(false);
+                        }else
+                        {
+                            pojo.setMfuCanStatusFlag(false);
+                            pojo.setClientCodeStatusFlag(!online_code.isEmpty());
+                        }
+                    }
+
                     resultList.add(pojo);
                 }
 
@@ -6070,8 +6079,6 @@ public class NseUserController
                 apiResponse.setStatus(StatusMessage.SuccessCode);
                 apiResponse.setStatus_msg(StatusMessage.SuccessMessage);
                 apiResponse.setMsg(StatusMessage.SuccessMessage);
-                apiResponse.setTitle("Open Mutual Fund Account");
-                apiResponse.setDescription("Start investing by Opening an account with us in less than 15 minutes. We will help you make sure everything hassle free and secure.");
                 apiResponse.setResult(resultList.isEmpty() ? new UserRegStatusPojo() : resultList.get(0));
                 return new ResponseEntity<UserRegStatusResponse>(apiResponse, HttpStatus.OK);
 
@@ -6284,5 +6291,146 @@ public class NseUserController
            return UserUtils.getCommonResponse(StatusMessage.ExceptionAPIMessage, StatusMessage.ExceptionCode);
         }
 
+    }
+
+    @GetMapping("/getMandateReportByIINNumber")
+    public ResponseEntity<?> getMandateReportByIINNumber( @RequestHeader("Authorization") String token, @RequestParam String iin_number, @RequestParam String broker_code) {
+
+        String client_name = "";
+        try
+        {
+            iin_number = UserUtils.checkParem(iin_number);
+            broker_code = UserUtils.checkParem(broker_code);
+
+            boolean isTokenValid = TokenInterceptor.isValidToken(token, secretKey);
+            if(!isTokenValid){
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token not valid");
+            }
+            CustomClaim customClaim = TokenInterceptor.getClaimsFromToken(token, secretKey);
+
+            client_name = customClaim.getClient_name();
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+
+            JSONObject requestDetails = new JSONObject();
+            requestDetails.put("client_code", iin_number);
+            requestDetails.put("from_date", "");
+            requestDetails.put("to_date", "");
+            requestDetails.put("mandate_id", "");
+            requestDetails.put("memberMandateIds", "");
+
+            BseNseKey online_access = bseNseKeyRepository.findByClientNameAndBrokerCode(client_name, broker_code);
+            if(online_access == null)
+            {
+                return UserUtils.errorResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST);
+            }
+
+            String nse_userid = UserUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = UserUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = UserUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = UserUtils.trimOrEmpty(online_access.getNse_license_key());
+
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("memberId", nse_memberid);
+            headers.set("Authorization", "Basic "+base64Encoded);
+            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "en-US");
+            headers.set("Connection", "keep-alive");
+            headers.set("Referer", "");
+
+            HttpEntity<String> entity = new HttpEntity<>(requestDetails.toString(), headers);
+
+            String mandateStatusReport_url = "https://www.nseinvest.com/nsemfdesk/api/v2/reports/MANDATE_STATUS";
+            ResponseEntity<String> mandateStatusResponse = restTemplate.postForEntity(mandateStatusReport_url, entity, String.class);
+
+            JSONObject jsonResponse = new JSONObject(mandateStatusResponse.getBody());
+
+            JSONArray reportData = jsonResponse.optJSONArray("report_data");
+
+            if (reportData != null && reportData.length() > 0)
+            {
+                for (int i = 0; i < reportData.length(); i++)
+                {
+                    JSONObject mandateObj = reportData.getJSONObject(i);
+
+                    String mandateId = mandateObj.optString("mandateId");
+                    String bankAccountNumber = mandateObj.optString("bankAccountNumber");
+                    String status = mandateObj.optString("status");
+                    String rejectReason = mandateObj.optString("rejectReason");
+                    String amount = mandateObj.optString("amount");
+                    String registrationDate = mandateObj.optString("registrationDate");
+                    String umrnNo = mandateObj.optString("umrnNo");
+
+                    System.out.println("Done:: bankAccountNumber:: " + bankAccountNumber + " with status " + status + "----client_name: " + client_name + "----iin_number: " + iin_number +"---rejectReason: " + rejectReason);
+
+                    int statusFlag = status.equalsIgnoreCase("APPROVED") ? 1 : 0;
+
+                    String message= "";
+                    if(rejectReason.isEmpty())
+                    {
+                        message= status;
+                    }else
+                    {
+                        message= status+" - " + rejectReason;
+                    }
+
+                    List<UsersOnlineRegDetails> usersList = userOnlineRegDetailsRespository.findByUserIdAndNseClientCodeAndBrokerCodeAndClientName(iin_number, broker_code, client_name);
+                    if(usersList==null || usersList.isEmpty()){
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("With this IIN user not found in our source, please update user in \"NSE Customer update\"");
+                    }
+                    Integer online_id = usersList.get(0).getId();
+
+                    int rows = usersMandateDetailsRespository.updateMandateStatusBulk(statusFlag, message, client_name, bankAccountNumber, iin_number, amount, mandateId, online_id);
+                    if (rows > 0)
+                    {
+                        System.out.println("✅ Updated mandate for account " + bankAccountNumber + " with status " + status);
+                    } else
+                    {
+//                            if(status.contains("REJECTED") || rejectReason.contains("REJECTED")){
+//                                continue;
+//                            }
+
+                        UsersMandateDetails newMandate = new UsersMandateDetails();
+                        newMandate.setNse_ach_approved(statusFlag);
+                        newMandate.setNse_ach_rej_reason(message);
+                        newMandate.setBroker_code(broker_code);
+                        newMandate.setClient_name(client_name);
+                        newMandate.setOnline_code(iin_number);
+                        newMandate.setNse_ach(mandateId);
+                        newMandate.setBank_account_number(bankAccountNumber);
+                        newMandate.setOnline_id(usersList.get(0).getId());
+                        newMandate.setOnline_flag("NSE");
+                        newMandate.setUser_id(usersList.get(0).getUser_id());
+                        newMandate.setCreated_date(new Date());
+                        newMandate.setNse_ach_amount(amount);
+                        newMandate.setNse_ach_created_date(new Date());
+                        newMandate.setNse_ach_flag(1);
+                        newMandate.setNse_ach_start_date(new Date(registrationDate));
+                        newMandate.setNse_umrn_no(umrnNo);
+
+                        usersMandateDetailsRespository.save(newMandate);
+                        System.out.println("⚠New Mandate Added " + mandateId);
+                    }
+                    System.out.println("MandateId " + mandateId + " updated rows: " + rows);
+
+                }
+
+                return ResponseEntity.ok("Mandate Updated successfully");
+            }else {
+                return ResponseEntity.ok(jsonResponse.optString("error_remark"));
+            }
+        } catch (Exception ex)
+        {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(ex.getMessage());
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(e.getMessage());
+        }
     }
 }

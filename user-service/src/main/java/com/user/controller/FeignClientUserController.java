@@ -235,7 +235,7 @@ public class FeignClientUserController
 			}
 	)
 	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = User.class))),
+			@ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = UserDto.class))),
 			@ApiResponse(responseCode = "404", description = "User not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)),
 			@ApiResponse(responseCode = "500", description = "Internal Server Error", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
 	})
@@ -246,19 +246,79 @@ public class FeignClientUserController
 		{
 			List<UsersOnlineRegDetails> userDetails = userOnlineRegDetailsRespository.findNseUserByUserId(userId);
 
-			if(userDetails.size() > 0)
-			{
-				return ResponseEntity.ok(userDetails.get(0));
-			}else
+			if (userDetails.isEmpty())
 			{
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "User not found"));
 			}
+
+			UsersOnlineRegDetails regDetails = userDetails.get(0);
+			User user = userRepository.findUSerByIdAndActive(userId).orElse(null);
+
+			// users table first, then overlay the NSE online registration record on top of it
+			UserDto userDto = new UserDto();
+			if (user != null)
+			{
+				BeanUtils.copyProperties(user, userDto);
+			}
+			BeanUtils.copyProperties(regDetails, userDto);
+
+			// keep the users table value wherever the registration record has nothing to say
+			if (user != null)
+			{
+				userDto.setName(preferNonBlank(regDetails.getName(), user.getName()));
+				userDto.setPan(preferNonBlank(regDetails.getPan(), user.getPan()));
+				userDto.setMobile(preferNonBlank(regDetails.getMobile(), user.getMobile()));
+				userDto.setEmail(preferNonBlank(regDetails.getEmail(), user.getEmail()));
+				userDto.setStreet_1(preferNonBlank(regDetails.getStreet_1(), user.getStreet_1()));
+				userDto.setStreet_2(preferNonBlank(regDetails.getStreet_2(), user.getStreet_2()));
+				userDto.setStreet_3(preferNonBlank(regDetails.getStreet_3(), user.getStreet_3()));
+				userDto.setCity(preferNonBlank(regDetails.getCity(), user.getCity()));
+				userDto.setPincode(preferNonBlank(regDetails.getPincode(), user.getPincode()));
+				userDto.setState(preferNonBlank(regDetails.getState(), user.getState()));
+				userDto.setCountry(preferNonBlank(regDetails.getCountry(), user.getCountry()));
+				userDto.setFather_name(preferNonBlank(regDetails.getFather_name(), user.getFather_name()));
+				userDto.setGender(preferNonBlank(regDetails.getGender(), user.getGender()));
+				userDto.setDate_of_birth(preferNonBlank(regDetails.getDate_of_birth(), user.getDate_of_birth()));
+				userDto.setPhone_office(preferNonBlank(regDetails.getPhone_office(), user.getPhone_office()));
+				userDto.setPhone_residence(preferNonBlank(regDetails.getPhone_residence(), user.getPhone_residence()));
+				userDto.setOccupation(preferNonBlank(regDetails.getOccupation(), user.getOccupation()));
+				userDto.setGuard_name(preferNonBlank(regDetails.getGuard_name(), user.getGuard_name()));
+				userDto.setGuard_pan(preferNonBlank(regDetails.getGuard_pan(), user.getGuard_pan()));
+				userDto.setBroker_code(preferNonBlank(regDetails.getBroker_code(), user.getBroker_code()));
+				userDto.setClient_name(preferNonBlank(regDetails.getClient_name(), user.getClient_name()));
+				userDto.setRegister_source(preferNonBlank(regDetails.getRegister_source(), user.getRegister_source()));
+				userDto.setSalutation(preferNonBlank(regDetails.getSalutation(), user.getSalutation()));
+				userDto.setEuin(preferNonBlank(regDetails.getEuin(), user.getEuin()));
+
+				if (regDetails.getEmail_verified() == null)
+				{
+					userDto.setEmail_verified(user.getEmail_verified());
+				}
+				if (regDetails.getMobile_verified() == null)
+				{
+					userDto.setMobile_verified(user.getMobile_verified());
+				}
+				if (regDetails.getCreated_date() == null)
+				{
+					userDto.setCreated_date(user.getCreated_date());
+				}
+			}
+
+			userDto.setId(regDetails.getId());
+			userDto.setUser_id(regDetails.getUser_id() != null ? regDetails.getUser_id() : userId);
+
+			return ResponseEntity.ok(userDto);
 		}
 		catch (Exception ex)
 		{
 			ex.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching user"));
 		}
+	}
+
+	private static String preferNonBlank(String primary, String fallback)
+	{
+		return (primary != null && !primary.trim().isEmpty()) ? primary : fallback;
 	}
 
 

@@ -8976,21 +8976,13 @@ public class NseTransactionController {
 
 
             broker_code = broker_code1;
-            appln_id = nsekey.getNse_appln_id();
-            password = nsekey.getNse_password();
 
-//            if(!subbroker_euin.isEmpty())
-//            {
-//                euin = subbroker_euin;
-//            }else
-//            {
-//                if(!euin_code.isEmpty())
-//                {
-//                    euin = euin_code;
-//                }else{
-//                    euin = nsekey.getEuin();
-//                }
-//            }
+            if(!euin_code.isEmpty())
+            {
+                euin = euin_code;
+            }else{
+                euin = nsekey.getEuin();
+            }
 
             if(!subbroker_arn.isEmpty())
             {

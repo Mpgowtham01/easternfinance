@@ -1,8 +1,13 @@
 package com.user.config;
 
+import com.user.response.CustomClaim;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 
 public class TokenInterceptor {
 
@@ -79,5 +84,47 @@ public class TokenInterceptor {
         }
 
         return client_name;
+    }
+
+    public static boolean isValidToken(String token, String secretKey) {
+        if (token == null || !token.startsWith("Bearer ")) {
+            return false;
+        }
+
+        String rawToken = token.replace("Bearer ", "");
+        Key key = Keys.hmacShaKeyFor(secretKey.getBytes());
+
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(rawToken);  // if invalid, will throw
+            return true;  // ✅ valid
+        } catch (JwtException | IllegalArgumentException e) {
+            return false; // ❌ invalid, expired, malformed, wrong signature, etc.
+        }
+    }
+
+    public static CustomClaim getClaimsFromToken(String token, String secret) {
+        try {
+            String rawToken = token.replace("Bearer ", "");
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+                    .parseClaimsJws(rawToken)
+                    .getBody();
+
+            CustomClaim customClaim = new CustomClaim();
+            customClaim.setIat(((Number) claims.get("iat")).longValue());
+            customClaim.setExp(((Number) claims.get("exp")).longValue());
+            customClaim.setUser_id(String.valueOf(claims.get("user_id")));
+            customClaim.setType_id(String.valueOf( claims.get("type_id")));
+            customClaim.setInvestor_id(String.valueOf(claims.get("investor_id")));
+            customClaim.setClient_name((String) claims.get("client_name"));
+
+            return customClaim;
+        } catch (JwtException e) {
+            throw new IllegalArgumentException("Invalid or expired token: " + e.getMessage());
+        }
     }
 }

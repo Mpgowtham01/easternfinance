@@ -17,6 +17,9 @@ public class UserService {
     @Autowired
     UserOnlineRegDetailsRespository userOnlineRegDetailsRespository;
 
+    @Autowired
+    UserRepository userRepository;
+
     // 🔁 Save or update based on user ID
     public UsersOnlineRegDetails saveOrUpdateUser(UsersOnlineRegDetails user)
     {
@@ -35,6 +38,11 @@ public class UserService {
 
     public void deleteUserById(Integer id) {
         userOnlineRegDetailsRespository.deleteById(id);
+    }
+
+    public Optional<User> getUserByIds(Integer id)
+    {
+        return userRepository.findById(id);
     }
 }
 

@@ -174,4 +174,25 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
                             @Param("startDate") Date startDate,
                             @Param("endDate") Date endDate);
 
+    @Modifying
+    @Transactional
+    @Query("UPDATE UsersMandateDetails u " +
+            "SET u.nse_ach_approved = :status, " +
+            "u.nse_ach_rej_reason = :remark " +
+            "WHERE u.client_name = :clientName " +
+            "AND u.online_flag = 'NSE' " +
+            "AND u.bank_account_number = :accountNo " +
+            "AND u.online_code = :online_code " +
+            "AND u.nse_ach = :mandateId " +
+            "AND u.nse_ach_amount = :amount "+
+            "AND u.online_id = :onlineId")
+    int updateMandateStatusBulk(@Param("status") int status,
+                                @Param("remark") String remark,
+                                @Param("clientName") String clientName,
+                                @Param("accountNo") String accountNo,
+                                @Param("online_code") String iin_number,
+                                @Param("amount") String amount,
+                                @Param("mandateId") String mandateId,
+                                @Param("onlineId") Integer onlineId);
+
 }

@@ -83,6 +83,9 @@ public class UserUtils
         return param.trim();
     }
 
+    public static String trimOrEmpty(String value) {
+        return value != null ? value.trim() : "";
+    }
 
     public static String getUserTypeName(Integer typerId)
     {

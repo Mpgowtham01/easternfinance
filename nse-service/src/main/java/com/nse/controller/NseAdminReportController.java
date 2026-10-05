@@ -2341,6 +2341,15 @@ public class NseAdminReportController
 
             RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
 
+            try
+            {
+                from_date = NseUtils.normalizeDateToYyyyMmDd(from_date);
+                to_date = NseUtils.normalizeDateToYyyyMmDd(to_date);
+            } catch (ParseException pe)
+            {
+                return NseUtils.commonResponse("Invalid date. Please use DD-MM-YYYY, DD/MM/YYYY or YYYY-MM-DD.", HttpStatus.BAD_REQUEST);
+            }
+
             JSONObject requestDetails = new JSONObject();
             requestDetails.put("client_code", iin_number);
             requestDetails.put("from_date", from_date);
@@ -3083,6 +3092,17 @@ public class NseAdminReportController
                 from_date = fromDate.format(formatter);
                 to_date = today.format(formatter);
             }
+            else
+            {
+                try
+                {
+                    from_date = NseUtils.normalizeDateToYyyyMmDd(from_date);
+                    to_date = NseUtils.normalizeDateToYyyyMmDd(to_date);
+                } catch (ParseException pe)
+                {
+                    return NseUtils.commonResponse("Invalid date. Please use DD-MM-YYYY, DD/MM/YYYY or YYYY-MM-DD.", HttpStatus.BAD_REQUEST);
+                }
+            }
 
             RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
             try
@@ -3417,12 +3437,18 @@ public class NseAdminReportController
             @RequestHeader("Authorization") String token,
             @RequestParam(required = true) String broker_code,
             @RequestParam(required = true) String client_code,
+            @RequestParam(required = true) String mandate_id,
+            @RequestParam(required = true) String to_date,
+            @RequestParam(required = true) String from_date,
             @RequestParam(required = false) String source) throws Exception
     {
         try
         {
             client_code = NseUtils.checkParem(client_code);
             broker_code = NseUtils.checkParem(broker_code);
+            mandate_id = NseUtils.checkParem(mandate_id);
+            to_date = NseUtils.checkParem(to_date);
+            from_date = NseUtils.checkParem(from_date);
             //source = NseUtils.checkParem(source);
 
             String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
@@ -3431,11 +3457,34 @@ public class NseAdminReportController
             try
             {
                 JSONObject requestDetails = new JSONObject();
-                requestDetails.put("client_code", client_code);
+                requestDetails.put("client_code", "");
                 requestDetails.put("from_date", "");
                 requestDetails.put("to_date", "");
                 requestDetails.put("mandate_id", "");
                 requestDetails.put("memberMandateIds", "");
+
+                if(!mandate_id.isEmpty())
+                {
+                    requestDetails.put("mandate_id", mandate_id);
+                }else if(!client_code.isEmpty())
+                {
+                    requestDetails.put("client_code", client_code);
+                }else
+                {
+                    if(from_date.isEmpty() || to_date.isEmpty())
+                    {
+                        return NseUtils.commonResponse("Please provide Mandate ID, Client Code, or both From Date and To Date.", HttpStatus.BAD_REQUEST);
+                    }
+
+                    try
+                    {
+                        requestDetails.put("from_date", NseUtils.normalizeDateToYyyyMmDd(from_date));
+                        requestDetails.put("to_date", NseUtils.normalizeDateToYyyyMmDd(to_date));
+                    } catch (ParseException pe)
+                    {
+                        return NseUtils.commonResponse("Invalid date. Please use DD-MM-YYYY, DD/MM/YYYY or YYYY-MM-DD.", HttpStatus.BAD_REQUEST);
+                    }
+                }
 
                 System.out.println("clientName = " + client_name + "af" + broker_code);
 
