@@ -121,6 +121,13 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
             @Param("nse_ach") String nse_ach
     );
 
+    @Query("FROM UsersMandateDetails u WHERE u.bank_account_number = :bankAccountNumber AND u.online_flag = :onlineFlag AND u.online_code = :onlineCode AND u.broker_code = :brokerCode")
+    List<UsersMandateDetails> loadMandateDetailsByBankAccNumber(
+            @Param("bankAccountNumber") String bankAccountNumber,
+            @Param("onlineCode") String onlineCode,
+            @Param("brokerCode") String brokerCode,
+            @Param("onlineFlag") String onlineFlag);
+
     @Query("FROM UsersMandateDetails u WHERE u.broker_code = :brokerCode AND u.online_flag = 'NSE' AND u.online_code = :onlineCode AND u.nse_ach = :orderId AND u.bank_account_number = :accountNo ORDER BY u.id DESC")
     List<UsersMandateDetails> findByBrokerCodeAndOnlineCodeAndAccountNo(
             @Param("brokerCode") String brokerCode,

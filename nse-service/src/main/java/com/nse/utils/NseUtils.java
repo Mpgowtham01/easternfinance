@@ -1110,5 +1110,17 @@ public class NseUtils
         return hashed;
     }
 
+    public static String extractJsonFromFeignError(String msg) {
+        if (msg == null) return null;
+
+        // Feign errors usually contain something like: ...]: [{"status":"BAD_REQUEST", ...}]
+        int start = msg.indexOf("[{");
+        int end = msg.lastIndexOf("}]");
+        if (start != -1 && end != -1 && end > start) {
+            return msg.substring(start, end + 2); // extract [{"..."}]
+        }
+        return null;
+    }
+
 
 }

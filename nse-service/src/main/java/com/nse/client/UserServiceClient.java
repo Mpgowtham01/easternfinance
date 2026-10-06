@@ -1,6 +1,7 @@
 package com.nse.client;
 
 import com.nse.dto.mf.*;
+import com.nse.response.MandateMasterResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -591,5 +592,8 @@ public interface UserServiceClient {
             @RequestParam("client_name") String client_name,
             @RequestParam("scheme_name") String scheme_name, @RequestHeader("Authorization") String token
     );
+
+    @GetMapping("/loadMandateDetailsByBankAccNumber")
+    List<MandateMasterResponse> loadMandateDetailsByBankAccNumber(@RequestParam("bankAccountNumber")String bankAccountNumber, @RequestParam("nseIinNum")String nseIinNum, @RequestParam("brokerCode")String brokerCode, @RequestParam("onlineFlag")String onlineFlag, @RequestHeader("Authorization") String token);
 
 }

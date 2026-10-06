@@ -128,6 +128,7 @@ public class FeignClientUserController
 	@Autowired
 	private UsersOnlineRegDetailsService usersOnlineRegDetailsService;
 
+
 	@Operation(
 			summary = "Get inactive NSE UserBseNseDetails by userId",
 			description = "Fetches the inactive NSE UserBseNseDetails record for the given user ID. " +
@@ -490,11 +491,11 @@ public class FeignClientUserController
     @Hidden
     @PostMapping("/saveUserRegStatus")
     public ResponseEntity<?> saveUserRegStatus(@RequestHeader("Authorization") String token) {
-        UsersOnlineRegDetails user = null;
+		User user = null;
         try {
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
 
-            Optional<UsersOnlineRegDetails> userOpt = userService.getUserById(Integer.parseInt(userid));
+            Optional<User> userOpt = userService.getUserByIds(Integer.parseInt(userid));
 
             if (userOpt.isPresent()) {
                 user = userOpt.get();
@@ -4448,6 +4449,27 @@ public class FeignClientUserController
 		} catch (Exception e) {
 			e.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving Karvy data");
+		}
+	}
+
+	@Hidden
+	@GetMapping("/loadMandateDetailsByBankAccNumber")
+	public ResponseEntity<?> loadMandateDetailsByBankAccNumber(@RequestParam String bankAccountNumber,@RequestParam String nseIinNum, @RequestParam String brokerCode, @RequestParam String onlineFlag, @RequestHeader("Authorization") String token) {
+		try {
+
+			if(!TokenInterceptor.isValidToken(token, secretKey)){
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.UNAUTHORIZED, "status_msg", "token expired"));
+			}
+			List<UsersMandateDetails> mandate_list = usersMandateDetailsRespository.loadMandateDetailsByBankAccNumber(bankAccountNumber, nseIinNum, brokerCode, onlineFlag);
+
+			if (!mandate_list.isEmpty()) {
+				return ResponseEntity.ok(mandate_list);
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "No record found for the given IIN Number and Client Name."));
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching data"));
 		}
 	}
 

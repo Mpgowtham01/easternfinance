@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="39184eb3-ed0f-4098-ac62-16504f47ce6e" />
+    <option name="activeSessionId" value="147cf0c0-61a6-485f-bf9b-fc1c4dde6bb0" />
     <option name="openSessionIds">
       <list>
         <option value="98933a04-11fb-477c-b714-16ffb21df484" />
@@ -13,13 +13,13 @@
         <option value="77a02e21-9469-4af5-a7aa-fe2320a7dced" />
         <option value="e182074b-354d-4785-b3bc-c0ff86484298" />
         <option value="b5fa265c-e3ef-46a2-b759-66c49d8c7837" />
-        <option value="39184eb3-ed0f-4098-ac62-16504f47ce6e" />
+        <option value="147cf0c0-61a6-485f-bf9b-fc1c4dde6bb0" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
         <entry key="0fecf575-51de-4d8d-a675-2fdd934438ea" value="/sessions/83192b40-bfa8-47b0-bddd-d12c16bcef5a" />
-        <entry key="39184eb3-ed0f-4098-ac62-16504f47ce6e" value="/sessions/2d807305-d39b-4c91-ab87-2b74dd927839" />
+        <entry key="147cf0c0-61a6-485f-bf9b-fc1c4dde6bb0" value="/sessions/96d794dc-6976-4b03-a79c-23c76ca667ff" />
         <entry key="52935674-2a14-496d-ba24-33677a47a773" value="/sessions/56f4bbc9-66d0-43e3-8b1c-0ec7b7ca32b8" />
         <entry key="5d8b1932-7dcf-4620-b78c-751e6e7daaca" value="/sessions/72daa3ef-a1cf-4fac-92ce-a5e658b9956f" />
         <entry key="77a02e21-9469-4af5-a7aa-fe2320a7dced" value="/sessions/56f4bbc9-66d0-43e3-8b1c-0ec7b7ca32b8" />
@@ -33,7 +33,7 @@
     <option name="sessionTitles">
       <map>
         <entry key="0fecf575-51de-4d8d-a675-2fdd934438ea" value="The user selected the lines 15 to 31 from user-ser" />
-        <entry key="39184eb3-ed0f-4098-ac62-16504f47ce6e" value="client_code = NseUtils.checkParem(client_code);" />
+        <entry key="147cf0c0-61a6-485f-bf9b-fc1c4dde6bb0" value="@user-service/src/main/java/com/user/controller/Us" />
         <entry key="52935674-2a14-496d-ba24-33677a47a773" value="Exception Date &amp; Time = Sat Sep 19 10:52:52 IST 20" />
         <entry key="5d8b1932-7dcf-4620-b78c-751e6e7daaca" value="live swagger its not working why" />
         <entry key="77a02e21-9469-4af5-a7aa-fe2320a7dced" value="Exception Date &amp; Time = Sat Sep 19 10:52:52 IST 20" />

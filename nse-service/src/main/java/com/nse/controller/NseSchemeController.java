@@ -5110,6 +5110,8 @@ public class NseSchemeController {
 
             } else
             {
+                System.out.println("userid" + userid );
+                System.out.println("client_name" + client_name );
                 list = nseTransactionRepository.findNonRequestTransactionsOrderedByDate(
                         Integer.valueOf(userid), client_name);
 
@@ -8552,6 +8554,36 @@ public class NseSchemeController {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/loadMandateDetailsByBankAccNumber")
+    public ResponseEntity<?> loadMandateDetailsByBankAccNumber(
+            @RequestParam String nse_iin_num,
+            @RequestParam String bank_account_number,
+            @RequestParam String broker_code,
+            @RequestHeader("Authorization") String token)
+    {
+        try
+        {
+            if(!TokenInterceptor.isValidToken(token, secretKey)){
+                return NseUtils.commonResponse("Invalid Token", HttpStatus.UNAUTHORIZED);
+            }
+
+            List<MandateMasterResponse> mandate_list = userServiceClient.loadMandateDetailsByBankAccNumber(bank_account_number, nse_iin_num, broker_code, "NSE", token);
+            return ResponseEntity.ok(mandate_list);
+
+        } catch (Exception ex) {
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+
+            String msg = ex.getMessage();
+            String extractedJson = NseUtils.extractJsonFromFeignError(msg);
+
+            if (extractedJson != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(extractedJson);
+            }
+            return NseUtils.commonResponse("Internal Server Error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

@@ -347,7 +347,7 @@ public class UserInfoController
             }
 
             Integer online_id = reg.getId();
-
+            System.out.println("online_id" + online_id);
             List<UsersBankDetails> bank_list = usersBankDetailsRepository.findByOnlineId(online_id);
             List<UsersMandateDetails> registered_mandate_list = usersMandateDetailsRepository.findByOnlineId(online_id);
 
