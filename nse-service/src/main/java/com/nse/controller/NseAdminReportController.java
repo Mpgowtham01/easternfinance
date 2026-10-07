@@ -3436,10 +3436,10 @@ public class NseAdminReportController
     public ResponseEntity<?> updateMandateStatus(
             @RequestHeader("Authorization") String token,
             @RequestParam(required = true) String broker_code,
-            @RequestParam(required = true) String client_code,
-            @RequestParam(required = true) String mandate_id,
-            @RequestParam(required = true) String to_date,
-            @RequestParam(required = true) String from_date,
+            @RequestParam(required = false) String client_code,
+            @RequestParam(required = false) String mandate_id,
+            @RequestParam(required = false) String to_date,
+            @RequestParam(required = false) String from_date,
             @RequestParam(required = false) String source) throws Exception
     {
         try
