@@ -3042,6 +3042,16 @@ public class FeignClientUserController
 				userDto.setClient_name(user.getClient_name());
 			}
 
+			// branch / rm_name / subbroker are held on the users table, not on users_online_reg_details,
+			// so the mapper cannot fill them - copy them over from the user record.
+			if (userDto != null && user != null)
+			{
+				userDto.setBranch(UserUtils.checkParem(user.getBranch()));
+				userDto.setRm_name(UserUtils.checkParem(user.getRm_name()));
+				userDto.setSubbroker_name(UserUtils.checkParem(user.getSubbroker_name()));
+				userDto.setSuper_subbroker_name(UserUtils.checkParem(user.getSuper_subbroker_name()));
+			}
+
 			if (userDto != null)
 			{
 				return ResponseEntity.ok(userDto);
@@ -3082,6 +3092,19 @@ public class FeignClientUserController
 			System.out.println("nomineeDetails = " + nomineeDetails);
 			System.out.println("mandateDetails = " + mandateDetails);
 			userDto = UserMapper.mapToUserDtoMapper(userDetail, bankDetails, mandateDetails, nomineeDetails);
+
+			// branch / rm_name / subbroker are held on the users table, not on users_online_reg_details,
+			// so the mapper cannot fill them - copy them over from the user record.
+			user = userRepository.findUSerByIdAndActive(userDetail.getUser_id()).orElse(null);
+
+			if (user != null)
+			{
+				userDto.setBranch(UserUtils.checkParem(user.getBranch()));
+				userDto.setRm_name(UserUtils.checkParem(user.getRm_name()));
+				userDto.setSubbroker_name(UserUtils.checkParem(user.getSubbroker_name()));
+				userDto.setSuper_subbroker_name(UserUtils.checkParem(user.getSuper_subbroker_name()));
+			}
+
 			System.out.println("userDto = " + userDto);
 			return ResponseEntity.ok(userDto);
 		} catch (Exception ex) {

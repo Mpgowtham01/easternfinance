@@ -67,4 +67,5 @@ public class BseNseKey {
     private String one_signal_app_id;
     private String one_signal_api_key;
     private Integer sanchay_crm_flag;
+    private Integer is_force_update;
 }

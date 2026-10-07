@@ -819,6 +819,60 @@ public class UserInfoController
         }
     }
 
+    @Operation(
+            summary = "Get Force Update Flag by Client Name",
+            description = "Checks the is_force_update value configured in bse_nse_key for the given client name. " +
+                    "Returns true when is_force_update is 1 and false when it is 0 (or not set)."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Force update flag fetched successfully",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(example = "true")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Key not found for the client name",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(example = "{\"status\": 404, \"status_msg\": \"Key not found\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal Server Error - while fetching force update flag",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(example = "{\"status\": 500, \"status_msg\": \"Error occurred while fetching force update flag\"}")
+                    )
+            )
+    })
+    @GetMapping("/getForceUpdateFlag")
+    public ResponseEntity<?> getForceUpdateFlag(@RequestHeader("Authorization") String token)
+    {
+        try
+        {
+            String clientName = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+            BseNseKey key = bseNseKeyRepository.findByClientName(clientName);
+
+            if (key == null)
+            {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status", 404, "status_msg", "Key not found"));
+            }
+
+            boolean forceUpdate = key.getIs_force_update() != null && key.getIs_force_update() == 1;
+            return ResponseEntity.ok(forceUpdate);
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching force update flag"));
+        }
+    }
+
     @GetMapping("/getUsersMandateDetailsByOnlineCode")
     public ResponseEntity<?> getUsersMandateDetailsByOnlineCode(
             @RequestHeader("Authorization") String token,
