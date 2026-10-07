@@ -820,9 +820,9 @@ public class UserInfoController
     }
 
     @Operation(
-            summary = "Get Force Update Flag by Client Name",
-            description = "Checks the is_force_update value configured in bse_nse_key for the given client name. " +
-                    "Returns true when is_force_update is 1 and false when it is 0 (or not set)."
+            summary = "Get Force Update Flag",
+            description = "Checks the is_force_update value configured in bse_nse_key for the client name resolved from the token. " +
+                    "Returns is_force_update as true when the configured value is 1 and false when it is 0 (or not set)."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -830,7 +830,7 @@ public class UserInfoController
                     description = "Force update flag fetched successfully",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(example = "true")
+                            schema = @Schema(example = "{\"status\": 200, \"status_msg\": \"Force update flag fetched successfully\", \"is_force_update\": true}")
                     )
             ),
             @ApiResponse(
@@ -864,7 +864,7 @@ public class UserInfoController
             }
 
             boolean forceUpdate = key.getIs_force_update() != null && key.getIs_force_update() == 1;
-            return ResponseEntity.ok(forceUpdate);
+            return ResponseEntity.ok(Map.of("status", 200, "status_msg", "Force update flag fetched successfully", "is_force_update", forceUpdate));
         }
         catch (Exception ex)
         {

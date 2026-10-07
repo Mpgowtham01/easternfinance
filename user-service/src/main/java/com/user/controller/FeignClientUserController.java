@@ -3084,17 +3084,15 @@ public class FeignClientUserController
 			if (userDetail == null) {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "user register not found!"));
 			}
-			System.out.println("userDetail = " + userDetail);
+//			System.out.println("userDetail = " + userDetail);
 			bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
 			nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE").orElse(null);
 			mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
-			System.out.println("bankDetails = " + bankDetails);
-			System.out.println("nomineeDetails = " + nomineeDetails);
-			System.out.println("mandateDetails = " + mandateDetails);
+//			System.out.println("bankDetails = " + bankDetails);
+//			System.out.println("nomineeDetails = " + nomineeDetails);
+//			System.out.println("mandateDetails = " + mandateDetails);
 			userDto = UserMapper.mapToUserDtoMapper(userDetail, bankDetails, mandateDetails, nomineeDetails);
 
-			// branch / rm_name / subbroker are held on the users table, not on users_online_reg_details,
-			// so the mapper cannot fill them - copy them over from the user record.
 			user = userRepository.findUSerByIdAndActive(userDetail.getUser_id()).orElse(null);
 
 			if (user != null)

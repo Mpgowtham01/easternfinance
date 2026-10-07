@@ -1200,7 +1200,7 @@ public class NseUserController
 //        }
 //    }
     @PostMapping("/saveJointHolderInfo")
-    public ResponseEntity<?> saveJointHolderInfo(@RequestBody List<JointHolderInfoDTO> dtoList, @RequestHeader("Authorization") String token,@RequestParam(required = false) String is_MultiReg)
+    public ResponseEntity<?> saveJointHolderInfo(@RequestBody List<JointHolderInfoDTO> dtoList, @RequestHeader("Authorization") String token)
     {
         try
         {
@@ -1217,55 +1217,39 @@ public class NseUserController
             }
             String userIdFromToken = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             Integer userId = Integer.parseInt(userIdFromToken);
-            is_MultiReg = UserUtils.checkParem(is_MultiReg);
-            Optional<UsersOnlineRegDetails> userOpt = userService.getUserById(userId);
+
+            Optional<User> userOpt = userService.getUserByIds(userId);
 
             if (userOpt.isEmpty())
             {
                 return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
 
-            UsersOnlineRegDetails user = userOpt.get();
+            User user = userOpt.get();
             UsersOnlineRegDetails userDetails = null;
 
-            Boolean isMultiReg = false;
-            if(is_MultiReg.equalsIgnoreCase("1"))
-            {
-                isMultiReg = true;
-            }
-            System.out.println("isMultiReg = " + isMultiReg);
-
-            MymfboxOnboarding onboarding = null;
-
-            if(!is_MultiReg.isEmpty()) {
-                onboarding = onboardingService.getOrCreateOnboardingbyMultireg(user.getUser_id(), user.getClient_name(), isMultiReg);
-            }else{
-                onboarding = onboardingService.getOrCreateOnboarding(user.getUser_id(), user.getClient_name());
-            }
+            MymfboxOnboarding onboarding = onboardingService.getOrCreateOnboarding(user.getId(), user.getClient_name());
 
             if (onboarding == null)
             {
                 return UserUtils.errorResponse("Could not create onboarding record", HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number())) {
-                List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getNseInactiveUserRegDetailsByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
 
-                if (userDetailsOpt != null && !userDetailsOpt.isEmpty()) {
-                    userDetails = userDetailsOpt.get(0);
-                }
+            List<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.findByUseridAndClientName(onboarding.getUser_id(), user.getClient_name());
 
-                if (userDetails != null) {
-                    userDetails = JoinHolderInfoMapper.dtoToUserBseNseDetails(dtoList, userDetails);
-                    userBseNseDetailsService.saveOrUpdateUserOnlineReg(userDetails);
-                }
-                else{
-                    user = JoinHolderInfoMapper.dtoToUser(dtoList, user);
-                    userService.saveOrUpdateUser(user);
-                }
-            }else{
-                user = JoinHolderInfoMapper.dtoToUser(dtoList, user);
-                userService.saveOrUpdateUser(user);
+            if(userDetailsOpt.isEmpty())
+            {
+                return UserUtils.errorResponse("User not found", HttpStatus.NOT_FOUND);
             }
+
+            userDetails = userDetailsOpt.get(0);
+
+            if(userDetails != null)
+            {
+                userDetails = JoinHolderInfoMapper.dtoToUserBseNseDetails(dtoList, userDetails);
+                userOnlineRegDetailsRespository.save(userDetails);
+            }
+
             onboarding.setJoint_holder_info(true);
             onboardingService.saveOnboarding(onboarding);
 
