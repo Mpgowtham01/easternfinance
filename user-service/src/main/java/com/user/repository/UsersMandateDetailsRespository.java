@@ -162,7 +162,8 @@ public interface UsersMandateDetailsRespository extends JpaRepository<UsersManda
             "u.nse_ach_amount = :amount, " +
             "u.nse_ach_start_date = :startDate, " +
             "u.nse_ach_end_date = :endDate, " +
-            "u.nse_umrn_no = :umrnNo " +
+            "u.nse_umrn_no = :umrnNo, " +
+            "u.updated_date = CURRENT_TIMESTAMP " +
             "WHERE u.broker_code = :brokerCode " +
             "AND u.client_name = :clientName " +
             "AND u.online_flag = 'NSE' " +

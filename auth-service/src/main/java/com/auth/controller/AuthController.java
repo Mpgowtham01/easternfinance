@@ -141,8 +141,14 @@ public class AuthController {
                     clientName = bseNseKey.getClientName();
                 }
             }
+			User user = null;
 
-            User user = loginService.validateLogin(userid, password, clientName);
+			if(investor_id > 0)
+			{
+				user = userRepository.findByIds(investor_id).orElse(null);
+			}else{
+				user = loginService.validateLogin(userid, password, clientName);
+			}
 
             if(user == null)
             {
