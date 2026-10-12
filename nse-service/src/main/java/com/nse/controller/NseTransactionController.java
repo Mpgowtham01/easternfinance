@@ -761,12 +761,7 @@ public class NseTransactionController {
                     nsetrans.setName(name);
                     nsetrans.setBranch(user.getBranch());
                     nsetrans.setRm_name(user.getRm_name());
-                    if(source.equalsIgnoreCase("Website"))
-                    {
-                        nsetrans.setSubbroker_name(subbroker_name);
-                    }else{
-                        nsetrans.setSubbroker_name(user.getSubbroker_name());
-                    }
+                    nsetrans.setSubbroker_name(user.getSubbroker_name());
                     if(!subbroker_code.isEmpty())
                     {
                         nsetrans.setSubbroker_code(subbroker_code);
@@ -4341,12 +4336,7 @@ public class NseTransactionController {
                     nsetrans.setName(name);
                     nsetrans.setBranch(user.getBranch());
                     nsetrans.setRm_name(user.getRm_name());
-                    if(source.equalsIgnoreCase("Website"))
-                    {
-                        nsetrans.setSubbroker_name(subbroker_name);
-                    }else{
-                        nsetrans.setSubbroker_name(user.getSubbroker_name());
-                    }
+                    nsetrans.setSubbroker_name(user.getSubbroker_name());
                     if(!subbroker_code.isEmpty())
                     {
                         nsetrans.setSubbroker_code(subbroker_code);
@@ -5075,12 +5065,7 @@ public class NseTransactionController {
                             nsetrans.setName(name);
                             nsetrans.setBranch(user.getBranch());
                             nsetrans.setRm_name(user.getRm_name());
-                            if(source.equalsIgnoreCase("Website"))
-                            {
-                                nsetrans.setSubbroker_name(subbroker_name);
-                            }else{
-                                nsetrans.setSubbroker_name(user.getSubbroker_name());
-                            }
+                            nsetrans.setSubbroker_name(user.getSubbroker_name());
                             if(!subbroker_code.isEmpty())
                             {
                                 nsetrans.setSubbroker_code(subbroker_code);
@@ -9451,7 +9436,6 @@ public class NseTransactionController {
                     nsetrans.setRefund_status("");
                     nsetrans.setRefund_amount("");
                     nsetrans.setSubbroker_arn(subbroker_arn);
-                    nsetrans.setSubbroker_name(subbroker_name);
                     nsetrans.setSubbroker_code(subbroker_code);
                     nsetrans.setCart_id(cart_id_array.get(i));
                     nseTransactionService.save(nsetrans);
