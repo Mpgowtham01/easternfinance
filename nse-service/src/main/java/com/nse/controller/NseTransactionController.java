@@ -10,6 +10,7 @@ import com.nse.model.NseOnlineSchemeMaster;
 import com.nse.model.NseTransactions;
 import com.nse.repository.NseLogRepository;
 import com.nse.repository.NseOnlineSchemeMasterRepository;
+import com.nse.repository.NseTransactionJdbcRepository;
 import com.nse.repository.NseTransactionRepository;
 import com.nse.response.CommonResponse;
 import com.nse.response.PurchaseOrdersPaymentAPIResponse;
@@ -70,6 +71,9 @@ public class NseTransactionController {
 
     @Autowired
     private NseTransactionRepository nseTransactionRepository;
+
+    @Autowired
+    private NseTransactionJdbcRepository nseTransactionJdbcRepository;
 
     /**
      * Cart ids are only collected when the order originates from a cart (Mobile source, or
@@ -9576,6 +9580,163 @@ public class NseTransactionController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
+    }
+
+    @PostMapping("/getOrderStatusReportByClientCode")
+    public ResponseEntity<?> getOrderStatusReportByClientCode(
+            @RequestHeader("Authorization") String token,
+            @RequestParam String broker_code,
+            @RequestParam String order_id,
+            @RequestParam String purchase_type) {
+
+        try
+        {
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token,secretKey);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            SimpleDateFormat sdf2 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+            SimpleDateFormat sdf3 = new SimpleDateFormat("dd/MM/yyyy");
+
+            order_id = NseUtils.checkParem(order_id);
+            broker_code = NseUtils.checkParem(broker_code);
+            purchase_type = NseUtils.checkParem(purchase_type);
+
+            LocalDate today = LocalDate.now();
+            LocalDate fromDate = today.minusDays(6);
+
+            String from_date = fromDate.format(formatter);
+            String to_date = today.format(formatter);
+
+            System.out.println("from_date " + from_date);
+            System.out.println("to_date " + to_date);
+            System.out.println("order_id " + order_id);
+
+            String PurcahseType = "";
+            if(purchase_type.equalsIgnoreCase("Lumpsum Purchase"))
+            {
+                PurcahseType="PUR";
+            }else if (purchase_type.equalsIgnoreCase("SIP Purchase")){
+                PurcahseType="SIP";
+            }else if (purchase_type.equalsIgnoreCase("Redemption Transaction")){
+                PurcahseType="RED";
+            }else if (purchase_type.equalsIgnoreCase("SWITCH Transaction")){
+                PurcahseType="SWITCH";
+            }else if (purchase_type.equalsIgnoreCase("STP Transaction")){
+                PurcahseType="STP";
+            }else if (purchase_type.equalsIgnoreCase("SWP Transaction")){
+                PurcahseType="SWP";
+            }
+
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+            try
+            {
+                JSONObject orderRequest = new JSONObject();
+                orderRequest.put("from_date", from_date);
+                orderRequest.put("to_date", to_date);
+                orderRequest.put("client_code", "");
+                orderRequest.put("Product_type", PurcahseType);
+                orderRequest.put("product_id", order_id);
+
+                BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
+                if(online_access == null)
+                {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
+                }
+
+                String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+                String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+                String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+                String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+                String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+                System.out.println("getOrderStatusReportForCron::requestBody: " + orderRequest);
+//                System.out.println("getOrderStatusReportForCron::authorization: " + base64Encoded);
+
+                HttpHeaders headers = NseUtils.getHttpHeaders(nse_memberid, base64Encoded);
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("memberId", nse_memberid);
+                headers.set("Authorization", "Basic "+base64Encoded);
+                headers.set("User-Agent", "PostmanRuntime/7.43.3");
+                headers.set("Accept-Encoding", "gzip, deflate, br");
+                headers.set("Accept-Language", "en-US");
+                headers.set("Connection", "keep-alive");
+                headers.set("Referer", "");
+
+                HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
+
+                ResponseEntity<String> orderStatusResponse = restTemplate.postForEntity(NseApiUrls.order_lifecycle, entity, String.class);
+                System.out.println("getOrderLifeCycleReportForCron::Response Code: " + orderStatusResponse.getStatusCode());
+
+                JSONObject jsonResponse = new JSONObject(orderStatusResponse.getBody());
+                JSONArray ordersArray = jsonResponse.optJSONArray("report_data");
+                System.out.println("ordersArray = " + ordersArray);
+                System.out.println("startTime: " + new Date());
+                if (ordersArray != null)
+                {
+                    List<NseTransactions> transactions = new ArrayList<>();
+
+                    for (int i = 0; i < ordersArray.length(); i++) {
+                        JSONObject order = ordersArray.getJSONObject(i);
+
+                        String orderId = order.optString("product_id");
+                        String orderStatus = order.optString("order_status");
+                        String orderRemark = order.optString("order_remark");
+                        String primaryAuthStatus = order.optString("primary_holder_authentication_status");
+                        String primaryAuthDatetimeStr = order.optString("primary_holder_authentication_datetime");
+                        String paymentDatetimeStr = order.optString("payment_datetime");
+                        String paymentStatus = order.optString("payment_status");
+                        String modeOfPayment = order.optString("mode_of_payment");
+
+                        Date primaryAuthDatetime = null;
+                        if (primaryAuthDatetimeStr != null && !primaryAuthDatetimeStr.trim().isEmpty()) {
+                            primaryAuthDatetime = sdf3.parse(primaryAuthDatetimeStr);
+                        }
+
+                        Date paymentDatetime = null;
+                        if (paymentDatetimeStr != null && !paymentDatetimeStr.trim().isEmpty()) {
+                            paymentDatetime = sdf2.parse(paymentDatetimeStr);
+                        }
+
+                        NseTransactions tx = new NseTransactions();
+                        tx.setReg_id(orderId);
+                        tx.setOrder_status(orderStatus);
+                        tx.setRemarks(orderRemark);
+//                        tx.setPrimary_holder_authentication_status(primaryAuthStatus);
+//                        tx.setPrimary_holder_authentication_datetime(primaryAuthDatetime);
+//                        tx.setPayment_datetime(paymentDatetime);
+                        tx.setPayment_status(paymentStatus);
+//                        tx.setMode_of_payment(modeOfPayment);
+                        tx.setClient_name(client_name);
+
+                        transactions.add(tx);
+                    }
+
+                    int[] results = nseTransactionJdbcRepository.batchUpdateMandateStatus(transactions);
+                    // Logging results
+                    for (int i = 0; i < transactions.size(); i++) {
+                        NseTransactions tx = transactions.get(i);
+                        if (results[i] > 0) {
+                            System.out.println("✅ Updated mandate for orderId " + tx.getReg_id() + " with status " + tx.getOrder_status());
+                        } else {
+                            System.out.println("⚠️ No matching mandate found for orderId " + tx.getReg_id());
+                        }
+                    }
+                }
+                System.out.println("endTime: " + new Date());
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(ordersArray != null ? ordersArray.toString() : new JSONArray().toString());
+            }catch (Exception ex){
+                System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        } catch (Exception ex){
+            System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+        }
+        return null;
     }
 
     }
