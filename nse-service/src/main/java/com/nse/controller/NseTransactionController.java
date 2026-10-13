@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -7377,7 +7378,7 @@ public class NseTransactionController {
             @RequestParam(required = false) String iin_no,
             @RequestParam(required = false) String mandate_id,
             @RequestParam(required = false) String fileName,
-            @RequestParam(required = false) String base64EncodedFile,
+            @RequestParam(required = true) MultipartFile file,
             @RequestParam(required = false) String broker_code,
             @RequestParam(required = false) String source,
             @RequestHeader("Authorization") String token) {
@@ -7389,7 +7390,41 @@ public class NseTransactionController {
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
 
-        try {
+        try
+        {
+
+            if(StringHelper.isEmpty(mandate_id))
+            {
+                return NseUtils.commonResponse("Mandate Id is Required",HttpStatus.BAD_REQUEST);
+            }
+
+            if(StringHelper.isEmpty(iin_no))
+            {
+                return NseUtils.commonResponse("Nse IIN Number is Required",HttpStatus.BAD_REQUEST);
+            }
+            if(StringHelper.isEmpty(broker_code))
+            {
+                return NseUtils.commonResponse("Broker Code is Required",HttpStatus.BAD_REQUEST);
+            }
+
+            String originalFileName = file.getOriginalFilename();
+
+            String lowerFileName = originalFileName == null
+                    ? ""
+                    : originalFileName.toLowerCase(Locale.ROOT);
+
+            if (!(lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg")))
+            {
+                return NseUtils.commonResponse(
+                        "Only JPG/JPEG image files are allowed",
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+
+            String base64EncodedFile = Base64.getEncoder().encodeToString(file.getBytes());
+
+            System.out.println("Uploaded File Name = " + file.getOriginalFilename());
+            System.out.println("Converted Base64 Length = " + base64EncodedFile.length());
 
             String userid = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
             System.out.println("User ID from token: " + userid);
@@ -7397,26 +7432,24 @@ public class NseTransactionController {
             UserDto users = userServiceClient.getUserById(Integer.valueOf(userid), token);
 
             String client_name = users.getClient_name();
-            String login_userid =userid;
-            String login_name = users.getFirst_name();
-            String login_mobile = users.getMobile();
 
             iin_no = NseUtils.checkParem(iin_no);
             mandate_id = NseUtils.checkParem(mandate_id);
-            fileName = NseUtils.checkParem(fileName);
-            base64EncodedFile = NseUtils.checkParem(base64EncodedFile);
             source = NseUtils.checkParem(source);
 
             JSONObject scanReq = new JSONObject();
             scanReq.put("client_code", iin_no);
             scanReq.put("mandate_id", mandate_id);
-            scanReq.put("file_name", fileName);
+            scanReq.put("file_name", file.getOriginalFilename());
             scanReq.put("file_data", base64EncodedFile);
 
+            System.out.println("broke = " + broker_code + "--" + client_name);
+
             BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
+
             if(online_access == null)
             {
-                return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.INTERNAL_SERVER_ERROR);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
             String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
@@ -7439,15 +7472,10 @@ public class NseTransactionController {
             headers.set("Referer", "");
 
             RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
-
             HttpEntity<String> entity = new HttpEntity<>(scanReq.toString(), headers);
-
             String scanMandate_url= nseUrl+"/nsemfdesk/api/v2/fileupload/MANDATEIMG";
-
             try
             {
-
-
                 ResponseEntity<String> ScanMandateResult = restTemplate.postForEntity(scanMandate_url, entity, String.class);
                 String statusCode = ScanMandateResult.getStatusCode().toString();
                 String responseBody = ScanMandateResult.getBody();
@@ -7457,13 +7485,12 @@ public class NseTransactionController {
 
                 JSONObject jsonObject = new JSONObject(responseBody);
 
-
                 String scanMandate_status = jsonObject.getString("status");
                 String scanMandate_status_message = jsonObject.getString("message");
 
                 NseTransactions nsetrans = new NseTransactions();
                 nsetrans.setUrl(scanMandate_url);
-                nsetrans.setNse_request(responseBody.toString());
+                nsetrans.setNse_request(request.toString());
                 nsetrans.setNse_response(responseBody);
                 nsetrans.setReturn_msg(scanMandate_status_message);
                 nsetrans.setService_return_code(scanMandate_status);
@@ -7522,7 +7549,7 @@ public class NseTransactionController {
                 }
                 else
                 {
-                    return NseUtils.commonResponse(scanMandate_status_message, HttpStatus.INTERNAL_SERVER_ERROR);
+                    return NseUtils.commonResponse(scanMandate_status_message, HttpStatus.BAD_REQUEST);
                 }
             }
             catch(Exception ex)
@@ -7532,22 +7559,27 @@ public class NseTransactionController {
 
             if(service_return_code.equalsIgnoreCase("0"))
             {
-                UsersNseRegReportDto reg = userServiceClient.getUserNseRegDetails(iin_no, client_name,token);
+                UsersNseRegReportDto reg = null;
+                try {
+                    reg = userServiceClient.getUserNseRegDetails(iin_no, client_name,token);
+                }catch (FeignException e)
+                {
+                    return FeignErrorHandler.handle(e, "User Service", "User not found");
+                }
                 if(reg != null)
                 {
-                    if(img_type.equalsIgnoreCase("IP")){
+                    if(img_type.equalsIgnoreCase("IP"))
+                    {
                         reg.setForm_updated_date(sdf.format(new Date()));
                     }
-
                     reg.setIin_status("Document uploaded. Waiting for IIN Activation");
                     userServiceClient.saveNseRegReport(reg,token);
-
                 }
 
                 return NseUtils.commonResponse("Document uploaded", HttpStatus.OK);
             }else
             {
-                return NseUtils.commonResponse(service_msg, HttpStatus.INTERNAL_SERVER_ERROR);
+                return NseUtils.commonResponse(service_msg, HttpStatus.BAD_REQUEST);
             }
 
         }catch(Exception ex){
