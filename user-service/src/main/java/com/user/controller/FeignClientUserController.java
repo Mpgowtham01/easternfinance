@@ -385,6 +385,23 @@ public class FeignClientUserController
 		}
 	}
 
+	@Hidden
+	@GetMapping("/getUserDetailsByUserTable")
+	public ResponseEntity<?> getUserDetailsByUserTable(@RequestParam Integer userId) {
+		try
+		{
+			System.out.println("userid = " + userId);
+			Optional<User> key = userRepository.findUSerByIdAndActive(userId);
+			return ResponseEntity.ok(key.get());
+
+		}
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", 500, "status_msg", "Error occurred while fetching user details"));
+		}
+	}
+
 	@Operation(
 			summary = "Get User Details by UserBseNseDetials",
 			description = "Retrieves all unique AMC codes available in the repository.\n\n" +

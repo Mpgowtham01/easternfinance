@@ -16,6 +16,9 @@ public interface UserServiceClient {
     @GetMapping("/getUserByIdAndActive")
     UserDto getUserById(@RequestParam Integer userId, @RequestHeader("Authorization") String token);
 
+    @GetMapping("/getUserDetailsByUserTable")
+    UserDto getUserDetailsByUserTable(@RequestParam Integer userId, @RequestHeader("Authorization") String token);
+
     // old: GET /nse-user/{id}
     @GetMapping("/nse-user/{id}")
     UserBseNseDto getUserNseDetailsById(@PathVariable("id") String userId);

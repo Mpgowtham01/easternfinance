@@ -1,7 +1,9 @@
 package com.nse.services;
 
 import com.nse.model.NseOnlineSchemeMaster;
+import com.nse.model.NseOnlineSchemeMasterTemp;
 import com.nse.repository.NseOnlineSchemeMasterRepository;
+import com.nse.repository.NseOnlineSchemeMasterTempRepository;
 import com.nse.utils.NseUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,9 @@ public class NseOnlineSchemeMasterService
 {
     @Autowired
     private NseOnlineSchemeMasterRepository nseOnlineSchemeMasterRepository;
+
+    @Autowired
+    private NseOnlineSchemeMasterTempRepository nseOnlineSchemeMasterTempRepository;
 
     public List<Object[]> getLumpsumAmc(List<String> amc_list)
     {
@@ -89,5 +94,10 @@ public class NseOnlineSchemeMasterService
         {
             return nseOnlineSchemeMasterRepository.getSipSchemesByAmcCodeAndCategory(amc_code, category);
         }
+    }
+
+    public void saveAllAndFlushAllSchemeMaster(List<NseOnlineSchemeMasterTemp> masterList)
+    {
+        nseOnlineSchemeMasterTempRepository.saveAllAndFlush(masterList);
     }
 }

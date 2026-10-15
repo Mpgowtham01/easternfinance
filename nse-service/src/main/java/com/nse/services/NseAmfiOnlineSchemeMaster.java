@@ -1,13 +1,10 @@
 package com.nse.services;
 
+
 import com.nse.client.AmfiServiceClient;
 import com.nse.dto.amfi.AmfiSchemeMasterDTO;
-import com.nse.model.NseOnlineSchemeMaster;
-import com.nse.model.NseOnlineSipStpSwpMaster;
-import com.nse.model.NseOnlineStepUpSchemeMaster;
-import com.nse.repository.NseOnlineSchemeMasterRepository;
-import com.nse.repository.NseOnlineSipStpSwpMasterRepository;
-import com.nse.repository.NseOnlineStepUpSchemeMasterRepository;
+import com.nse.model.*;
+import com.nse.repository.*;
 import com.nse.utils.NseUtils;
 import jakarta.persistence.EntityManager;
 import org.apache.commons.io.FilenameUtils;
@@ -15,15 +12,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.text.Format;
 import java.text.NumberFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,7 +25,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Service
-public class NseAmfiOnlineSchemeMaster {
+public class NseAmfiOnlineSchemeMaster
+{
+
+    private static final String TAFED_ISIN = "INF277K012Y8";
+
     @Autowired
     AmfiServiceClient amfiServiceClient;
 
@@ -39,61 +37,56 @@ public class NseAmfiOnlineSchemeMaster {
     NseOnlineSchemeMasterRepository nseOnlineSchemeMasterRepository;
 
     @Autowired
-    NseOnlineSipStpSwpMasterRepository nseOnlineSipStpSwpMasterRepository;
+    NseOnlineSipStpSwpMasterRepository  nseOnlineSipStpSwpMasterRepository;
 
     @Autowired
     private EntityManager entityManager;
     @Autowired
     private NseOnlineStepUpSchemeMasterRepository nseOnlineStepUpSchemeMasterRepository;
 
+    @Autowired
+    NseOnlineSchemeMasterService nseOnlineSchemeMasterService;
+
+    @Autowired
+    NseSxpSchemeMasterTempService nseSxpSchemeMasterTempService;
 
     @Transactional
-    public List<String> uploadNSEOnlineSchemeMasterPhy(File file, @RequestHeader("Authorization") String token) throws ParseException {
+    public List<String> uploadNSEOnlineSchemeMasterPhy(File file, @RequestHeader("Authorization") String token) throws ParseException
+    {
         BufferedReader dis;
         String error_msg = "";
 
-        SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy");
-        SimpleDateFormat sdf3 = new SimpleDateFormat("dd-MMM-yyyy");
-        Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
-
         List<String> error_list = new ArrayList<String>();
-        Integer rowNum = 0;
 
         String filePath = file.getPath();
         String extension = FilenameUtils.getExtension(filePath);
         String file_upload_status = "";
 
         int availableCores = Runtime.getRuntime().availableProcessors();
-        System.out.println("availableCores: " + availableCores);
         ExecutorService executor = Executors.newFixedThreadPool(availableCores);
 
         List<String> batch = new ArrayList<>();
-        int batchSize = 100;
+        int batchSize = 1000;
 
         List<Future<?>> futures = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
         try
         {
             String str;
-            System.out.println("extension:" + extension);
             if(extension.equalsIgnoreCase("txt"))
             {
                 FileReader fr = new FileReader(file);
                 dis = new BufferedReader(fr);
 
                 int line_no = 0;
-                System.out.println("uploadNSEOnlineSchemeMasterPhy start Date: " + new Date());
 
                 List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.getActiveWithIsinNo(token);
 
-                entityManager.createNativeQuery("TRUNCATE TABLE nse_online_scheme_master").executeUpdate();
-
-                while ((str = dis.readLine()) != null) {
-
+                while ((str = dis.readLine()) != null)
+                {
                     int colLength = str.split("\\|", -1).length;
 
-                    if(colLength != 44) {
-
+                    if(colLength != 44)
+                    {
                         error_msg = "please check the file. it is not matching with column counts. it is need to be: 44 columns. but it is have: " + colLength;
                         error_list.add(error_msg);
                         return error_list;
@@ -132,7 +125,6 @@ public class NseAmfiOnlineSchemeMaster {
                         e.printStackTrace();
                     }
                 }
-                System.out.println("uploadNSEOnlineSchemeMasterPhy end Date: " + new Date());
                 error_msg = "";
                 error_msg = "The File has been Uploaded Successfully";
                 error_list.add(error_msg);
@@ -161,6 +153,7 @@ public class NseAmfiOnlineSchemeMaster {
 
     private void processBatch(List<String> taskBatch, List<AmfiSchemeMasterDTO> schemeMappingList)
     {
+        List<NseOnlineSchemeMasterTemp> masterList = new ArrayList<>();
 
         String unique_sr_no;
         String scheme_code;
@@ -318,9 +311,12 @@ public class NseAmfiOnlineSchemeMaster {
                     reopening_date = splited[42];
                     open_close_ended_scheme = splited[43];
 
-                    if(purchase_transaction_mode.equalsIgnoreCase("D")){
+                    if(purchase_transaction_mode.equalsIgnoreCase("D"))
+                    {
                         continue;
                     }
+
+                    isin = resolveIsin(scheme_code, isin);
 
                     amc_code = NseUtils.getAMCNameByNSECompanyName(amc_name);
                     String isin_number = isin;
@@ -345,7 +341,7 @@ public class NseAmfiOnlineSchemeMaster {
                         scheme_amfi_short_name  = "";
                     }
 
-                    NseOnlineSchemeMaster nseOnlineSchemeMaster = new NseOnlineSchemeMaster();
+                    NseOnlineSchemeMasterTemp nseOnlineSchemeMaster = new NseOnlineSchemeMasterTemp();
                     nseOnlineSchemeMaster.setUniqueSrNo(trimString(unique_sr_no));
                     nseOnlineSchemeMaster.setSchemeCode(trimString(scheme_code));
                     nseOnlineSchemeMaster.setRtaSchemeCode(trimString(rta_scheme_code));
@@ -402,20 +398,33 @@ public class NseAmfiOnlineSchemeMaster {
                     nseOnlineSchemeMaster.setSchemeAmfiCode(scheme_amfi_code);
                     nseOnlineSchemeMaster.setSchemeAmfiShortName(scheme_amfi_short_name);
 
-                    nseOnlineSchemeMasterRepository.save(nseOnlineSchemeMaster);
+                    masterList.add(nseOnlineSchemeMaster);
 
-                }else {
+                }else
+                {
                     System.out.println("splited: " + Arrays.toString(splited));
                 }
-
             }catch (Exception e)
             {
                 throw e;
             }
         }
+
+        nseOnlineSchemeMasterService.saveAllAndFlushAllSchemeMaster(masterList);
     }
     private String trimString(String str) {
         return org.apache.commons.lang3.StringUtils.trim(str);
+    }
+
+    /**
+     * NSE master files do not carry an ISIN for the TAFED schemes, so we stamp the known ISIN.
+     */
+    private String resolveIsin(String scheme_code, String isin) {
+        String code = trimString(scheme_code);
+        if ("TAFED-DP".equalsIgnoreCase(code) || "TAFED-DP-L1".equalsIgnoreCase(code)) {
+            return TAFED_ISIN;
+        }
+        return isin;
     }
 
     public List<String> uploadNSEOnlineSchemeMasterSip(File file,@RequestHeader("Authorization") String token)
@@ -427,12 +436,9 @@ public class NseAmfiOnlineSchemeMaster {
         int start_index = 0;
         int end_index = 0;
 
-        SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy");
-        SimpleDateFormat sdf3 = new SimpleDateFormat("dd-MMM-yyyy");
-        Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
+        ////Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
 
         List<String> error_list = new ArrayList<String>();
-        Integer rowNum = 0;
 
         String filePath = file.getPath();
         String extension = FilenameUtils.getExtension(filePath);
@@ -440,19 +446,15 @@ public class NseAmfiOnlineSchemeMaster {
         String file_upload_status = "";
 
         int availableCores = Runtime.getRuntime().availableProcessors();
-        System.out.println("availableCores: " + availableCores);
         ExecutorService executor = Executors.newFixedThreadPool(availableCores);
 
         List<String> batch = new ArrayList<>();
-        int batchSize = 100;
+        int batchSize = 1000;
 
         List<Future<?>> futures = new ArrayList<>();
 
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-
         try
         {
-            System.out.println("extension: " + extension);
             if(extension.equalsIgnoreCase("txt"))
             {
                 FileReader fr = new FileReader(file);
@@ -462,9 +464,9 @@ public class NseAmfiOnlineSchemeMaster {
 
                 List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.getActiveWithIsinNo(token);
 
-                nseOnlineSipStpSwpMasterRepository.deleteByMasterOption("SIP");
+                nseSxpSchemeMasterTempService.deleteByMasterOption("SIP");
 
-                System.out.println("uploadNSEOnlineSchemeMasterSip start Date: " + new Date());
+                //                System.out.println("uploadNSEOnlineSchemeMasterSip start Date: " + new Date());
                 while ((str = dis.readLine()) != null)
                 {
 
@@ -509,7 +511,7 @@ public class NseAmfiOnlineSchemeMaster {
                         e.printStackTrace();
                     }
                 }
-                System.out.println("uploadNSEOnlineSchemeMasterSip end Date: " + new Date());
+                //                System.out.println("uploadNSEOnlineSchemeMasterSip end Date: " + new Date());
                 error_msg = "";
                 error_msg = "The File has been Uploaded Successfully";
                 error_list.add(error_msg);
@@ -538,6 +540,8 @@ public class NseAmfiOnlineSchemeMaster {
     }
     private void processBatchSIP(List<String> taskBatch, List<AmfiSchemeMasterDTO> schemeMappingList)
     {
+
+        List<NseOnlineSipStpSwpMasterTemp> masterList = new ArrayList<>();
 
         String amc_code;
         String amc_name;
@@ -606,13 +610,11 @@ public class NseAmfiOnlineSchemeMaster {
             scheme_amfi = "";
             scheme_category = "";
             scheme_amfi_code = "";
-            scheme_amfi_short_name = "";
 
             amc_name = "";
             scheme_amfi = "";
             scheme_category = "";
             scheme_amfi_code = "";
-            scheme_amfi_short_name = "";
 
             String[] splited = str.split("\\|", -1);
 
@@ -620,7 +622,6 @@ public class NseAmfiOnlineSchemeMaster {
                 if (splited.length == 27) {
 
                     amc_code = splited[0];
-                    amc_name = splited[1];
                     scheme_code = splited[2];
                     scheme_name = splited[3];
                     sip_transaction_mode = splited[4];
@@ -651,6 +652,8 @@ public class NseAmfiOnlineSchemeMaster {
                         continue;
                     }
 
+                    scheme_isin = resolveIsin(scheme_code, scheme_isin);
+
                     String isin_number = scheme_isin;
                     AmfiSchemeMasterDTO mapping = schemeMappingList.stream()
                             .filter(sm -> (Objects.nonNull(sm.getIsin_no()) && sm.getIsin_no().equalsIgnoreCase(isin_number)) ||
@@ -663,19 +666,16 @@ public class NseAmfiOnlineSchemeMaster {
                         scheme_amfi = mapping.getScheme_amfi();
                         scheme_category = mapping.getScheme_advisorkhoj_category();
                         scheme_amfi_code = mapping.getScheme_amfi_code();
-                        scheme_amfi_short_name = mapping.getScheme_amfi_short_name();
                     }
                     else
                     {
                         scheme_amfi = scheme_name;
                         scheme_category = "";
                         scheme_amfi_code = "";
-                        scheme_amfi_short_name  = "";
                     }
 
                     amc_name = NseUtils.getAMCNameByNSECompanyName(amc_code);
-                    NseOnlineSipStpSwpMaster nseOnlineSipStpSwpMaster = new NseOnlineSipStpSwpMaster();
-
+                    NseOnlineSipStpSwpMasterTemp nseOnlineSipStpSwpMaster = new NseOnlineSipStpSwpMasterTemp();
                     nseOnlineSipStpSwpMaster.setAmc_code(amc_code);
                     nseOnlineSipStpSwpMaster.setAmc_name(amc_name);
                     nseOnlineSipStpSwpMaster.setScheme_code(scheme_code);
@@ -715,9 +715,10 @@ public class NseAmfiOnlineSchemeMaster {
                     nseOnlineSipStpSwpMaster.setScheme_category(scheme_category);
                     nseOnlineSipStpSwpMaster.setScheme_amfi_code(scheme_amfi_code);
 
-                    nseOnlineSipStpSwpMasterRepository.save(nseOnlineSipStpSwpMaster);
-                }else {
+                    masterList.add(nseOnlineSipStpSwpMaster);
 
+                }else
+                {
                     System.out.println("splited: " + Arrays.toString(splited));
                 }
 
@@ -727,6 +728,7 @@ public class NseAmfiOnlineSchemeMaster {
             }
         }
 
+        nseSxpSchemeMasterTempService.saveAllAndFlushAllSchemeMaster(masterList);
 
     }
 
@@ -739,25 +741,21 @@ public class NseAmfiOnlineSchemeMaster {
         int start_index = 0;
         int end_index = 0;
 
-        SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy");
-        SimpleDateFormat sdf3 = new SimpleDateFormat("dd-MMM-yyyy");
-        Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
+        ////Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
 
         List<String> error_list = new ArrayList<String>();
-        Integer rowNum = 0;
 
         String filePath = file.getPath();
         String extension = FilenameUtils.getExtension(filePath);
 
         String file_upload_status = "";
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
 
         int availableCores = Runtime.getRuntime().availableProcessors();
         System.out.println("availableCores: " + availableCores);
         ExecutorService executor = Executors.newFixedThreadPool(availableCores);
 
         List<String> batch = new ArrayList<>();
-        int batchSize = 100;
+        int batchSize = 1000;
 
         List<Future<?>> futures = new ArrayList<>();
 
@@ -772,9 +770,8 @@ public class NseAmfiOnlineSchemeMaster {
 
                 List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.getActiveWithIsinNo(token);
 
-                nseOnlineSipStpSwpMasterRepository.deleteByMasterOption("STP");
+                nseSxpSchemeMasterTempService.deleteByMasterOption("STP");
 
-                System.out.println("uploadNSEOnlineSchemeMasterStp start Date: " + new Date());
                 while ((str = dis.readLine()) != null)
                 {
                     if(line_no == 0){
@@ -848,6 +845,8 @@ public class NseAmfiOnlineSchemeMaster {
 
     private void processBatchSTP(List<String> taskBatch, List<AmfiSchemeMasterDTO> schemeMappingList)
     {
+        List<NseOnlineSipStpSwpMasterTemp> masterList = new ArrayList<>();
+
         String amc_code;
         String amc_name;
         String scheme_code;
@@ -923,7 +922,6 @@ public class NseAmfiOnlineSchemeMaster {
                 if (splited.length == 26) {
 
                     amc_code = splited[0];
-                    amc_name = splited[1];
                     scheme_code = splited[2];
                     scheme_name = splited[3];
                     scheme_isin = splited[4];
@@ -952,6 +950,9 @@ public class NseAmfiOnlineSchemeMaster {
                     if(astp_transaction_mode.equalsIgnoreCase("D")){
                         continue;
                     }
+
+                    scheme_isin = resolveIsin(scheme_code, scheme_isin);
+
                     String isin_number = scheme_isin;
                     AmfiSchemeMasterDTO mapping = schemeMappingList.stream()
                             .filter(sm -> (Objects.nonNull(sm.getIsin_no()) && sm.getIsin_no().equalsIgnoreCase(isin_number)) ||
@@ -964,19 +965,17 @@ public class NseAmfiOnlineSchemeMaster {
                         scheme_amfi = mapping.getScheme_amfi();
                         scheme_category = mapping.getScheme_advisorkhoj_category();
                         scheme_amfi_code = mapping.getScheme_amfi_code();
-                        scheme_amfi_short_name = mapping.getScheme_amfi_short_name();
                     }
                     else
                     {
                         scheme_amfi = scheme_name;
                         scheme_category = "";
                         scheme_amfi_code = "";
-                        scheme_amfi_short_name  = "";
                     }
 
                     amc_name = NseUtils.getAMCNameByNSECompanyName(amc_code);
 
-                    NseOnlineSipStpSwpMaster nseOnlineSipStpSwpMaster = new NseOnlineSipStpSwpMaster();
+                    NseOnlineSipStpSwpMasterTemp nseOnlineSipStpSwpMaster = new NseOnlineSipStpSwpMasterTemp();
                     nseOnlineSipStpSwpMaster.setAmc_code(amc_code);
                     nseOnlineSipStpSwpMaster.setAmc_name(amc_name);
                     nseOnlineSipStpSwpMaster.setScheme_code(scheme_code);
@@ -1011,8 +1010,7 @@ public class NseAmfiOnlineSchemeMaster {
 
                     nseOnlineSipStpSwpMaster.setCreated_date(new Date());
                     nseOnlineSipStpSwpMaster.setMaster_option("stp");
-
-                    nseOnlineSipStpSwpMasterRepository.save(nseOnlineSipStpSwpMaster);
+                    masterList.add(nseOnlineSipStpSwpMaster);
                 }else {
                     System.out.println("splited: " + Arrays.toString(splited));
                 }
@@ -1022,6 +1020,8 @@ public class NseAmfiOnlineSchemeMaster {
                 throw e;
             }
         }
+
+        nseSxpSchemeMasterTempService.saveAllAndFlushAllSchemeMaster(masterList);
     }
 
     public List<String> uploadNSEOnlineSchemeMasterSwp(File file,@RequestHeader("Authorization") String token)
@@ -1033,25 +1033,21 @@ public class NseAmfiOnlineSchemeMaster {
         int start_index = 0;
         int end_index = 0;
 
-        SimpleDateFormat sdf2 = new SimpleDateFormat("dd-MM-yyyy");
-        SimpleDateFormat sdf3 = new SimpleDateFormat("dd-MMM-yyyy");
-        Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
+        ////Format format = NumberFormat.getNumberInstance(new Locale("en", "in"));
 
         List<String> error_list = new ArrayList<String>();
-        Integer rowNum = 0;
 
         String filePath = file.getPath();
         String extension = FilenameUtils.getExtension(filePath);
 
         String file_upload_status = "";
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
 
         int availableCores = Runtime.getRuntime().availableProcessors();
         System.out.println("availableCores: " + availableCores);
         ExecutorService executor = Executors.newFixedThreadPool(availableCores);
 
         List<String> batch = new ArrayList<>();
-        int batchSize = 100;
+        int batchSize = 1000;
 
         List<Future<?>> futures = new ArrayList<>();
         try
@@ -1065,7 +1061,7 @@ public class NseAmfiOnlineSchemeMaster {
 
                 List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.getActiveWithIsinNo(token);
 
-                nseOnlineSipStpSwpMasterRepository.deleteByMasterOption("SWP");
+                nseSxpSchemeMasterTempService.deleteByMasterOption("SWP");
 
                 System.out.println("uploadNSEOnlineSchemeMasterSwp start Date: " + new Date());
                 while ((str = dis.readLine()) != null)
@@ -1142,6 +1138,7 @@ public class NseAmfiOnlineSchemeMaster {
 
     private void processBatchSWP(List<String> taskBatch, List<AmfiSchemeMasterDTO> schemeMappingList)
     {
+        List<NseOnlineSipStpSwpMasterTemp> masterList = new ArrayList<>();
         String amc_code;
         String amc_name;
         String nse_scheme_code;
@@ -1200,7 +1197,6 @@ public class NseAmfiOnlineSchemeMaster {
                 if (splited.length == 21) {
 
                     amc_code = splited[0];
-                    amc_name = splited[1];
                     nse_scheme_code = splited[2];
                     scheme_name = splited[3];
                     scheme_isin = splited[4];
@@ -1225,6 +1221,8 @@ public class NseAmfiOnlineSchemeMaster {
                         continue;
                     }
 
+                    scheme_isin = resolveIsin(nse_scheme_code, scheme_isin);
+
                     String isin_number = scheme_isin;
                     AmfiSchemeMasterDTO mapping = schemeMappingList.stream()
                             .filter(sm -> (Objects.nonNull(sm.getIsin_no()) && sm.getIsin_no().equalsIgnoreCase(isin_number)) ||
@@ -1237,19 +1235,17 @@ public class NseAmfiOnlineSchemeMaster {
                         scheme_amfi = mapping.getScheme_amfi();
                         scheme_category = mapping.getScheme_advisorkhoj_category();
                         scheme_amfi_code = mapping.getScheme_amfi_code();
-                        scheme_amfi_short_name = mapping.getScheme_amfi_short_name();
 
                     }else
                     {
                         scheme_amfi = scheme_name;
                         scheme_category = "";
                         scheme_amfi_code = "";
-                        scheme_amfi_short_name  = "";
                     }
 
                     amc_name = NseUtils.getAMCNameByNSECompanyName(amc_code);
 
-                    NseOnlineSipStpSwpMaster  nseOnlineSipStpSwpMaster = new NseOnlineSipStpSwpMaster();
+                    NseOnlineSipStpSwpMasterTemp  nseOnlineSipStpSwpMaster = new NseOnlineSipStpSwpMasterTemp();
                     nseOnlineSipStpSwpMaster.setAmc_code(amc_code);
                     nseOnlineSipStpSwpMaster.setAmc_name(amc_name);
                     nseOnlineSipStpSwpMaster.setScheme_code(nse_scheme_code);
@@ -1280,12 +1276,219 @@ public class NseAmfiOnlineSchemeMaster {
                     nseOnlineSipStpSwpMaster.setCreated_date(new Date());
                     nseOnlineSipStpSwpMaster.setMaster_option("swp");
 
-                    nseOnlineSipStpSwpMasterRepository.save(nseOnlineSipStpSwpMaster);
+                    masterList.add(nseOnlineSipStpSwpMaster);
                 }
             }
+
+            nseSxpSchemeMasterTempService.saveAllAndFlushAllSchemeMaster(masterList);
         }catch (Exception e)
         {
             throw e;
+        }
+    }
+
+    public void uploadNSEOnlineSchemeMasterSipStepUp(MultipartFile file, @RequestHeader("Authorization") String token) throws IOException {
+        BufferedReader dis;
+        String str;
+
+        String filePath = file.getOriginalFilename();
+        String extension = FilenameUtils.getExtension(filePath);
+        int availableCores = Runtime.getRuntime().availableProcessors();
+        System.out.println("availableCores: " + availableCores);
+        ExecutorService executor = Executors.newFixedThreadPool(availableCores);
+
+        List<String> batch = new ArrayList<>();
+        int batchSize = 100;
+
+        List<Future<?>> futures = new ArrayList<>();
+        try
+        {
+            System.out.println("extension: " + extension);
+            assert extension != null;
+            if(extension.equalsIgnoreCase("txt"))
+            {
+                dis = new BufferedReader(new InputStreamReader(file.getInputStream()));
+                int line_no = 0;
+                List<AmfiSchemeMasterDTO> schemeMappingList = amfiServiceClient.getActiveWithIsinNo(token);
+
+                System.out.println("uploadNSEOnlineSchemeMasterSipStepUp start Date: " + new Date());
+                while ((str = dis.readLine()) != null)
+                {
+
+                    int colLength = str.split("\\|", -1).length;
+
+                    if(colLength != 28) {
+                        System.out.println("Column mismatch detected in the uploaded file. Expected 27 columns, but found only " + colLength + ".");
+                        return;
+                    }
+
+                    if(line_no == 0){
+                        line_no++;
+                        continue;
+                    }
+                    batch.add(str);
+                    if (batch.size() == batchSize) {
+                        List<String> taskBatch = new ArrayList<>(batch);
+                        futures.add(executor.submit(() -> processBatchSIPStepUp(taskBatch, schemeMappingList)));
+                        batch.clear();
+                    }
+                    line_no++;
+                }
+                if (!batch.isEmpty()) {
+                    List<String> taskBatch = new ArrayList<>(batch);
+                    futures.add(executor.submit(() -> processBatchSIPStepUp(taskBatch, schemeMappingList)));
+                }
+                executor.shutdown();
+                try {
+                    if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
+                        executor.shutdownNow();
+                    }
+                } catch (InterruptedException ex) {
+                    executor.shutdownNow();
+                }
+
+                for (Future<?> future : futures) {
+                    try {
+                        future.get();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                System.out.println("uploadNSEOnlineSchemeMasterSipStepUp end Date: " + new Date());
+                System.out.println("The File has been Uploaded Successfully");
+
+                dis.close();
+            }
+            else{
+                System.out.println("File upload error.Not a Txt file!!");
+            }
+
+        } catch ( IOException ex )
+        {
+            ex.printStackTrace();
+            System.out.println("File upload error.");
+        }
+    }
+    private void processBatchSIPStepUp(List<String> taskBatch, List<AmfiSchemeMasterDTO> schemeMappingList){
+
+        String amc_code;
+        String amc_name;
+        String scheme_code;
+        String scheme_name;
+        String sip_transaction_mode;
+        String sip_frequency;
+        String sip_dates;
+        String sip_minimum_gap;
+        String sip_maximum_gap;
+        String sip_installment_gap;
+        String sip_status;
+        String sip_minimum_installment_amount;
+        String sip_maximum_installment_amount;
+        String sip_multiplier_amount;
+        String sip_minimum_installment_numbers;
+        String sip_maximum_installment_numbers;
+        String scheme_isin;
+        String scheme_type;
+        String pause_flag;
+        String pause_minimum_installments;
+        String pause_maximum_installments;
+        String pause_modification_count;
+        String stepup_flag;
+        String amc_name_amfi;
+        String scheme_category;
+        String scheme_amfi_code;
+        String scheme_amfi;
+
+        String str;
+        for (String batch : taskBatch) {
+            str = batch;
+
+
+            String[] splited = str.split("\\|", -1);
+
+            if (splited.length == 28) {
+                amc_code = splited[0];
+                amc_name = splited[1];
+                scheme_code = splited[2];
+                scheme_name = splited[3];
+                sip_transaction_mode = splited[4];
+                sip_frequency = splited[5];
+                sip_dates = splited[6];
+                sip_minimum_gap = splited[7];
+                sip_maximum_gap = splited[8];
+                sip_installment_gap = splited[9];
+                sip_status = splited[10];
+                sip_minimum_installment_amount = splited[11];
+                sip_maximum_installment_amount = splited[12];
+                sip_multiplier_amount = splited[13];
+                sip_minimum_installment_numbers = splited[14];
+                sip_maximum_installment_numbers = splited[15];
+                scheme_isin = splited[16];
+                scheme_type = splited[17];
+                pause_flag = splited[18];
+                pause_minimum_installments = splited[19];
+                pause_maximum_installments = splited[20];
+                pause_modification_count = splited[21];
+                stepup_flag = splited[22];
+
+                scheme_isin = resolveIsin(scheme_code, scheme_isin);
+
+                String isin_number = scheme_isin;
+                AmfiSchemeMasterDTO mapping = schemeMappingList.stream()
+                        .filter(sm -> (Objects.nonNull(sm.getIsin_no()) && sm.getIsin_no().equalsIgnoreCase(isin_number)) ||
+                                (Objects.nonNull(sm.getIsin_divreinvst_no()) && sm.getIsin_divreinvst_no().equalsIgnoreCase(isin_number)))
+                        .findAny()
+                        .orElse(null);
+
+                if (mapping != null)
+                {
+                    scheme_category = mapping.getScheme_advisorkhoj_category();
+                    scheme_amfi_code = mapping.getScheme_amfi_code();
+                    scheme_amfi = mapping.getScheme_amfi();
+                } else
+                {
+                    scheme_category = "";
+                    scheme_amfi_code = "";
+                    scheme_amfi = "";
+                }
+
+                amc_name_amfi = NseUtils.getAMCNameByNSECompanyName(amc_code);
+                NseOnlineStepUpSchemeMaster nseOnlineStepUpSchemeMaster = new NseOnlineStepUpSchemeMaster();
+
+                nseOnlineStepUpSchemeMaster.setAmc_code(amc_code);
+                nseOnlineStepUpSchemeMaster.setAmc_name(amc_name);
+                nseOnlineStepUpSchemeMaster.setScheme_code(scheme_code);
+                nseOnlineStepUpSchemeMaster.setScheme_name(scheme_name);
+                nseOnlineStepUpSchemeMaster.setSip_transaction_mode(sip_transaction_mode);
+                nseOnlineStepUpSchemeMaster.setSip_frequency(sip_frequency);
+                nseOnlineStepUpSchemeMaster.setSip_dates(sip_dates);
+                nseOnlineStepUpSchemeMaster.setSip_minimum_gap(sip_minimum_gap);
+                nseOnlineStepUpSchemeMaster.setSip_maximum_gap(sip_maximum_gap);
+                nseOnlineStepUpSchemeMaster.setSip_installment_gap(sip_installment_gap);
+                nseOnlineStepUpSchemeMaster.setSip_status(sip_status);
+                nseOnlineStepUpSchemeMaster.setSip_minimum_installment_amount(Double.parseDouble(trimString(sip_minimum_installment_amount)));
+                nseOnlineStepUpSchemeMaster.setSip_maximum_installment_amount(Double.parseDouble(trimString(sip_maximum_installment_amount)));
+                nseOnlineStepUpSchemeMaster.setSip_multiplier_amount(Double.parseDouble(trimString(sip_multiplier_amount)));
+                nseOnlineStepUpSchemeMaster.setSip_minimum_installment_numbers(sip_minimum_installment_numbers);
+                nseOnlineStepUpSchemeMaster.setSip_maximum_installment_numbers(sip_maximum_installment_numbers);
+                nseOnlineStepUpSchemeMaster.setScheme_isin(scheme_isin);
+                nseOnlineStepUpSchemeMaster.setScheme_type(scheme_type);
+                nseOnlineStepUpSchemeMaster.setPause_flag(pause_flag);
+                nseOnlineStepUpSchemeMaster.setPause_minimum_installments(pause_minimum_installments);
+                nseOnlineStepUpSchemeMaster.setPause_maximum_installments(pause_maximum_installments);
+                nseOnlineStepUpSchemeMaster.setPause_modification_count(pause_modification_count);
+                nseOnlineStepUpSchemeMaster.setStepup_flag(stepup_flag);
+
+                nseOnlineStepUpSchemeMaster.setAmc_name_amfi(amc_name_amfi);
+                nseOnlineStepUpSchemeMaster.setScheme_category(scheme_category);
+                nseOnlineStepUpSchemeMaster.setScheme_amfi_code(scheme_amfi_code);
+                nseOnlineStepUpSchemeMaster.setScheme_amfi(scheme_amfi);
+
+                nseOnlineStepUpSchemeMasterRepository.save(nseOnlineStepUpSchemeMaster);
+            } else {
+
+                System.out.println("split: " + Arrays.toString(splited));
+            }
         }
     }
 

@@ -2531,7 +2531,7 @@ public class NseAdminReportController
             }
             String userid = TokenInterceptor.extractAdminIdFromToken(token, secretKey);
 
-            UserDto user = userServiceClient.getUserById(Integer.valueOf(userid), token);
+            UserDto user = userServiceClient.getUserDetailsByUserTable(Integer.valueOf(userid), token);
 
             if(user == null)
             {
