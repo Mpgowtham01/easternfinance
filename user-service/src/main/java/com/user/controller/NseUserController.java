@@ -1033,6 +1033,7 @@ public class NseUserController
 
             UsersOnlineRegDetails user = userOpt.get();
             UsersNomineeDetails nomineeDetails = null;
+            UsersOnlineRegDetails userDetail = null;
 
             Boolean isMultiReg = false;
             if(is_MultiReg.equalsIgnoreCase("1"))
@@ -1056,25 +1057,38 @@ public class NseUserController
                 return UserUtils.errorResponse("Could not create onboarding record", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            if(user.getNse_customer().equals(1) && user.getNse_active().equals(1) && StringHelper.isNotEmpty(user.getNse_iin_number()))
+            Optional<UsersOnlineRegDetails> userDetailsOpt = userOnlineRegDetailsRespository.getUserRegDetailsByOnlineId(onboarding.getUser_id(), user.getClient_name());
+
+            if(userDetailsOpt.isEmpty())
             {
-
-                UsersNomineeDetails userDetailsOpts = usersNomineeDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
-
-                if (userDetailsOpts != null) {
-                    nomineeDetails = userDetailsOpts;
-                }
-
-                UsersNomineeDetails nomineeInfo = NomineeInfoMapper.dtoToUserBseNseDetails(dtoList, nomineeDetails);
-                nomineeInfo.setUser_id(nomineeDetails.getUser_id());
-                nomineeInfo.setOnline_code(nomineeDetails.getOnline_code());
-                nomineeInfo.setBroker_code(nomineeDetails.getBroker_code());
-                nomineeInfo.setNumber_of_nominee(String.valueOf(dtoList.size()));
-                nomineeInfo.setCreated_date(new Date());
-                nomineeInfo.setClient_name(nomineeDetails.getClient_name());
-
-                usersNomineeDetailsRepository.save(nomineeInfo);
+                return UserUtils.errorResponse("CAN UCC Details Not Found, Please check.", HttpStatus.BAD_REQUEST);
             }
+
+            userDetail = userDetailsOpt.get();
+
+            UsersNomineeDetails userNomneeDetails = usersNomineeDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), user.getClient_name());
+
+            if (userNomneeDetails != null)
+            {
+                nomineeDetails = userNomneeDetails;
+            } else {
+                nomineeDetails = new UsersNomineeDetails();
+            }
+
+            Long nomineeCount = dtoList.stream().map(NomineeInfoDTO::getName).filter(name -> name != null && !name.trim().isEmpty()).count();
+
+            UsersNomineeDetails nomineeInfo = NomineeInfoMapper.dtoToUserBseNseDetails(dtoList, nomineeDetails);
+            nomineeInfo.setUser_id(userDetail.getUser_id());
+            nomineeInfo.setOnline_id(userDetail.getId());
+            nomineeInfo.setOnline_code(userDetail.getNse_iin_number());
+            nomineeInfo.setOnline_flag("NSE");
+            nomineeInfo.setBroker_code(userDetail.getBroker_code());
+            nomineeInfo.setNumber_of_nominee(String.valueOf(nomineeCount));
+            nomineeInfo.setCreated_date(new Date());
+            nomineeInfo.setClient_name(userDetail.getClient_name());
+            nomineeInfo.setRegistered_source("Mobile App");
+            usersNomineeDetailsRepository.save(nomineeInfo);
+
             onboarding.setNomiee_info(true);
             onboardingService.saveOnboarding(onboarding);
 
