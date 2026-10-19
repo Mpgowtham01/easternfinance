@@ -1005,7 +1005,9 @@ public class NseUserController
 //    }
 
     @PostMapping("/saveNomineeInfo")
-    public ResponseEntity<?> saveNomineeInfo(@RequestBody List<NomineeInfoDTO> dtoList, @RequestHeader("Authorization") String token,@RequestParam(required = false) String is_MultiReg)
+    public ResponseEntity<?> saveNomineeInfo(@RequestBody List<NomineeInfoDTO> dtoList, @RequestHeader("Authorization") String token,@RequestParam(required = false) String is_MultiReg,
+                                             @RequestParam(required = false) String no_nominee_flag,
+                                             @RequestParam(required = false) String nominee_opt_flag)
     {
         try
         {
@@ -1076,19 +1078,112 @@ public class NseUserController
             }
 
             Long nomineeCount = dtoList.stream().map(NomineeInfoDTO::getName).filter(name -> name != null && !name.trim().isEmpty()).count();
+            if(nominee_opt_flag.equalsIgnoreCase("N"))
+            {
+                userNomneeDetails.setUser_id(userDetail.getUser_id());
+                userNomneeDetails.setOnline_id(userDetail.getId());
+                userNomneeDetails.setOnline_code(userDetail.getNse_iin_number());
+                userNomneeDetails.setOnline_flag("NSE");
+                userNomneeDetails.setBroker_code(userDetail.getBroker_code());
+                userNomneeDetails.setNumber_of_nominee("0");
+                userNomneeDetails.setCreated_date(new Date());
+                userNomneeDetails.setClient_name(userDetail.getClient_name());
+                userNomneeDetails.setNominee_opt("N");
+                userNomneeDetails.setRegistered_source("Mobile App");
 
-            UsersNomineeDetails nomineeInfo = NomineeInfoMapper.dtoToUserBseNseDetails(dtoList, nomineeDetails);
-            nomineeInfo.setUser_id(userDetail.getUser_id());
-            nomineeInfo.setOnline_id(userDetail.getId());
-            nomineeInfo.setOnline_code(userDetail.getNse_iin_number());
-            nomineeInfo.setOnline_flag("NSE");
-            nomineeInfo.setBroker_code(userDetail.getBroker_code());
-            nomineeInfo.setNumber_of_nominee(String.valueOf(nomineeCount));
-            nomineeInfo.setCreated_date(new Date());
-            nomineeInfo.setClient_name(userDetail.getClient_name());
-            nomineeInfo.setRegistered_source("Mobile App");
-            usersNomineeDetailsRepository.save(nomineeInfo);
+                userNomneeDetails.setNominee1_name("");
+                userNomneeDetails.setNominee1_middle_name("");
+                userNomneeDetails.setNominee1_last_name("");
+                userNomneeDetails.setNominee1_dob("");
+                userNomneeDetails.setNominee1_type("");
+                userNomneeDetails.setNominee1_type_desc("");
+                userNomneeDetails.setNominee1_percentage("");
+                userNomneeDetails.setNominee1_address1("");
+                userNomneeDetails.setNominee1_address2("");
+                userNomneeDetails.setNominee1_address3("");
+                userNomneeDetails.setNominee1_pincode("");
+                userNomneeDetails.setNominee1_city("");
+                userNomneeDetails.setNominee1_state("");
+                userNomneeDetails.setNominee1_state_code("");
+                userNomneeDetails.setNominee1_country("");
+                userNomneeDetails.setNominee1_email("");
+                userNomneeDetails.setNominee1_mobile("");
+                userNomneeDetails.setNominee1_relation("");
+                userNomneeDetails.setNominee1_id_type("");
+                userNomneeDetails.setNominee1_id_no("");
+                userNomneeDetails.setNominee1_guard_name("");
+                userNomneeDetails.setNominee1_guard_middle_name("");
+                userNomneeDetails.setNominee1_guard_last_name("");
+                userNomneeDetails.setNominee1_guard_pan("");
+                userNomneeDetails.setNominee1_guard_relationship("");
 
+                userNomneeDetails.setNominee2_name("");
+                userNomneeDetails.setNominee2_middle_name("");
+                userNomneeDetails.setNominee2_last_name("");
+                userNomneeDetails.setNominee2_dob("");
+                userNomneeDetails.setNominee2_type("");
+                userNomneeDetails.setNominee2_type_desc("");
+                userNomneeDetails.setNominee2_percentage("");
+                userNomneeDetails.setNominee2_address1("");
+                userNomneeDetails.setNominee2_address2("");
+                userNomneeDetails.setNominee2_address3("");
+                userNomneeDetails.setNominee2_pincode("");
+                userNomneeDetails.setNominee2_city("");
+                userNomneeDetails.setNominee2_state("");
+                userNomneeDetails.setNominee2_state_code("");
+                userNomneeDetails.setNominee2_country("");
+                userNomneeDetails.setNominee2_email("");
+                userNomneeDetails.setNominee2_mobile("");
+                userNomneeDetails.setNominee2_relation("");
+                userNomneeDetails.setNominee2_id_type("");
+                userNomneeDetails.setNominee2_id_no("");
+                userNomneeDetails.setNominee2_guard_name("");
+                userNomneeDetails.setNominee2_guard_middle_name("");
+                userNomneeDetails.setNominee2_guard_last_name("");
+                userNomneeDetails.setNominee2_guard_pan("");
+                userNomneeDetails.setNominee2_guard_relationship("");
+
+                userNomneeDetails.setNominee3_name("");
+                userNomneeDetails.setNominee3_middle_name("");
+                userNomneeDetails.setNominee3_last_name("");
+                userNomneeDetails.setNominee3_dob("");
+                userNomneeDetails.setNominee3_type("");
+                userNomneeDetails.setNominee3_type_desc("");
+                userNomneeDetails.setNominee3_percentage("");
+                userNomneeDetails.setNominee3_address1("");
+                userNomneeDetails.setNominee3_address2("");
+                userNomneeDetails.setNominee3_address3("");
+                userNomneeDetails.setNominee3_pincode("");
+                userNomneeDetails.setNominee3_city("");
+                userNomneeDetails.setNominee3_state("");
+                userNomneeDetails.setNominee3_state_code("");
+                userNomneeDetails.setNominee3_country("");
+                userNomneeDetails.setNominee3_email("");
+                userNomneeDetails.setNominee3_mobile("");
+                userNomneeDetails.setNominee3_relation("");
+                userNomneeDetails.setNominee3_id_type("");
+                userNomneeDetails.setNominee3_id_no("");
+                userNomneeDetails.setNominee3_guard_name("");
+                userNomneeDetails.setNominee3_guard_middle_name("");
+                userNomneeDetails.setNominee3_guard_last_name("");
+                userNomneeDetails.setNominee3_guard_pan("");
+                userNomneeDetails.setNominee3_guard_relationship("");
+
+                usersNomineeDetailsRepository.save(userNomneeDetails);
+            }else {
+
+                UsersNomineeDetails nomineeInfo = NomineeInfoMapper.dtoToUserBseNseDetails(dtoList, nomineeDetails);
+                nomineeInfo.setUser_id(userDetail.getUser_id());
+                nomineeInfo.setOnline_id(userDetail.getId());
+                nomineeInfo.setOnline_code(userDetail.getNse_iin_number());
+                nomineeInfo.setOnline_flag("NSE");
+                nomineeInfo.setBroker_code(userDetail.getBroker_code());
+                nomineeInfo.setNumber_of_nominee(String.valueOf(nomineeCount));
+                nomineeInfo.setCreated_date(new Date());
+                nomineeInfo.setClient_name(userDetail.getClient_name());
+                nomineeInfo.setRegistered_source("Mobile App");
+                usersNomineeDetailsRepository.save(nomineeInfo);
+            }
             onboarding.setNomiee_info(true);
             onboardingService.saveOnboarding(onboarding);
 
