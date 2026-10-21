@@ -1925,7 +1925,7 @@ public class NseUserController
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved Nominee information",
                     content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = NomineeInfoDTO.class))),
+                            schema = @Schema(implementation = NomineeInfoResponse.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
@@ -1966,13 +1966,14 @@ public class NseUserController
                 return UserUtils.errorResponse("Onboarding details not found.", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            List<NomineeInfoDTO> nominee_info = null;
+            NomineeInfoResponse nominee_info = new NomineeInfoResponse();
 
             UsersNomineeDetails userDetailsOpt = usersNomineeDetailsRepository.findByUserIdAndClientName(onboarding.getUser_id(), onboarding.getClient_name());
 
             if(userDetailsOpt != null)
             {
-                nominee_info = NomineeInfoMapper.userBseNseDetailsToDto(userDetailsOpt);
+                nominee_info.setNominee_opt(UserUtils.checkParem(userDetailsOpt.getNominee_opt()));
+                nominee_info.setResponse(NomineeInfoMapper.userBseNseDetailsToDto(userDetailsOpt));
             }
 
             return ResponseEntity.ok(nominee_info);
