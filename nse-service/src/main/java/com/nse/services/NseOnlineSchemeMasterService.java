@@ -7,6 +7,7 @@ import com.nse.repository.NseOnlineSchemeMasterTempRepository;
 import com.nse.utils.NseUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -99,5 +100,27 @@ public class NseOnlineSchemeMasterService
     public void saveAllAndFlushAllSchemeMaster(List<NseOnlineSchemeMasterTemp> masterList)
     {
         nseOnlineSchemeMasterTempRepository.saveAllAndFlush(masterList);
+    }
+
+    public void clearNseSchemeMasterTempTable()
+    {
+        nseOnlineSchemeMasterTempRepository.deleteAllTempRecords();
+    }
+
+    public long countTempRecords()
+    {
+        return nseOnlineSchemeMasterTempRepository.countTempRecords();
+    }
+
+    /**
+     * Publishes the temp table as the live table. Both statements share one transaction, so readers
+     * keep seeing the previous scheme master until the copy commits, and a failed copy rolls the
+     * delete back instead of leaving the live table empty.
+     */
+    @Transactional
+    public int publishTempToMainTable()
+    {
+        nseOnlineSchemeMasterTempRepository.deleteAllMainRecords();
+        return nseOnlineSchemeMasterTempRepository.copyTempToMainTable();
     }
 }

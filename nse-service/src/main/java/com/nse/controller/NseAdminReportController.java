@@ -92,6 +92,12 @@ public class NseAdminReportController
     NseAmfiOnlineSchemeMaster nseAmfiOnlineSchemeMaster;
 
     @Autowired
+    NseOnlineSchemeMasterService nseOnlineSchemeMasterService;
+
+    @Autowired
+    NseSxpSchemeMasterTempService nseSxpSchemeMasterTempService;
+
+    @Autowired
     NseTransactionRepository nseTransactionRepository;
 
     @Operation(
@@ -2587,6 +2593,7 @@ public class NseAdminReportController
 
                 if(fileType.equalsIgnoreCase("SCH"))
                 {
+                    nseOnlineSchemeMasterService.clearNseSchemeMasterTempTable();
                     error_list = nseAmfiOnlineSchemeMaster.uploadNSEOnlineSchemeMasterPhy(file,token);
                 }
                 else if(fileType.equalsIgnoreCase("SIP"))
@@ -2600,6 +2607,34 @@ public class NseAdminReportController
                 {
                     error_list = nseAmfiOnlineSchemeMaster.uploadNSEOnlineSchemeMasterSwp(file,token);
                 }
+
+                if(fileType.equalsIgnoreCase("SCH"))
+                {
+                    long temp_count = nseOnlineSchemeMasterService.countTempRecords();
+                    System.out.println("masterDownload::SCH temp record count: " + temp_count);
+
+                    if(temp_count <= 0)
+                    {
+                        return NseUtils.commonResponse("No SCH records were loaded into the temp table. Live table left unchanged. " + error_list, HttpStatus.BAD_REQUEST);
+                    }
+
+                    int published = nseOnlineSchemeMasterService.publishTempToMainTable();
+                    System.out.println("masterDownload::SCH published " + published + " rows into the live table");
+                }
+                else if(fileType.equalsIgnoreCase("SIP") || fileType.equalsIgnoreCase("STP") || fileType.equalsIgnoreCase("SWP"))
+                {
+                    long temp_count = nseSxpSchemeMasterTempService.countByMasterOption(fileType.toUpperCase());
+                    System.out.println("masterDownload::" + fileType + " temp record count: " + temp_count);
+
+                    if(temp_count <= 0)
+                    {
+                        return NseUtils.commonResponse("No " + fileType + " records were loaded into the temp table. Live table left unchanged. " + error_list, HttpStatus.BAD_REQUEST);
+                    }
+
+                    int published = nseSxpSchemeMasterTempService.publishTempToMainTable(fileType.toUpperCase());
+                    System.out.println("masterDownload::" + fileType + " published " + published + " rows into the live table");
+                }
+
                 return NseUtils.commonResponse(error_list.toString(), HttpStatus.OK);
 
             }catch (Exception ex)
