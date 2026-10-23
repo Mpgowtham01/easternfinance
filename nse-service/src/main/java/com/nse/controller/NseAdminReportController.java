@@ -6,6 +6,7 @@ import com.nse.config.TokenInterceptor;
 import com.nse.dto.UserIinBrokerDto;
 import com.nse.dto.mf.BseNseKeyDto;
 import com.nse.dto.mf.BseNseOnlineAccessDto;
+import com.nse.dto.mf.MfdArnDetailsDto;
 import com.nse.dto.mf.UserDto;
 import com.nse.model.NseOnlineStepUpSchemeMaster;
 import com.nse.model.NseTransactions;
@@ -42,6 +43,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -3627,6 +3629,145 @@ public class NseAdminReportController
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getAdminOrderStatusReport")
+    public ResponseEntity<?> getAdminOrderStatusReport(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) String trans_type,
+            @RequestParam(required = false) String report_status_type,
+            @RequestParam(required = false) String from_date,
+            @RequestParam(required = false) String to_date,
+            @RequestParam(required = false) String source) throws Exception
+    {
+        String userid = "";
+
+        try {
+            trans_type = NseUtils.checkParem(trans_type);
+            report_status_type = NseUtils.checkParem(report_status_type);
+            from_date = NseUtils.checkParem(from_date);
+            to_date = NseUtils.checkParem(to_date);
+
+            if (report_status_type.isEmpty()) report_status_type = "Order Status Report";
+            if (trans_type.isEmpty()) trans_type = "ALL";
+
+            if (from_date.isEmpty() || to_date.isEmpty()) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate today = LocalDate.now();
+                LocalDate fromDate = today.minusDays(6);
+                from_date = fromDate.format(formatter);
+                to_date = today.format(formatter);
+            }
+
+            userid = TokenInterceptor.extractAdminIdFromToken(token, secretKey);
+            String client_name = TokenInterceptor.extractClientNamedFromToken(token, secretKey);
+            logger.info(LOG_USER_AND_CLIENT, userid, client_name);
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+
+            JSONObject orderRequest = new JSONObject();
+            orderRequest.put("from_date", from_date);
+            orderRequest.put("to_date", to_date);
+            orderRequest.put("trans_type", trans_type);
+            orderRequest.put("order_type", "ALL");
+            orderRequest.put("sub_order_type", "ALL");
+            orderRequest.put("client_code", "");
+            orderRequest.put("order_status", "All");
+            orderRequest.put("settlement_type", "ALL");
+            orderRequest.put("order_ids", "");
+            orderRequest.put("member_unique_ids", "");
+
+            System.out.println("Request Body: " + orderRequest);
+
+            BseNseKeyDto mfdDetails = userServiceClient.getByClientName(client_name, token);
+            if (mfdDetails == null) {
+                return NseUtils.commonResponse(NO_ARN_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            JSONArray combinedOrders = new JSONArray();
+
+
+            collectBrokerOrders(restTemplate, orderRequest, combinedOrders, client_name, userid, report_status_type, mfdDetails,token);
+
+
+            return ResponseEntity.ok("please click ok to load page!");
+
+        } catch (GeneralSecurityException | RuntimeException ex) {
+            System.out.println("❌ Exception Date & Time = " + new Date() + " | ERROR = " + ex.getMessage());
+            ex.printStackTrace();
+            return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void collectBrokerOrders(RestTemplate restTemplate, JSONObject orderRequest, JSONArray combinedOrders,
+                                     String client_name, String userid, String report_status_type,
+                                     BseNseKeyDto mfdDetail,@RequestHeader("Authorization") String token) throws Exception
+    {
+        String brokerCode = mfdDetail.getBrokerCode();
+        System.out.println("🔹 Processing brokerCode = " + brokerCode);
+
+        BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, brokerCode,token);
+        if(online_access == null)
+        {
+            System.out.println("⚠️ NSE Online credentials not found for brokerCode = " + brokerCode);
+            return;
+        }
+        String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+        String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+        String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+        String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+        String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("memberId", nse_memberid);
+        headers.set("Authorization", "Basic " + base64Encoded);
+        headers.set("User-Agent", "PostmanRuntime/7.43.3");
+        headers.set("Accept-Encoding", "gzip, deflate, br");
+        headers.set("Accept-Language", "en-US");
+        headers.set("Connection", "keep-alive");
+
+        HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
+
+        String orderStatus_url = report_status_type.equalsIgnoreCase("Order Status Report")
+                ? NseApiUrls.nse_order_status
+                : NseApiUrls.nse_preview_order;
+
+        try
+        {
+            ResponseEntity<String> orderStatusresponse =
+                    restTemplate.postForEntity(orderStatus_url, entity, String.class);
+
+            System.out.println("Response Code for ARN " + brokerCode + ": " + orderStatusresponse.getStatusCode());
+
+            JSONObject jsonResponse = new JSONObject(orderStatusresponse.getBody());
+            JSONArray ordersArray = jsonResponse.optJSONArray("report_data");
+
+            if (ordersArray == null || ordersArray.isEmpty()) {
+                System.out.println("⚠️ No data for ARN " + brokerCode);
+                return;
+            }
+
+            IntStream.range(0, ordersArray.length()).mapToObj(ordersArray::getJSONObject).forEach(order ->
+            {
+                String orderId     = order.optString("order_id");
+                String orderStatus = order.optString("order_status");
+                String orderRemark = order.optString("order_remark");
+                String accountNo   = order.optString("account_no");
+                String amount      = order.optString("amount");
+                String schemecode  = order.optString("scheme_code");
+
+                int rows = nseTransactionRepository.updateMandateStatus(orderStatus, orderRemark, amount, client_name, accountNo, schemecode, orderId, Integer.valueOf(userid));
+
+                System.out.println(rows > 0 ? "✅ Updated " + orderId + " | account " + accountNo + " | status " + orderStatus : "⚠️ No record found for orderId " + orderId);
+
+                combinedOrders.put(order);
+            });
+
+        } catch (RuntimeException e) {
+            System.out.println("❌ Error processing ARN " + brokerCode + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

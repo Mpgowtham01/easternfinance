@@ -94,5 +94,25 @@ public interface NseTransactionRepository extends JpaRepository<NseTransactions,
                                @Param("clientName") String clientName,
                                @Param("regid") String regid);
 
+    @Modifying
+    @Transactional
+    @Query("UPDATE NseTransactions u " +
+            "SET u.order_status = :order_status, " +
+            "    u.remarks = :remark " +
+            "WHERE u.amount_units = :amount " +
+            "AND u.client_name = :clientName " +
+            "AND u.scheme_code = :scheme_code " +
+            "AND u.reg_id = :regid " +
+            "AND u.user_id = :userid " +
+            "AND u.bank_acc_no = :accountNo")
+    int updateMandateStatus(@Param("order_status") String order_status,
+                            @Param("remark") String remark,
+                            @Param("amount") String amount,
+                            @Param("clientName") String clientName,
+                            @Param("accountNo") String accountNo,
+                            @Param("scheme_code") String scheme_code,
+                            @Param("regid") String regid,
+                            @Param("userid") Integer userid);
+
 
 }
