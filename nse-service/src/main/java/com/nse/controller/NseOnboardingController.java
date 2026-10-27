@@ -1267,6 +1267,35 @@ public class NseOnboardingController {
                                         }
                                     }
 
+                                    try
+                                    {
+                                        UsersNseRegReportDto reg = new UsersNseRegReportDto();
+
+                                        reg.setUser_id(Integer.parseInt(userid));
+                                        reg.setName(userDto.getName());
+                                        reg.setPan(userDto.getPan());
+                                        reg.setBranch(userDto.getBranch());
+                                        reg.setRm_name(userDto.getRm_name());
+                                        reg.setSubbroker_name(userDto.getSubbroker_name());
+                                        reg.setIin_number(userDto.getNse_iin_number());
+                                        reg.setIin_created_date(df1.format(new Date()));
+                                        reg.setForm_updated_date("");
+                                        reg.setCheque_updated_date("");
+                                        reg.setIin_status("");
+                                        reg.setIin_active(1);
+                                        reg.setTransaction_date(df0.format(new Date()));
+                                        reg.setClient_name(client_name);
+                                        reg.setMandate_active(0);
+                                        reg.setMultiple_reg(multiple_reg != null && multiple_reg.trim().matches("-?\\d+")
+                                                ? Integer.parseInt(multiple_reg.trim()) : 0);
+                                        userServiceClient.saveRegDetails(reg, token);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.out.println("saveRegDetails failed for userid = " + userid + " & ERROR = " + ex.getMessage());
+                                        ex.printStackTrace();
+                                    }
+
                                     if(source.equalsIgnoreCase("Mobile"))
                                     {
                                         userServiceClient.saveUserRegStatus(token);

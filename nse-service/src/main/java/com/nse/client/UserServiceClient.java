@@ -306,7 +306,7 @@ public interface UserServiceClient {
     String saveUserBseNseDetail(@RequestBody UserBseNseDto userBseNseDto, @RequestHeader("Authorization") String token);
 
     @PostMapping("/saveRegDetails")
-    UsersNseRegReportDto saveRegDetails(@RequestParam UsersNseRegReportDto usersNseRegReportDto, @RequestHeader("Authorization") String token);
+    String saveRegDetails(@RequestBody UsersNseRegReportDto usersNseRegReportDto, @RequestHeader("Authorization") String token);
 
     @GetMapping("/getUserDetailsByPanName")
     List<UserDto> getUserDetailsByPanName(
