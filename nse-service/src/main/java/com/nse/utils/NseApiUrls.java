@@ -62,4 +62,6 @@ public class NseApiUrls
 
     public static String sipRegReport = NSE_API_BASE_URL + "/reports/XSIP_REG_REPORT";
 
+    public static final String STEPUP_REG_REPORT = NSE_API_BASE_URL + "/reports/STEPUP_REG_REPORT";
+
 }

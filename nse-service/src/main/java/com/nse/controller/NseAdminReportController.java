@@ -49,6 +49,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -71,6 +72,13 @@ public class NseAdminReportController
     private static final String LOG_USER_AND_CLIENT = "userId = {} | clientName = {}";
 
     private static final String NO_ARN_FOUND = "No ARN/Broker codes found for client";
+
+    private static final int REPORT_MAX_CSV_IDS = 50;
+
+    private static final int STEPUP_REPORT_MAX_DAY_GAP = 31;
+
+    private static final List<String> STEPUP_INVESTOR_NAME_KEYS =
+            List.of("investor_name", "client_name", "first_holder_name", "holder_name", "user_name");
 
     @Value("${jwt.secret-key}")
     private String secretKey;
@@ -3769,5 +3777,204 @@ public class NseAdminReportController
             System.out.println("❌ Error processing ARN " + brokerCode + ": " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    @Operation(
+            summary = "NSE Step-up Registration Report",
+            description = "Fetches the SIP/XSIP step-up registration report. Search by sip_reg_id or client_code (comma separated, max 50 each - sip_reg_id takes priority and makes NSE ignore the other inputs, client_code comes next); when neither is supplied from_date/to_date are mandatory in dd-MM-yyyy format, to_date must be greater than from_date and the two may not be more than 31 days apart. investor_name is an optional case insensitive partial match applied to the rows NSE returns."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Step-up registration report fetched successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Bad request - missing or invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
+    })
+    @GetMapping("/nseStepupRegistrationReport")
+    public ResponseEntity<?> getNseStepupRegistrationReport(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(value = "sip_reg_id", required = false) String sipRegId,
+            @RequestParam(value = "client_code", required = false) String clientCode,
+            @RequestParam(value = "from_date", required = false) String fromDate,
+            @RequestParam(value = "to_date", required = false) String toDate,
+            @RequestParam(value = "investor_name", required = false) String investorName,
+            @RequestParam(required = false) String brokerCode
+    ) {
+        String userId;
+
+        try {
+            // Clean parameters
+            sipRegId = NseUtils.checkParem(sipRegId);
+            clientCode = NseUtils.checkParem(clientCode);
+            fromDate = NseUtils.checkParem(fromDate);
+            toDate = NseUtils.checkParem(toDate);
+            investorName = NseUtils.checkParem(investorName);
+            brokerCode = NseUtils.checkParem(brokerCode);
+
+            if (!sipRegId.isEmpty()) {
+                if (countCommaSeparatedValues(sipRegId) > REPORT_MAX_CSV_IDS) {
+                    return NseUtils.commonResponse("sip_reg_id allows a maximum of " + REPORT_MAX_CSV_IDS + " comma separated values", HttpStatus.BAD_REQUEST);
+                }
+                clientCode = "";
+                fromDate = "";
+                toDate = "";
+            } else if (!clientCode.isEmpty()) {
+                if (countCommaSeparatedValues(clientCode) > REPORT_MAX_CSV_IDS) {
+                    return NseUtils.commonResponse("client_code allows a maximum of " + REPORT_MAX_CSV_IDS + " comma separated values", HttpStatus.BAD_REQUEST);
+                }
+                fromDate = "";
+                toDate = "";
+            } else {
+                if (fromDate.isEmpty() || toDate.isEmpty()) {
+                    return NseUtils.commonResponse("from_date and to_date are mandatory when sip_reg_id and client_code are not supplied", HttpStatus.BAD_REQUEST);
+                }
+
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+                LocalDate from;
+                LocalDate to;
+                try {
+                    from = LocalDate.parse(fromDate, formatter);
+                    to = LocalDate.parse(toDate, formatter);
+                } catch (DateTimeParseException e) {
+                    return NseUtils.commonResponse("from_date and to_date must be in dd-MM-yyyy format", HttpStatus.BAD_REQUEST);
+                }
+
+                if (!to.isAfter(from)) {
+                    return NseUtils.commonResponse("to_date must be greater than from_date", HttpStatus.BAD_REQUEST);
+                }
+
+                if (from.plusDays(STEPUP_REPORT_MAX_DAY_GAP).isBefore(to)) {
+                    return NseUtils.commonResponse("from_date and to_date cannot be more than " + STEPUP_REPORT_MAX_DAY_GAP + " days apart", HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            userId = TokenInterceptor.extractInvestorIdFromToken(token, secretKey);
+            if (userId.isEmpty()) {
+                userId = TokenInterceptor.extractAdminIdFromToken(token, secretKey);
+            }
+
+            UserDto user = null;
+
+            try {
+                user = userServiceClient.getUserById(Integer.valueOf(userId), token);
+            } catch (FeignException e) {
+                return FeignErrorHandler.handle(e, "User Service", "User not found");
+            }
+
+            if (user == null) {
+                return NseUtils.commonResponse("User not found, please login again", HttpStatus.BAD_REQUEST);
+            }
+            String clientName = user.getClient_name();
+
+            // If broker code not provided, pick the first one
+            if (brokerCode.isEmpty()) {
+                List<String> brokerCodeList = userServiceClient.getDistinctBrokerCodes(clientName, token);
+                if (brokerCodeList == null || brokerCodeList.isEmpty()) {
+                    return NseUtils.commonResponse("No brokers found for client", HttpStatus.BAD_REQUEST);
+                }
+                brokerCode = brokerCodeList.get(0);
+            }
+
+            BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(clientName, brokerCode,token);
+            if(online_access == null)
+            {
+                System.out.println("⚠️ NSE Online credentials not found for brokerCode = " + brokerCode);
+            }
+            String nse_userid = NseUtils.trimOrEmpty(online_access.getNse_userid());
+            String nse_memberid = NseUtils.trimOrEmpty(online_access.getNse_memberid());
+            String nse_secret_key = NseUtils.trimOrEmpty(online_access.getNse_secret_key());
+            String nse_license_key = NseUtils.trimOrEmpty(online_access.getNse_license_key());
+
+            JSONObject requestJson = new JSONObject();
+            requestJson.put("sip_reg_id", sipRegId);
+            requestJson.put("client_code", clientCode);
+            requestJson.put("from_date", fromDate);
+            requestJson.put("to_date", toDate);
+
+//            System.out.println("getNseStepupRegistrationReport::brokerCode: " + brokerCode + " | memberId: " + NseUtils.trimOrEmpty(onlineAccess.getNse_memberid()));
+//            System.out.println("getNseStepupRegistrationReport::requestJson: " + requestJson);
+
+            // Prepare authorization
+            String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(
+                    NseUtils.trimOrEmpty(nse_secret_key),
+                    NseUtils.trimOrEmpty(nse_license_key),
+                    NseUtils.trimOrEmpty(nse_userid)
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("memberId", nse_memberid);
+            headers.set("Authorization", "Basic " + base64Encoded);
+            headers.set("User-Agent", "PostmanRuntime/7.43.3");
+            headers.set("Accept-Encoding", "gzip, deflate, br");
+            headers.set("Accept-Language", "en-US");
+            headers.set("Connection", "keep-alive");
+
+            HttpEntity<String> entity = new HttpEntity<>(requestJson.toString(), headers);
+
+            RestTemplate restTemplate = RestTemplateFactory.createRestTemplate();
+            ResponseEntity<String> stepupResponse = restTemplate.postForEntity(NseApiUrls.STEPUP_REG_REPORT, entity, String.class);
+
+            JSONObject jsonResponse = new JSONObject(stepupResponse.getBody());
+            String responseStatus = jsonResponse.optString("response_status");
+
+            // Log NSE's own answer verbatim - an empty report_data with response_status "S" means NSE
+            // matched no step-up registrations, which is not distinguishable from a failure downstream.
+//            System.out.println("getNseStepupRegistrationReport::nseResponse: " + jsonResponse);
+
+            String report_data_json;
+            if ("S".equalsIgnoreCase(responseStatus)) {
+                JSONArray reportDataArray = jsonResponse.optJSONArray("report_data");
+//                System.out.println("reportDataArray = " + reportDataArray);
+
+                if (reportDataArray != null) {
+                    // NSE's step-up report takes no name input, so the investor name filter is applied here.
+                    if (!investorName.isEmpty()) {
+                        reportDataArray = filterStepupReportByInvestorName(reportDataArray, investorName);
+                    }
+                    report_data_json = reportDataArray.toString().replace("'", "\\'");
+                } else {
+                    report_data_json = "[]";
+                }
+            } else {
+                report_data_json = "[]";
+            }
+            return ResponseEntity.ok(report_data_json);
+
+        } catch (FeignException.NotFound nfe) {
+            return NseUtils.commonResponse("Resource Not Found", HttpStatus.NOT_FOUND);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return NseUtils.commonResponse(StatusMessage.EXCEPTION_API_MESSAGE, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private static int countCommaSeparatedValues(String value)
+    {
+        int count = 0;
+        for (String part : value.split(",", -1))
+        {
+            if (!part.trim().isEmpty())
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private JSONArray filterStepupReportByInvestorName(JSONArray reportDataArray, String investorName) {
+        String searchName = investorName.toLowerCase();
+        JSONArray filteredArray = new JSONArray();
+
+        for (int i = 0; i < reportDataArray.length(); i++) {
+            JSONObject record = reportDataArray.getJSONObject(i);
+
+            for (String nameKey : STEPUP_INVESTOR_NAME_KEYS) {
+                if (record.optString(nameKey, "").toLowerCase().contains(searchName)) {
+                    filteredArray.put(record);
+                    break;
+                }
+            }
+        }
+
+        return filteredArray;
     }
 }

@@ -15,4 +15,6 @@ public class StatusMessage
     public static String EmptyUserId = "Please provide the user id";
 
     public static String ExceptionAPIMessage = "Something went wrong, We have taken note of the issue. Be rest assured we will fix it as soon as possible";
+
+    public static final String EXCEPTION_API_MESSAGE = "Something went wrong, We have taken note of the issue. Be rest assured we will fix it as soon as possible";
 }
