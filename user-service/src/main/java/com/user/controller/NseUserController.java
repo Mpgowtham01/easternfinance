@@ -3281,7 +3281,15 @@ public class NseUserController
             @RequestParam(required = false) String joint_holder_mobile1_isd_code,
             @RequestParam(required = false) String joint_holder_mobile2_isd_code,
             @RequestParam(required = false) String arn_number,
-            @RequestParam(required = false) String nominee_opt_flag
+            @RequestParam(required = false) String nominee_opt_flag,
+            @RequestParam(required = false) String client_type,
+            @RequestParam(required = false) String pms,
+            @RequestParam(required = false) String default_dp,
+            @RequestParam(required = false) String cdsl_dpid,
+            @RequestParam(required = false) String cdslcltid,
+            @RequestParam(required = false) String cmbp_id,
+            @RequestParam(required = false) String nsdldpid,
+            @RequestParam(required = false) String nsdlcltid
     )
     {
         String client_name = "";
@@ -3465,6 +3473,14 @@ public class NseUserController
             arn_number = UserUtils.checkParem(arn_number);
             nominee_soa = UserUtils.checkParem(nominee_soa);
             nominee_opt_flag = UserUtils.checkParem(nominee_opt_flag);
+            client_type = UserUtils.checkParem(client_type);
+            pms = UserUtils.checkParem(pms);
+            default_dp = UserUtils.checkParem(default_dp);
+            cdsl_dpid = UserUtils.checkParem(cdsl_dpid);
+            cdslcltid = UserUtils.checkParem(cdslcltid);
+            cmbp_id = UserUtils.checkParem(cmbp_id);
+            nsdldpid = UserUtils.checkParem(nsdldpid);
+            nsdlcltid = UserUtils.checkParem(nsdlcltid);
 
             if(!nominee_soa.isEmpty())
             {
@@ -3706,6 +3722,14 @@ public class NseUserController
             user.setNetworth_dob(networth_dob);
             user.setBroker_code(arn_number);
             user.setEuin(euin);
+            user.setClient_type(client_type);
+            user.setPms(pms);
+            user.setDefault_dp(default_dp);
+            user.setCdsl_dpid(cdsl_dpid);
+            user.setCdsl_cltid(cdslcltid);
+            user.setCmbp_id(cmbp_id);
+            user.setNsdl_dpid(nsdldpid);
+            user.setNsdl_cltid(nsdlcltid);
             user.setCreated_date(new Date());
 
             user = userOnlineRegDetailsRespository.save(user);

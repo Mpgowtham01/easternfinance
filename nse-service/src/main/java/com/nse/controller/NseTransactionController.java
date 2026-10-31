@@ -16,6 +16,7 @@ import com.nse.response.CommonResponse;
 import com.nse.response.PurchaseOrdersPaymentAPIResponse;
 import com.nse.response.StatusMessage;
 import com.nse.response.TransactionResponse;
+import com.nse.services.ApiLogService;
 import com.nse.services.NseTransactionService;
 import com.nse.utils.*;
 import feign.FeignException;
@@ -57,6 +58,9 @@ public class NseTransactionController {
 
     @Autowired
     UserServiceClient userServiceClient;
+
+    @Autowired
+    ApiLogService apiLogService;
 
     @Autowired
     NseOnlineSchemeMasterRepository nseOnlineSchemeMasterRepository;
@@ -254,6 +258,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
             System.out.println("usre = " + user);
@@ -301,6 +306,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.sdsds", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update.sdsds"));
             }
 
@@ -329,16 +335,20 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid),"NSE",iin_number, "Lumpsum Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.OK,"No Cart found for the user.");
                     } else if (e.status() == 404) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse("No Cart found for the user.", HttpStatus.OK);
                     } else {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching AMC details.");
                     }
                 }
 
                 if(cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
@@ -384,16 +394,20 @@ public class NseTransactionController {
                         cartList = userServiceClient.getCartDetailsByIds(ids,token);
                     } catch (FeignException e) {
                         if (e.status() == 400) {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                         } else if (e.status() == 404) {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                         } else {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse1("Error occurred while fetching AMC details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching AMC details.");
                         }
                     }
 
                     if(cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
@@ -460,6 +474,8 @@ public class NseTransactionController {
 
             String mobile  = "";
             String email = "";
+            String client_type = "";
+            String default_dp = "";
 
             SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy");
             SimpleDateFormat df1 = new SimpleDateFormat("dd-MMM-yyyy");
@@ -474,21 +490,27 @@ public class NseTransactionController {
                     nse = userServiceClient.getUserBseNseDetailsByIinNumber(client_name,iin_number,token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No record found for the given IIN Number and Client Name.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No record found for the given IIN Number and Client Name.", HttpStatus.BAD_REQUEST, "No record found for the given IIN Number and Client Name.");
                     } else if (e.status() == 404) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse("User not found.", HttpStatus.NOT_FOUND);
                     } else {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Downstream service error.", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse("Downstream service error.", HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }
                 if(nse == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
                 pan = nse.getPan();
                 name = nse.getName();
                 mobile = nse.getMobile();
                 email = nse.getEmail();
+                client_type = NseUtils.checkParem(nse.getClient_type());
+                default_dp = NseUtils.checkParem(nse.getDefault_dp());
             }
 
             String otm_flag = Integer.toString(otmflag);
@@ -542,7 +564,26 @@ public class NseTransactionController {
                 }
 
                 regObject.put("client_code", iin_number);
-                regObject.put("demat_physical", "P");
+
+                if(client_type.isEmpty())
+                {
+                    client_type = "P";
+                }
+
+                if(client_type.equalsIgnoreCase("P"))
+                {
+                    regObject.put("demat_physical", "P");
+                }else
+                {
+                    if(default_dp.equalsIgnoreCase("CDSL"))
+                    {
+                        regObject.put("demat_physical", "C");
+                    }else
+                    {
+                        regObject.put("demat_physical", "N");
+                    }
+                }
+
                 regObject.put("order_amount", amount_array.get(i));
 
                 if(folio_array!=null && folio_array.size()>i)
@@ -597,6 +638,7 @@ public class NseTransactionController {
 
             if (online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -879,6 +921,7 @@ public class NseTransactionController {
 
                 System.out.println("orderEntryFreshPurchase::Status Code: " + ex.getStatusCode());
                 System.out.println("orderEntryFreshPurchase::Response Body: " + ex.getResponseBodyAsString());
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST, ex.getResponseBodyAsString());
             }
 
@@ -927,12 +970,40 @@ public class NseTransactionController {
                 userServiceClient.updateCartByCartId(cartList, token);
             }
 
+            if (trxn_status.equalsIgnoreCase("TRXN SUCCESS"))
+            {
+                try
+                {
+                    UsersNseRegReportDto reg = null;
+                    try {
+                        reg = userServiceClient.getRegReportInActive(iin_number, client_name,token);
+                    }catch (FeignException e)
+                    {
+                        System.out.println("getUserNseRegDetails failed for iin_number = " + iin_number + " & ERROR = " + e.getMessage());
+                    }
+
+                    if (reg != null)
+                    {
+                        reg.setTransaction_date("YES");
+                        userServiceClient.saveRegDetails(reg, token);
+                    }
+                    else
+                    {
+                        System.out.println("No NSE reg report found for iin_number = " + iin_number + " & client_name = " + client_name + ". Skipped transaction_date update.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.out.println("saveRegDetails failed for userid = " + userid + " & ERROR = " + ex.getMessage());
+                }
+            }
             System.out.println("resMap = " + new Gson().toJson(resMap));
 
             if (successCount > 0 && failureCount > 0)
             {
                 String message = String.format("%d out of %d Purchase transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                 message += "Failed transactions: " + String.join(", ", failedSchemes);
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
 
             }
@@ -940,18 +1011,22 @@ public class NseTransactionController {
             {
                 if(source.equalsIgnoreCase("Mobile"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionMobileResponse(HttpStatus.OK, trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, resMap);
                 }else{
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.purchaseTransactionResponse(HttpStatus.OK, trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, resMap, orderIdList);
                 }
             }
             else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST, trxn_remark);
             }
         } catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ""));
         }
     }
@@ -1197,16 +1272,20 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid),"NSE",iin_number, "SIP Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     } else if (e.status() == 404) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     } else {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
                 if(cartList == null || cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
@@ -1331,15 +1410,18 @@ public class NseTransactionController {
                     {
                         if (e.status() == 400)
                         {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST, "No cart found");
                         }else
                         {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse1(e.getMessage(), HttpStatus.BAD_REQUEST, e.getMessage());
                         }
                     }
 
                     if(cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
@@ -1510,6 +1592,7 @@ public class NseTransactionController {
 
             if (mandate_id_array == null || mandate_id_array.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST, "ACH MANDATE Code is empty. Please contact admin.");
             }
 
@@ -1519,11 +1602,13 @@ public class NseTransactionController {
                 nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name, iin_number,broker_code,token);
             }catch (FeignException e)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
             if(nse == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
             }
 
@@ -1570,6 +1655,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -1578,6 +1664,8 @@ public class NseTransactionController {
             SimpleDateFormat df2 = new SimpleDateFormat("ddMMyyyyhhmmss");
 
             String nse_iin = nse.getNse_iin_number();
+            String client_type = NseUtils.checkParem(nse.getClient_type());
+            String default_dp = NseUtils.checkParem(nse.getDefault_dp());
             String pan = "";
             String name = "";
             String selected_name = "";
@@ -1604,6 +1692,7 @@ public class NseTransactionController {
             try {
                 user = userServiceClient.getUserById(Integer.valueOf(userid), token);
             } catch (FeignException e) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
           
@@ -1613,15 +1702,19 @@ public class NseTransactionController {
                 online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
             } catch (FeignException e) {
                 if (e.status() == 400) {
+                   apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No record found in Bse Online Access Table", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                    return NseUtils.commonResponse1("No record found in Bse Online Access Table", HttpStatus.BAD_REQUEST, "No record found in Bse Online Access Table");
                 } else if (e.status() == 404) {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(e.getMessage(), HttpStatus.BAD_REQUEST, e.getMessage());
                 } else {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(e.getMessage(), HttpStatus.BAD_REQUEST, e.getMessage());
                 }
             }
             if (online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST, "NSE Online Credentials Not available. Please contact your RM");
             }
 
@@ -1649,8 +1742,29 @@ public class NseTransactionController {
                 regObject.put("client_code", iin_number);
                 regObject.put("bank_ref_no", "");
                 regObject.put("internal_ref_no", "");
-                regObject.put("trans_mode", "P");
-                regObject.put("dp_txn_mode", "P");
+
+                if(client_type.isEmpty())
+                {
+                    client_type = "P";
+                }
+
+                if(client_type.equalsIgnoreCase("P"))
+                {
+                    regObject.put("trans_mode", "P");
+                    regObject.put("dp_txn_mode", "P");
+                }else
+                {
+                    if(default_dp.equalsIgnoreCase("CDSL"))
+                    {
+                        regObject.put("trans_mode", "D");
+                        regObject.put("dp_txn_mode", "C");
+                    }else
+                    {
+                        regObject.put("trans_mode", "D");
+                        regObject.put("dp_txn_mode", "N");
+                    }
+                }
+
                 regObject.put("start_date", start_date_str);
                 regObject.put("frequency_type", frequency_array.get(i));
                 regObject.put("frequency_allowed", "1");
@@ -1711,6 +1825,7 @@ public class NseTransactionController {
                 regObject.put("convenience_fee", "0");
                 if (mandate_id_array.size() <= i)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST, "ACH MANDATE Code is empty. Please contact admin.");
                 }
                 regObject.put("xsip_mandate_id", mandate_id_array.get(i));
@@ -2034,6 +2149,34 @@ public class NseTransactionController {
                         }
                     }
 
+                    if (reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                    {
+                        try
+                        {
+                            UsersNseRegReportDto reg = null;
+                            try {
+                                reg = userServiceClient.getRegReportInActive(iin_number, client_name,token);
+                            }catch (FeignException e)
+                            {
+                                System.out.println("getUserNseRegDetails failed for iin_number = " + iin_number + " & ERROR = " + e.getMessage());
+                            }
+
+                            if (reg != null)
+                            {
+                                reg.setTransaction_date("YES");
+                                userServiceClient.saveRegDetails(reg, token);
+                            }
+                            else
+                            {
+                                System.out.println("No NSE reg report found for iin_number = " + iin_number + " & client_name = " + client_name + ". Skipped transaction_date update.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.out.println("saveRegDetails failed for userid = " + userid + " & ERROR = " + ex.getMessage());
+                        }
+                    }
+
                     if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
                         successCount++;
@@ -2083,14 +2226,17 @@ public class NseTransactionController {
                 {
                     String message = String.format("%d out of %d SIP transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                     message += "Failed transactions: " + String.join(", ", failedSchemes);
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
                 }
                 else if (successCount > 0)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Your SIP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.OK,"Your SIP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }
                 else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(reg_remark, HttpStatus.BAD_REQUEST,reg_remark);
                 }
 
@@ -2099,11 +2245,13 @@ public class NseTransactionController {
                 // For 4xx and 5xx responses
                 System.out.println("sipRegistrationServiceApi::Status Code: " + ex.getStatusCode());
                 System.out.println("sipRegistrationServiceApi::Response Body: " + ex.getResponseBodyAsString());
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
             } catch (Exception ex) {
 
                 // Other exceptions (e.g., connection issues)
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
             }
 
@@ -2111,6 +2259,7 @@ public class NseTransactionController {
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
         }
     }
@@ -2267,6 +2416,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
@@ -2286,16 +2436,20 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "Redemption Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     } else if (e.status() == 404) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     } else {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
                 if (cartList == null || cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
@@ -2354,11 +2508,13 @@ public class NseTransactionController {
                     try {
                         cartList = userServiceClient.getCartDetailsByIds(ids, token);
                     } catch (FeignException e) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
                     }
 
                     if (cartList == null || cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
@@ -2416,6 +2572,8 @@ public class NseTransactionController {
 
             String mobile = "";
             String email = "";
+            String client_type = "";
+            String default_dp = "";
 
             if(!nse_iin.equalsIgnoreCase(iin_number))
             {
@@ -2435,6 +2593,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
@@ -2444,15 +2603,18 @@ public class NseTransactionController {
 
                 mobile = nse.getMobile();
                 email = nse.getEmail();
+                client_type = NseUtils.checkParem(nse.getClient_type());
+                default_dp = NseUtils.checkParem(nse.getDefault_dp());
 
             }else
             {
                 pan = user.getPan();
                 name = user.getName();
                 selected_name = name + " (" + userid + ")";
-
                 mobile = user.getMobile();
                 email = user.getEmail();
+                client_type = NseUtils.checkParem(user.getClient_type());
+                default_dp = NseUtils.checkParem(user.getDefault_dp());
             }
 
             BseNseKeyDto nsekey = userServiceClient.getByClientName(client_name,token);
@@ -2479,6 +2641,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -2494,7 +2657,26 @@ public class NseTransactionController {
                 regObject.put("trxn_type", "R");
                 regObject.put("buy_sell_type", "");
                 regObject.put("client_code", iin_number);
-                regObject.put("demat_physical", "P");
+
+                if(client_type.isEmpty())
+                {
+                    client_type = "P";
+                }
+
+                if(client_type.equalsIgnoreCase("P"))
+                {
+                    regObject.put("demat_physical", "P");
+                }else
+                {
+                    if(default_dp.equalsIgnoreCase("CDSL"))
+                    {
+                        regObject.put("demat_physical", "C");
+                    }else
+                    {
+                        regObject.put("demat_physical", "N");
+                    }
+                }
+
                 regObject.put("folio_no", folio_array.get(i));
                 regObject.put("remarks", "");
                 regObject.put("kyc_flag", "Y");
@@ -2551,11 +2733,13 @@ public class NseTransactionController {
             }catch(FeignException ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
             }
 
             if (online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -2842,14 +3026,17 @@ public class NseTransactionController {
                 {
                     String message = String.format("%d out of %d Redemption transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                     message += "Failed transactions: " + String.join(", ", failedSchemes);
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
                 }
                 else if (successCount > 0)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All Redemption Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.OK,"All Redemption Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }
                 else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST,trxn_remark);
                 }
             } catch (HttpClientErrorException | HttpServerErrorException ex) {
@@ -2860,6 +3047,7 @@ public class NseTransactionController {
 
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST, ex.getResponseBodyAsString());
                 }
             } catch (Exception ex) {
@@ -2868,6 +3056,7 @@ public class NseTransactionController {
                 ex.printStackTrace();
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(ex.getMessage(), HttpStatus.BAD_REQUEST, ex.getMessage());
                 }
             }
@@ -2897,8 +3086,10 @@ public class NseTransactionController {
 
             if (trxn_status.equalsIgnoreCase("TRXN SUCCESS"))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.OK, trxn_status + " Your Order is successfully triggered...! orderID: " + trxn_order_id, resMap);
             }else{
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST, trxn_remark);
             }
 
@@ -2906,6 +3097,7 @@ public class NseTransactionController {
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
         }
     }
@@ -3082,6 +3274,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
@@ -3104,16 +3297,20 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "Switch Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     } else if (e.status() == 404) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     } else {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
                 if (cartList == null || cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
                 System.out.println("cartList = " + cartList);
@@ -3178,11 +3375,13 @@ public class NseTransactionController {
                     try {
                         cartList = userServiceClient.getCartDetailsByIds(ids, token);
                     } catch (FeignException e) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
                     }
 
                     if (cartList == null || cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
@@ -3239,6 +3438,8 @@ public class NseTransactionController {
             }
 
             String nse_iin = user.getNse_iin_number();
+            String client_type = "";
+            String default_dp = "";
             String pan = "";
             String name = "";
             String selected_name = "";
@@ -3265,6 +3466,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
@@ -3274,6 +3476,8 @@ public class NseTransactionController {
 
                 mobile = nse.getMobile();
                 email = nse.getEmail();
+                client_type = NseUtils.checkParem(nse.getClient_type());
+                default_dp = NseUtils.checkParem(nse.getDefault_dp());
 
             }else
             {
@@ -3283,6 +3487,8 @@ public class NseTransactionController {
 
                 mobile = user.getMobile();
                 email = user.getEmail();
+                client_type = NseUtils.checkParem(user.getClient_type());
+                default_dp = NseUtils.checkParem(user.getDefault_dp());
             }
 
             String appln_id = "";
@@ -3311,6 +3517,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -3328,7 +3535,25 @@ public class NseTransactionController {
                 regObject.put("to_scheme_code", to_scheme_code_array.get(i));
                 regObject.put("buy_sell_type", "");
                 regObject.put("client_code", iin_number);
-                regObject.put("demat_physical", "P");
+
+                if(client_type.isEmpty())
+                {
+                    client_type = "P";
+                }
+
+                if(client_type.equalsIgnoreCase("P"))
+                {
+                    regObject.put("demat_physical", "P");
+                }else
+                {
+                    if(default_dp.equalsIgnoreCase("CDSL"))
+                    {
+                        regObject.put("demat_physical", "C");
+                    }else
+                    {
+                        regObject.put("demat_physical", "N");
+                    }
+                }
 
                 if(all_units_array.get(i).equalsIgnoreCase("Y"))
                 {
@@ -3374,6 +3599,7 @@ public class NseTransactionController {
 
             if (online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -3608,6 +3834,7 @@ public class NseTransactionController {
 
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST, ex.getResponseBodyAsString());
                 }
             } catch (Exception ex) {
@@ -3616,6 +3843,7 @@ public class NseTransactionController {
                 ex.printStackTrace();
                 if(trxn_status.equalsIgnoreCase("TRXN FAILED"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1(ex.getMessage(), HttpStatus.BAD_REQUEST, ex.getMessage());
                 }
             }
@@ -3671,14 +3899,17 @@ public class NseTransactionController {
             {
                 String message = String.format("%d out of %d Switch transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                 message += "Failed transactions: " + String.join(", ", failedSchemes);
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
             }
             else if (successCount > 0)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All Switch Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.OK,"All Switch Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
             }
             else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), trxn_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(trxn_remark, HttpStatus.BAD_REQUEST, trxn_remark);
             }
 
@@ -3686,6 +3917,7 @@ public class NseTransactionController {
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
         }
     }
@@ -3878,6 +4110,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
@@ -3902,12 +4135,14 @@ public class NseTransactionController {
                 try{
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "STP Purchase",token);
                 }catch (FeignException e) {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
                 }
 
 
                 if (cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
@@ -3965,10 +4200,12 @@ public class NseTransactionController {
                     try {
                         cartList = userServiceClient.getCartDetailsByIds(ids, token);
                     }catch (FeignException e) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
                     }
                     if (cartList == null || cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
 
@@ -4026,6 +4263,8 @@ public class NseTransactionController {
             String email = "";
             String client_name = user.getClient_name();
             String login_name = user.getName();
+            String client_type = "";
+            String default_dp = "";
 
             if(!nse_iin.equalsIgnoreCase(iin_number))
             {
@@ -4045,6 +4284,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
@@ -4054,6 +4294,8 @@ public class NseTransactionController {
 
                 mobile = nse.getMobile();
                 email = nse.getEmail();
+                client_type = NseUtils.checkParem(nse.getClient_type());
+                default_dp = NseUtils.checkParem(nse.getDefault_dp());
 
             }else
             {
@@ -4063,6 +4305,8 @@ public class NseTransactionController {
 
                 mobile = user.getMobile();
                 email = user.getEmail();
+                client_type = NseUtils.checkParem(user.getClient_type());
+                default_dp = NseUtils.checkParem(user.getDefault_dp());
             }
 
             String appln_id = "";
@@ -4090,6 +4334,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -4139,7 +4384,20 @@ public class NseTransactionController {
                 regObject.put("from_scheme_code", from_scheme_code_array.get(i));
                 regObject.put("to_scheme_code",to_scheme_code_array.get(i));
                 regObject.put("buy_sell_type", "ADDITIONAL");
-                regObject.put("transaction_mode","P");
+
+                if(client_type.isEmpty())
+                {
+                    client_type = "P";
+                }
+
+                if(client_type.equalsIgnoreCase("P"))
+                {
+                    regObject.put("transaction_mode", "P");
+                }else
+                {
+                    regObject.put("transaction_mode", "D");
+                }
+
                 regObject.put("folio_no", folio_array.get(i));
                 regObject.put("internal_ref_number",ref_number);
                 regObject.put("start_date", start_date_str);
@@ -4206,6 +4464,7 @@ public class NseTransactionController {
 
             if (online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -4500,10 +4759,12 @@ public class NseTransactionController {
             {
                 String message = String.format("%d out of %d STP transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                 message += "Failed transactions: " + String.join(", ", failedSchemes);
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(message,HttpStatus.BAD_REQUEST,message);
             }
             else if (successCount > 0)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All STP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.OK,"All STP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
             }
             else
@@ -4511,6 +4772,7 @@ public class NseTransactionController {
                 String failureMessage = !failedSchemes.isEmpty() ? String.join(", ", failedSchemes)
                         : (StringHelper.isNotEmpty(reg_remark) ? reg_remark
                         : "STP registration failed. Please try again.");
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), failureMessage, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(failureMessage, HttpStatus.BAD_REQUEST,failureMessage);
             }
 
@@ -4518,6 +4780,7 @@ public class NseTransactionController {
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
         }
     }
@@ -4669,6 +4932,7 @@ public class NseTransactionController {
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1("User not found", HttpStatus.BAD_REQUEST, "User not found");
             }
 
@@ -4698,16 +4962,20 @@ public class NseTransactionController {
                     cartList = userServiceClient.getCartDetailsByUserID(Integer.parseInt(userid), "NSE", iin_number, "SWP Purchase",token);
                 } catch (FeignException e) {
                     if (e.status() == 400) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     } else if (e.status() == 404) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     } else {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("Error occurred while fetching cart details.", HttpStatus.BAD_REQUEST, "Error occurred while fetching cart details.");
                     }
                 }
 
                 if (cartList == null || cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                 }
 
@@ -4746,11 +5014,13 @@ public class NseTransactionController {
                     try {
                         cartList = userServiceClient.getCartDetailsByIds(ids, token);
                     } catch (FeignException e) {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return FeignErrorHandler.handle(e, "User Service", "No Cart found for the user.");
                     }
 
                     if (cartList == null || cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No Cart found for the user.", HttpStatus.BAD_REQUEST, "No Cart found for the user.");
                     }
                     for (CartDto cart : cartList)
@@ -4766,6 +5036,7 @@ public class NseTransactionController {
                         cart_id_array.add(String.valueOf(cart.getId()));
                     }
                 }else{
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Cart ID missing.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("Cart ID missing.", HttpStatus.BAD_REQUEST, "Cart ID missing.");
                 }
             }
@@ -4778,6 +5049,8 @@ public class NseTransactionController {
             String email = "";
             String client_name = user.getClient_name();
             String login_name = user.getName();
+            String client_type = "";
+            String default_dp = "";
 
             if(!nse_iin.equalsIgnoreCase(iin_number))
             {
@@ -4797,6 +5070,7 @@ public class NseTransactionController {
 
                 if(nse == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse1("No User Found", HttpStatus.BAD_REQUEST, "No User Found");
                 }
 
@@ -4806,6 +5080,8 @@ public class NseTransactionController {
 
                 mobile = nse.getMobile();
                 email = nse.getEmail();
+                client_type = NseUtils.checkParem(nse.getClient_type());
+                default_dp = NseUtils.checkParem(nse.getDefault_dp());
 
             }else
             {
@@ -4815,6 +5091,8 @@ public class NseTransactionController {
 
                 mobile = user.getMobile();
                 email = user.getEmail();
+                client_type = NseUtils.checkParem(user.getClient_type());
+                default_dp = NseUtils.checkParem(user.getDefault_dp());
             }
 
             String appln_id = "";
@@ -4842,6 +5120,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -4912,7 +5191,20 @@ public class NseTransactionController {
 
                     regObject.put("client_code", iin_number);
                     regObject.put("scheme_code", scheme_code);
-                    regObject.put("trans_mode", "P");
+
+                    if(client_type.isEmpty())
+                    {
+                        client_type = "P";
+                    }
+
+                    if(client_type.equalsIgnoreCase("P"))
+                    {
+                        regObject.put("trans_mode", "P");
+                    }else
+                    {
+                        regObject.put("trans_mode", "D");
+                    }
+
                     regObject.put("folio_no", folio_no1);
                     regObject.put("internal_ref_no", ref_number);
                     regObject.put("start_date", start_date_str);
@@ -4953,6 +5245,7 @@ public class NseTransactionController {
 
                     if (online_access == null)
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(StatusMessage.NseFailureCode, StatusMessage.NseFailureMessage, "NSE Online Credentials Not available. Please contact your RM"));
                     }
 
@@ -5210,8 +5503,10 @@ public class NseTransactionController {
 
                 if(source.equalsIgnoreCase("Mobile"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionMobileResponse(HttpStatus.BAD_REQUEST, message, resMap);
                 }else{
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
                 }
             }
@@ -5219,8 +5514,10 @@ public class NseTransactionController {
             {
                 if(source.equalsIgnoreCase("Mobile"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All SWP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionMobileResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }else{
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All SWP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.OK, "All SWP Orders successfully triggered! Order IDs: " + String.join(", ", lastSuccessRegId),resMap);
                 }
             }
@@ -5229,6 +5526,7 @@ public class NseTransactionController {
                 String failureMessage = !failedSchemes.isEmpty() ? String.join(", ", failedSchemes)
                         : (StringHelper.isNotEmpty(reg_remark) ? reg_remark
                         : "SWP registration failed. Please try again.");
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), failureMessage, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse1(failureMessage, HttpStatus.BAD_REQUEST,failureMessage);
             }
 
@@ -5236,6 +5534,7 @@ public class NseTransactionController {
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction failed. Please try again!", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Transaction failed. Please try again!"));
         }
     }
@@ -5365,6 +5664,7 @@ public class NseTransactionController {
 
             if (sip_reg_no.isEmpty() || iin_number.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "SIP Reg number or IIN Number is empty.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "SIP Reg number or IIN Number is empty."));
             }
 
@@ -5373,11 +5673,13 @@ public class NseTransactionController {
             try {
                 user = userServiceClient.getUserById(Integer.valueOf(userid), token);
             } catch (FeignException e) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
             }
 
@@ -5420,6 +5722,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -5562,21 +5865,25 @@ public class NseTransactionController {
 
                 if (can_status.equalsIgnoreCase("CAN_SUCCESS"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), option + " Cancellation done Successfully " + sip_reg_no, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.OK).body(new CommonResponse(HttpStatus.OK.value(), can_status, option + " Cancellation done Successfully " + sip_reg_no));
 
                 } else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), can_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), can_status, can_remark));
                 }
             } catch (Exception ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
     }
@@ -5682,6 +5989,7 @@ public class NseTransactionController {
 
             if(effective_date.isEmpty() || unique_number.isEmpty() || iin_number.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Transaction number or IIN Number is empty.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, "Transaction number or IIN Number is empty.", new HashMap<>());
             }
 
@@ -5690,11 +5998,13 @@ public class NseTransactionController {
             try {
                 user = userServiceClient.getUserById(Integer.valueOf(userid), token);
             } catch (FeignException e) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, "User not found", new HashMap<>());
             }
 
@@ -5730,6 +6040,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -5847,23 +6158,28 @@ public class NseTransactionController {
             {
                 System.out.println("pauseSip::Status Code: " + ex.getStatusCode());
                 System.out.println("pauseSip::Response Body: " + ex.getResponseBodyAsString());
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), new HashMap<>());
 
             } catch (Exception ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), new HashMap<>());
             }
             if(pause_status.equalsIgnoreCase("SUCCESS"))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), pause_remark + " Your Order is successfully triggered...! orderID: ", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.OK, pause_remark + " Your Order is successfully triggered...! orderID: ", new HashMap<>());
             }else{
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), pause_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, pause_remark, new HashMap<>());
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.transactionResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), new HashMap<>());
         }
     }
@@ -6004,11 +6320,13 @@ public class NseTransactionController {
             try {
                 user = userServiceClient.getUserById(Integer.valueOf(userid), token);
             } catch (FeignException e) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
             }
 
@@ -6030,6 +6348,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -6045,6 +6364,7 @@ public class NseTransactionController {
 
             if(nse_iin.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "IIN Number not available for this user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "IIN Number not available for this user."));
             }
 
@@ -6059,10 +6379,12 @@ public class NseTransactionController {
                     nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name,nse_iin,broker_code,token);
                 }catch (FeignException e)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return FeignErrorHandler.handle(e, "User Service", "User not found");
                 }
                 if(nse == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
                 }
                 pan = nse.getPan();
@@ -6132,6 +6454,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -6292,25 +6615,30 @@ public class NseTransactionController {
                 {
                     if("mobile".equalsIgnoreCase(source))
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Congratulations! Bank Mandate Registration done Successfully. ACH MANDATE Confirmation link sent to register Email, Please verify the Confirmation link and complete the registration process. Thanks!" + reg_id, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.transactionMobileResponse(HttpStatus.OK, "Congratulations! Bank Mandate Registration done Successfully. ACH MANDATE Confirmation link sent to register Email, Please verify the Confirmation link and complete the registration process. Thanks!" + reg_id, new HashMap<>());
                     }else
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Congratulations! Bank Mandate Registration done Successfully. ACH MANDATE Confirmation link sent to register Email, Please verify the Confirmation link and complete the registration process. Thanks!" + reg_id, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.transactionResponse(HttpStatus.OK, "Congratulations! Bank Mandate Registration done Successfully. ACH MANDATE Confirmation link sent to register Email, Please verify the Confirmation link and complete the registration process. Thanks!" + reg_id, new HashMap<>());
                     }
 
                 }else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), reg_remark));
                 }
             } catch (Exception ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
     }
@@ -6468,6 +6796,7 @@ public class NseTransactionController {
 
                 if(checking_flag)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body("This account number already exists!");
                 }
@@ -6492,6 +6821,7 @@ public class NseTransactionController {
                     );
                 } catch (feign.FeignException.NotFound ex)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
 
                 }
@@ -6809,20 +7139,24 @@ public class NseTransactionController {
                                 userServiceClient.saveUser(user,token);
                             }
                         }
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Saved Bank Details Successfully", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.transactionResponse(HttpStatus.OK, "Saved Bank Details Successfully", new HashMap<>());
 
                     }else
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), error_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), error_remark));
                     }
 
                 }catch (Exception ex)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), error_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), error_remark));
                 }
             }
             catch (Exception ex)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error fetching in Bank Details", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Error fetching in Bank Details"));
             }
 
@@ -6858,6 +7192,7 @@ public class NseTransactionController {
 
             if(StringHelper.isEmpty(userid) || StringHelper.isEmpty(iin_number) || StringHelper.isEmpty(account_number))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All fields are mandatory", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("All fields are mandatory" , HttpStatus.BAD_REQUEST);
             }
 
@@ -6866,6 +7201,7 @@ public class NseTransactionController {
                 user =  userServiceClient.getUserByIdAndClientNameAndiinnumber(client_name, Integer.valueOf(userid),iin_number,token);
             }catch (FeignException e)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
@@ -6877,10 +7213,12 @@ public class NseTransactionController {
             int deleteByClientNameUserIdAndonlinecode = userServiceClient.deleteByClientNameUserIdAndonlinecode(client_name,user.getId(),account_number, Integer.valueOf(userid),"NSE",umrn_no,token);
             System.out.println(deleteByClientNameUserIdAndonlinecode);
 
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "ACH Mandate deatails removed successfully.", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse("ACH Mandate deatails removed successfully.", HttpStatus.OK);
         } catch(Exception ex)
         {
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error ", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse("Error ", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -6929,6 +7267,7 @@ public class NseTransactionController {
 
             UserDto user = userServiceClient.getUserDetailsByID( client_name,Integer.parseInt(userid),token);
             if (user == null) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User Details Not Exits, Please Contact Admin!", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("User Details Not Exits, Please Contact Admin!",HttpStatus.BAD_REQUEST);
             }
 
@@ -6973,6 +7312,7 @@ public class NseTransactionController {
             BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM",HttpStatus.BAD_REQUEST);
             }
 
@@ -7357,12 +7697,15 @@ public class NseTransactionController {
                     }
                     userServiceClient.saveUser(user,token);
                 }
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Deleted Bank Details successfully!", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Deleted Bank Details successfully!", HttpStatus.OK);
             }else{
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), error_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(error_remark, HttpStatus.BAD_REQUEST);
             }
         }catch(Exception ex){
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse("Error", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -7399,15 +7742,18 @@ public class NseTransactionController {
 
             if(StringHelper.isEmpty(mandate_id))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Mandate Id is Required", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Mandate Id is Required",HttpStatus.BAD_REQUEST);
             }
 
             if(StringHelper.isEmpty(iin_no))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Nse IIN Number is Required", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Nse IIN Number is Required",HttpStatus.BAD_REQUEST);
             }
             if(StringHelper.isEmpty(broker_code))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Broker Code is Required", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Broker Code is Required",HttpStatus.BAD_REQUEST);
             }
 
@@ -7419,6 +7765,7 @@ public class NseTransactionController {
 
             if (!(lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg")))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Only JPG/JPEG image files are allowed", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(
                         "Only JPG/JPEG image files are allowed",
                         HttpStatus.BAD_REQUEST
@@ -7453,6 +7800,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -7549,10 +7897,12 @@ public class NseTransactionController {
 
                 if(scanMandate_status.equalsIgnoreCase("100"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), scanMandate_status_message, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse(scanMandate_status_message,HttpStatus.OK);
                 }
                 else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), scanMandate_status_message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse(scanMandate_status_message, HttpStatus.BAD_REQUEST);
                 }
             }
@@ -7568,6 +7918,7 @@ public class NseTransactionController {
                     reg = userServiceClient.getUserNseRegDetails(iin_no, client_name,token);
                 }catch (FeignException e)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return FeignErrorHandler.handle(e, "User Service", "User not found");
                 }
                 if(reg != null)
@@ -7580,14 +7931,17 @@ public class NseTransactionController {
                     userServiceClient.saveNseRegReport(reg,token);
                 }
 
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Document uploaded", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Document uploaded", HttpStatus.OK);
             }else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), service_msg, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(service_msg, HttpStatus.BAD_REQUEST);
             }
 
         }catch(Exception ex){
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Error", HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse("Error",HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -7660,6 +8014,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -7802,10 +8157,12 @@ public class NseTransactionController {
 
                     if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "REG_SUCCESS", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse("REG_SUCCESS",HttpStatus.OK);
                     }
                     else
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
                     }
                 }
@@ -7813,6 +8170,7 @@ public class NseTransactionController {
             catch(Exception ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
             }
 
@@ -7822,17 +8180,20 @@ public class NseTransactionController {
             } catch (Exception logEx) {
                 logEx.printStackTrace();
             }
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         try {
         } catch (Exception logEx) {
             logEx.printStackTrace();
         }
+        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "please check With Admin about Status", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
         return NseUtils.commonResponse("please check With Admin about Status", HttpStatus.BAD_REQUEST);
     }
 
     @PostMapping("/sipStpSwpModificationWithNse")
     public ResponseEntity<?> sipStpSwpModificationWithNse(
+            HttpServletRequest request,
             @RequestParam String broker_code,
             @RequestParam String iin_number,
             @RequestParam String type,
@@ -7874,6 +8235,7 @@ public class NseTransactionController {
 
             if(xsip_reg_no.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "xsip_reg_no is required.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("xsip_reg_no is required.", HttpStatus.BAD_REQUEST);
             }
 
@@ -7915,6 +8277,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -7951,6 +8314,7 @@ public class NseTransactionController {
                 modification_url = nseUrl + "/nsemfdesk/api/v2/modification/product/SWP_MOD";
             }else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Invalid type: " + type + ". Allowed values are SIP, STP, SWP.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Invalid type: " + type + ". Allowed values are SIP, STP, SWP.", HttpStatus.BAD_REQUEST);
             }
 
@@ -8007,19 +8371,23 @@ public class NseTransactionController {
 
             if(mod_success)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), type + " Modification Success.", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(type + " Modification Success.", HttpStatus.OK);
             } else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), mod_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(mod_remark, HttpStatus.BAD_REQUEST);
             }
         } catch (HttpClientErrorException | HttpServerErrorException ex)
         {
             System.out.println("sipStpSwpModificationWithNse::Status Code: " + ex.getStatusCode());
             System.out.println("sipStpSwpModificationWithNse::Response Body: " + ex.getResponseBodyAsString());
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(ex.getResponseBodyAsString(), HttpStatus.BAD_REQUEST);
         } catch(Exception ex)
         {
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -8067,6 +8435,7 @@ public class NseTransactionController {
 
             if (sip_reg_no.isEmpty() || iin_number.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "SIP Reg number or IIN Number is empty.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "SIP Reg number or IIN Number is empty."));
             }
 
@@ -8074,11 +8443,13 @@ public class NseTransactionController {
             try {
                 user = userServiceClient.getUserById(Integer.valueOf(userid), token);
             } catch (FeignException e) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
             if (user == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "User not found"));
             }
 
@@ -8116,6 +8487,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -8256,21 +8628,25 @@ public class NseTransactionController {
 
                 if (can_status.equalsIgnoreCase("CAN_SUCCESS"))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), option + " Cancellation done Successfully " + sip_reg_no, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.OK).body(new CommonResponse(HttpStatus.OK.value(), can_status, option + " Cancellation done Successfully " + sip_reg_no));
 
                 } else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), can_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), can_status, can_remark));
                 }
             } catch (Exception ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
     }
@@ -8349,6 +8725,7 @@ public class NseTransactionController {
             }else if(payment_mode.equalsIgnoreCase("RTGS/NEFT") || payment_mode.equalsIgnoreCase("RTGS") || payment_mode.equalsIgnoreCase("NEFT")){
                 purchaseOrdersPaymentRegObj.put("neft_rtgs_utr_no", neft_rtgs_utr_no);
             }else{
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Please select options between following! MANDATE, CHEQUE, UPI, NETBANKING, RTGS/NEFT", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Please select options between following! MANDATE, CHEQUE, UPI, NETBANKING, RTGS/NEFT", HttpStatus.BAD_REQUEST);
             }
 
@@ -8356,6 +8733,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -8446,16 +8824,19 @@ public class NseTransactionController {
                 nsetrans.setRefund_amount("");
                 nseTransactionRepository.save(nsetrans);
 
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), String.valueOf(purchaseOrdersPaymentAPIResponse), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.ok(purchaseOrdersPaymentAPIResponse);
 
             }catch(Exception ex)
             {
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
             }
 
         }catch(Exception ex){
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -8621,15 +9002,18 @@ public class NseTransactionController {
                 {
                     if (e.status() == 400)
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse1("No cart found", HttpStatus.BAD_REQUEST,"No cart found");
                     }else
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);
                     }
                 }
 
                 if(cartList.isEmpty())
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
                 }
 
@@ -8784,15 +9168,18 @@ public class NseTransactionController {
                     {
                         if (e.status() == 400)
                         {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No cart found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse("No cart found", HttpStatus.BAD_REQUEST);
                         }else
                         {
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse( e.getMessage(), HttpStatus.BAD_REQUEST);
                         }
                     }
 
                     if(cartList.isEmpty())
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No Cart found for the user.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No Cart found for the user."));
                     }
 
@@ -8974,11 +9361,13 @@ public class NseTransactionController {
                 nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name, iin_number,broker_code,token);
             }catch (FeignException e)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
             if(nse == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "No User Found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "No User Found"));
             }
 
@@ -9021,6 +9410,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -9029,6 +9419,7 @@ public class NseTransactionController {
             try {
                 user = userServiceClient.getUserById(userid, token);
             } catch (FeignException e) {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
@@ -9047,6 +9438,7 @@ public class NseTransactionController {
 
             if(broker_code.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), broker_code + " does not have the NSE credentials. Kindly update.", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), broker_code + " does not have the NSE credentials. Kindly update."));
             }
 
@@ -9054,6 +9446,7 @@ public class NseTransactionController {
 
             if(online_access == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
             }
 
@@ -9077,6 +9470,8 @@ public class NseTransactionController {
             String client_ifsccode = "";
             String client_acc_type = "";
             String client_bank_branch = "";
+            String client_type = NseUtils.checkParem(nse.getClient_type());
+            String default_dp = NseUtils.checkParem(nse.getDefault_dp());
 
             String mobile = "";
             String email = "";
@@ -9114,6 +9509,7 @@ public class NseTransactionController {
 
             if (mandate_id_array == null || mandate_id_array.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "ACH MANDATE Code is empty. Please contact admin.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "ACH MANDATE Code is empty. Please contact admin."));
             }
 
@@ -9139,8 +9535,29 @@ public class NseTransactionController {
                 regObject.put("client_code", iin_number);
                 regObject.put("bank_ref_no", "");
                 regObject.put("internal_ref_no", "");
-                regObject.put("trans_mode", "P");
-                regObject.put("dp_txn_mode", "P");
+
+                if(client_type.isEmpty())
+                {
+                    client_type = "P";
+                }
+
+                if(client_type.equalsIgnoreCase("P"))
+                {
+                    regObject.put("trans_mode", "P");
+                    regObject.put("dp_txn_mode", "P");
+                }else
+                {
+                    if(default_dp.equalsIgnoreCase("CDSL"))
+                    {
+                        regObject.put("trans_mode", "D");
+                        regObject.put("dp_txn_mode", "C");
+                    }else
+                    {
+                        regObject.put("trans_mode", "D");
+                        regObject.put("dp_txn_mode", "N");
+                    }
+                }
+
                 regObject.put("start_date", start_date_str);
                 regObject.put("frequency_type", frequency_array.get(i));
                 regObject.put("frequency_allowed", "1");
@@ -9528,6 +9945,34 @@ public class NseTransactionController {
                         }
                     }
 
+                    if (reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                    {
+                        try
+                        {
+                            UsersNseRegReportDto reg = null;
+                            try {
+                                reg = userServiceClient.getRegReportInActive(iin_number, client_name,token);
+                            }catch (FeignException e)
+                            {
+                                System.out.println("getUserNseRegDetails failed for iin_number = " + iin_number + " & ERROR = " + e.getMessage());
+                            }
+
+                            if (reg != null)
+                            {
+                                reg.setTransaction_date("YES");
+                                userServiceClient.saveRegDetails(reg, token);
+                            }
+                            else
+                            {
+                                System.out.println("No NSE reg report found for iin_number = " + iin_number + " & client_name = " + client_name + ". Skipped transaction_date update.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.out.println("saveRegDetails failed for userid = " + userid + " & ERROR = " + ex.getMessage());
+                        }
+                    }
+
                     if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
                         successCount++;
@@ -9551,14 +9996,17 @@ public class NseTransactionController {
                 {
                     String message = String.format("%d out of %d SIP transactions succeeded. Please go to MyOrders Page check the details.",successCount, (successCount + failureCount));
                     message += "Failed transactions: " + String.join(", ", failedSchemes);
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.BAD_REQUEST, message, resMap);
                 }
                 else if (successCount > 0)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "All SIP Orders successfully triggered! Last orderID: " + lastSuccessRegId, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.transactionResponse(HttpStatus.OK,"All SIP Orders successfully triggered! Last orderID: " + lastSuccessRegId,resMap);
                 }
                 else
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
                 }
 
@@ -9567,27 +10015,32 @@ public class NseTransactionController {
                 // For 4xx and 5xx responses
                 System.out.println("sipRegistrationServiceApi::Status Code: " + ex.getStatusCode());
                 System.out.println("sipRegistrationServiceApi::Response Body: " + ex.getResponseBodyAsString());
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
             } catch (Exception ex) {
 
                 // Other exceptions (e.g., connection issues)
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), ex.getMessage()));
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CommonResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), e.getMessage()));
         }
     }
 
     @PostMapping("/getOrderStatusReportByClientCode")
     public ResponseEntity<?> getOrderStatusReportByClientCode(
+            HttpServletRequest request,
             @RequestHeader("Authorization") String token,
             @RequestParam String broker_code,
             @RequestParam String order_id,
-            @RequestParam String purchase_type) {
+            @RequestParam String purchase_type,
+            @RequestParam(required = false) String source) {
 
         try
         {
@@ -9642,6 +10095,7 @@ public class NseTransactionController {
 
                 if(online_access == null)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
                 }
 
@@ -9725,16 +10179,19 @@ public class NseTransactionController {
                     }
                 }
                 System.out.println("endTime: " + new Date());
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(ordersArray != null ? ordersArray.toString() : new JSONArray().toString());
             }catch (Exception ex){
                 System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "", HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.getMessage(), LogUtils.getIpAddr(request), source);
             }
         } catch (Exception ex){
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "", HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.getMessage(), LogUtils.getIpAddr(request), source);
         }
         return null;
     }

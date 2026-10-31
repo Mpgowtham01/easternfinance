@@ -104,21 +104,89 @@ public class NseUtilsController {
                 taxList.add(NseUtils.createCommonData("24", "NRO"));
                 taxList.add(NseUtils.createCommonData("21", "NRE"));
             }else {
+//                taxList.add(NseUtils.createCommonData("01", "Individual"));
+//                taxList.add(NseUtils.createCommonData("02", "On behalf of minor"));
+//                taxList.add(NseUtils.createCommonData("03", "HUF"));
+//                taxList.add(NseUtils.createCommonData("04", "Company"));
+//                taxList.add(NseUtils.createCommonData("06", "Partnership Firm"));
+//                taxList.add(NseUtils.createCommonData("07", "Body Corporate"));
+//                taxList.add(NseUtils.createCommonData("08", "Trust"));
+//                taxList.add(NseUtils.createCommonData("13", "Proprietorship"));
+//                taxList.add(NseUtils.createCommonData("24", "NRO"));
+//                taxList.add(NseUtils.createCommonData("21", "NRE"));
+//                taxList.add(NseUtils.createCommonData("26", "NRI - Minor (NRE)"));
+//                taxList.add(NseUtils.createCommonData("28", "NRI - Minor (NRO)"));
+//                taxList.add(NseUtils.createCommonData("47", "Limited Liability Partnership (LLP)"));
+//                taxList.add(NseUtils.createCommonData("61", "OCI - Repatriation"));
+//                taxList.add(NseUtils.createCommonData("62", "OCI - Non-Repatriation"));
+
+                //new
                 taxList.add(NseUtils.createCommonData("01", "Individual"));
                 taxList.add(NseUtils.createCommonData("02", "On behalf of minor"));
                 taxList.add(NseUtils.createCommonData("03", "HUF"));
                 taxList.add(NseUtils.createCommonData("04", "Company"));
+                taxList.add(NseUtils.createCommonData("05", "AOP"));
                 taxList.add(NseUtils.createCommonData("06", "Partnership Firm"));
                 taxList.add(NseUtils.createCommonData("07", "Body Corporate"));
                 taxList.add(NseUtils.createCommonData("08", "Trust"));
-                taxList.add(NseUtils.createCommonData("13", "Proprietorship"));
-                taxList.add(NseUtils.createCommonData("24", "NRO"));
+                taxList.add(NseUtils.createCommonData("09", "Society"));
+                taxList.add(NseUtils.createCommonData("10", "Others"));
+                taxList.add(NseUtils.createCommonData("11", "NRI - Others"));
+                taxList.add(NseUtils.createCommonData("12", "DFI"));
+                taxList.add(NseUtils.createCommonData("13", "Sole Proprietorship"));
+
                 taxList.add(NseUtils.createCommonData("21", "NRE"));
-                taxList.add(NseUtils.createCommonData("26", "NRI - Minor (NRE)"));
+                taxList.add(NseUtils.createCommonData("22", "OCB"));
+                taxList.add(NseUtils.createCommonData("23", "FII"));
+                taxList.add(NseUtils.createCommonData("24", "NRO"));
+                taxList.add(NseUtils.createCommonData("25", "Overseas Corporate Body - Others"));
+                taxList.add(NseUtils.createCommonData("26", "NRI Child"));
+                taxList.add(NseUtils.createCommonData("27", "NRI - HUF (NRO)"));
                 taxList.add(NseUtils.createCommonData("28", "NRI - Minor (NRO)"));
+                taxList.add(NseUtils.createCommonData("29", "NRI - HUF (NRE)"));
+
+                taxList.add(NseUtils.createCommonData("31", "Provident Fund"));
+                taxList.add(NseUtils.createCommonData("32", "Super Annuation Fund"));
+                taxList.add(NseUtils.createCommonData("33", "Gratuity Fund"));
+                taxList.add(NseUtils.createCommonData("34", "Pension Fund"));
+                taxList.add(NseUtils.createCommonData("36", "Mutual Funds FOF Schemes"));
+                taxList.add(NseUtils.createCommonData("37", "NPS Trust"));
+                taxList.add(NseUtils.createCommonData("38", "Global Development Network"));
+                taxList.add(NseUtils.createCommonData("39", "FCRA"));
+
+                taxList.add(NseUtils.createCommonData("41", "QFI - Individual"));
+                taxList.add(NseUtils.createCommonData("42", "QFI - Minors"));
+                taxList.add(NseUtils.createCommonData("43", "QFI - Corporate"));
+                taxList.add(NseUtils.createCommonData("44", "QFI - Pension Funds"));
+                taxList.add(NseUtils.createCommonData("45", "QFI - Hedge Funds"));
+                taxList.add(NseUtils.createCommonData("46", "QFI - Mutual Funds"));
+
                 taxList.add(NseUtils.createCommonData("47", "Limited Liability Partnership (LLP)"));
+                taxList.add(NseUtils.createCommonData("48", "Non-Profit Organization (NPO)"));
+
+                taxList.add(NseUtils.createCommonData("51", "Public Limited Company"));
+                taxList.add(NseUtils.createCommonData("52", "Private Limited Company"));
+                taxList.add(NseUtils.createCommonData("53", "Unlisted Company"));
+                taxList.add(NseUtils.createCommonData("54", "Mutual Funds"));
+                taxList.add(NseUtils.createCommonData("55", "FPI - Category I"));
+                taxList.add(NseUtils.createCommonData("56", "FPI - Category II"));
+                taxList.add(NseUtils.createCommonData("57", "FPI - Category III"));
+                taxList.add(NseUtils.createCommonData("58", "Financial Institutions"));
+                taxList.add(NseUtils.createCommonData("59", "Body of Individuals"));
+                taxList.add(NseUtils.createCommonData("60", "Insurance Company"));
+
                 taxList.add(NseUtils.createCommonData("61", "OCI - Repatriation"));
                 taxList.add(NseUtils.createCommonData("62", "OCI - Non-Repatriation"));
+
+                taxList.add(NseUtils.createCommonData("70", "Person of Indian Origin"));
+                taxList.add(NseUtils.createCommonData("72", "Government Body"));
+                taxList.add(NseUtils.createCommonData("73", "Defense Establishment"));
+                taxList.add(NseUtils.createCommonData("74", "Non-Government Organization"));
+                taxList.add(NseUtils.createCommonData("75", "Bank / Co-operative Bank"));
+                taxList.add(NseUtils.createCommonData("76", "Artificial Juridical Person"));
+                taxList.add(NseUtils.createCommonData("77", "Seafarer NRE"));
+                taxList.add(NseUtils.createCommonData("78", "Seafarer NRO"));
+                taxList.add(NseUtils.createCommonData("79", "Local Authority"));
             }
 
             return ResponseEntity.ok(taxList);

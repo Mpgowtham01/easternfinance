@@ -60,6 +60,9 @@ public interface UserOnlineRegDetailsRespository extends JpaRepository<UsersOnli
             @Param("clientName") String clientName
     );
 
+    @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName", nativeQuery = true)
+    List<UsersOnlineRegDetails> findUserByIdAndClientNameAndActive(@Param("userId") Integer userid, @Param("clientName") String clientName);
+
     @Query(value = "SELECT * FROM users_online_reg_details WHERE user_id = :userId AND client_name = :clientName AND nse_active = 1", nativeQuery = true)
     List<UsersOnlineRegDetails> findInactiveNseByUserIdAndClientname1(
             @Param("userId") Integer userId,

@@ -444,4 +444,13 @@ public class UserDto {
     private String last_name = "";
 
     private String date_of_birth_greeting = "";
+
+    private String client_type;
+    private String pms;
+    private String default_dp;
+    private String cdsl_dpid;
+    private String cdsl_cltid;
+    private String cmbp_id;
+    private String nsdl_dpid;
+    private String nsdl_cltid;
 }

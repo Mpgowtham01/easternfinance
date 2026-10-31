@@ -243,75 +243,97 @@ public class FeignClientUserController
 	@Hidden
 	@GetMapping("/getUserByIdAndActive")
 	public ResponseEntity<?> getUserById(@RequestParam Integer userId) {
-		try
-		{
-			List<UsersOnlineRegDetails> userDetails = userOnlineRegDetailsRespository.findNseUserByUserId(userId);
-
-			if (userDetails.isEmpty())
+		List<UsersOnlineRegDetails> useOptional = null;
+		UsersOnlineRegDetails userDetail = null;
+		List<UsersBankDetails> bankDetails = null;
+		UsersNomineeDetails nomineeDetails = null;
+		List<UsersMandateDetails> mandateDetails = null;
+		UsersNomineeDetails nominee = null;
+		UserDto userDto = null;
+		User user = null;
+		try {
+			System.out.println("came hereaaaaaa ");
+			Optional<User> userOpt = userService.getUserByIds(userId);
+			System.out.println("userOpt" +  userOpt);
+			if (userOpt.isEmpty())
 			{
+				return ResponseEntity.status(HttpStatus.NOT_FOUND)
+						.body(Map.of(
+								"status", 404,
+								"status_msg", "User not found"
+						));
+			}
+
+			if (userOpt.isPresent()) {
+				user = userOpt.get();
+			}
+
+			if (user != null) {
+				useOptional = userOnlineRegDetailsRespository.findUserByIdAndClientNameAndActive(userId,user.getClient_name());
+			}
+			if (useOptional != null && !useOptional.isEmpty()) {
+				userDetail = useOptional.get(0);
+			}
+
+			if (userDetail != null)
+			{
+				bankDetails = usersBankDetailsRepository.findByUseridAndClientName(userId, userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+				nomineeDetails = usersNomineeDetailsRepository.findByUseridAndClientName(userId, userDetail.getClient_name(), String.valueOf(userDetail.getId()), "NSE").orElse(null);
+				mandateDetails = usersMandateDetailsRespository.findByUseridAndClientName(userDetail.getUser_id(), userDetail.getClient_name(), String.valueOf(userDetail.getId()));
+
+				userDto = UserMapper.mapToUserDtoMapper(userDetail, bankDetails, mandateDetails, nomineeDetails);
+				userDto.setType_id(user.getType_id());
+				userDto.setBranch(user.getBranch());
+				userDto.setRm_name(user.getRm_name());
+				userDto.setSubbroker_name(user.getSubbroker_name());
+				userDto.setSuper_subbroker_name(user.getSuper_subbroker_name());
+				userDto.setPayout(user.getPayout());
+				userDto.setMobile_otp(user.getMobile_otp());
+				userDto.setEmail_authcode(user.getEmail_authcode());
+			} else {
+				userDto = new UserDto();
+				userDto.setUser_id(user.getId());
+				userDto.setName(user.getName());
+				userDto.setPan(user.getPan());
+				userDto.setMobile(user.getMobile());
+				userDto.setEmail(user.getEmail());
+				userDto.setType_id(user.getType_id());
+				userDto.setBranch(user.getBranch());
+				userDto.setRm_name(user.getRm_name());
+				userDto.setSubbroker_name(user.getSubbroker_name());
+				userDto.setSuper_subbroker_name(user.getSuper_subbroker_name());
+				userDto.setPayout(user.getPayout());
+				userDto.setActive(user.getActive());
+				userDto.setEmail_active(user.getEmail_active());
+				userDto.setUser_password(user.getUserPassword());
+				userDto.setUser_pass(user.getUserPass());
+				userDto.setStreet_1(user.getStreet_1());
+				userDto.setStreet_2(user.getStreet_2());
+				userDto.setStreet_3(user.getStreet_3());
+				userDto.setCity(user.getCity());
+				userDto.setPincode(user.getPincode());
+				userDto.setState(user.getState());
+				userDto.setCountry(user.getCountry());
+				userDto.setFather_name(user.getFather_name());
+				userDto.setGender(user.getGender());
+				userDto.setMarital_status(user.getMarital_status());
+				userDto.setDate_of_birth(user.getDate_of_birth());
+				userDto.setAnniversary_date(user.getAnniversary_date());
+				userDto.setPhone_office(user.getPhone_office());
+				userDto.setPhone_residence(user.getPhone_residence());
+				userDto.setBroker_code(user.getBroker_code());
+				userDto.setMobile_otp(user.getMobile_otp());
+				userDto.setEmail_authcode(user.getEmail_authcode());
+				userDto.setClient_name(user.getClient_name());
+			}
+
+
+			if (userDto != null) {
+				return ResponseEntity.ok(userDto);
+			} else {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", HttpStatus.BAD_REQUEST, "status_msg", "User not found"));
 			}
-
-			UsersOnlineRegDetails regDetails = userDetails.get(0);
-			User user = userRepository.findUSerByIdAndActive(userId).orElse(null);
-
-			// users table first, then overlay the NSE online registration record on top of it
-			UserDto userDto = new UserDto();
-			if (user != null)
-			{
-				BeanUtils.copyProperties(user, userDto);
-			}
-			BeanUtils.copyProperties(regDetails, userDto);
-
-			// keep the users table value wherever the registration record has nothing to say
-			if (user != null)
-			{
-				userDto.setName(preferNonBlank(regDetails.getName(), user.getName()));
-				userDto.setPan(preferNonBlank(regDetails.getPan(), user.getPan()));
-				userDto.setMobile(preferNonBlank(regDetails.getMobile(), user.getMobile()));
-				userDto.setEmail(preferNonBlank(regDetails.getEmail(), user.getEmail()));
-				userDto.setStreet_1(preferNonBlank(regDetails.getStreet_1(), user.getStreet_1()));
-				userDto.setStreet_2(preferNonBlank(regDetails.getStreet_2(), user.getStreet_2()));
-				userDto.setStreet_3(preferNonBlank(regDetails.getStreet_3(), user.getStreet_3()));
-				userDto.setCity(preferNonBlank(regDetails.getCity(), user.getCity()));
-				userDto.setPincode(preferNonBlank(regDetails.getPincode(), user.getPincode()));
-				userDto.setState(preferNonBlank(regDetails.getState(), user.getState()));
-				userDto.setCountry(preferNonBlank(regDetails.getCountry(), user.getCountry()));
-				userDto.setFather_name(preferNonBlank(regDetails.getFather_name(), user.getFather_name()));
-				userDto.setGender(preferNonBlank(regDetails.getGender(), user.getGender()));
-				userDto.setDate_of_birth(preferNonBlank(regDetails.getDate_of_birth(), user.getDate_of_birth()));
-				userDto.setPhone_office(preferNonBlank(regDetails.getPhone_office(), user.getPhone_office()));
-				userDto.setPhone_residence(preferNonBlank(regDetails.getPhone_residence(), user.getPhone_residence()));
-				userDto.setOccupation(preferNonBlank(regDetails.getOccupation(), user.getOccupation()));
-				userDto.setGuard_name(preferNonBlank(regDetails.getGuard_name(), user.getGuard_name()));
-				userDto.setGuard_pan(preferNonBlank(regDetails.getGuard_pan(), user.getGuard_pan()));
-				userDto.setBroker_code(preferNonBlank(regDetails.getBroker_code(), user.getBroker_code()));
-				userDto.setClient_name(preferNonBlank(regDetails.getClient_name(), user.getClient_name()));
-				userDto.setRegister_source(preferNonBlank(regDetails.getRegister_source(), user.getRegister_source()));
-				userDto.setSalutation(preferNonBlank(regDetails.getSalutation(), user.getSalutation()));
-				userDto.setEuin(preferNonBlank(regDetails.getEuin(), user.getEuin()));
-
-				if (regDetails.getEmail_verified() == null)
-				{
-					userDto.setEmail_verified(user.getEmail_verified());
-				}
-				if (regDetails.getMobile_verified() == null)
-				{
-					userDto.setMobile_verified(user.getMobile_verified());
-				}
-				if (regDetails.getCreated_date() == null)
-				{
-					userDto.setCreated_date(user.getCreated_date());
-				}
-			}
-
-			userDto.setId(regDetails.getId());
-			userDto.setUser_id(regDetails.getUser_id() != null ? regDetails.getUser_id() : userId);
-
-			return ResponseEntity.ok(userDto);
-		}
-		catch (Exception ex)
-		{
+		} catch (Exception ex) {
 			ex.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status", HttpStatus.INTERNAL_SERVER_ERROR, "status_msg", "Error occurred while fetching user"));
 		}
@@ -688,6 +710,24 @@ public class FeignClientUserController
 		try
 		{
 			return usersNseRegReportRepository.findFirstByIin_numberAndClient_name(iin_number, client_name)
+					.map(ResponseEntity::ok)
+					.orElseGet(() -> ResponseEntity.notFound().build());
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			return ResponseEntity.status(500).body("Error retrieving report");
+		}
+	}
+
+	@Hidden
+	@GetMapping("/getRegReportInActive")
+	public ResponseEntity<?> getRegReportInActive(
+			@RequestParam String iin_number,
+			@RequestParam String client_name) {
+		try
+		{
+			return usersNseRegReportRepository.findFirstByIin_numberAndClient_nameInActive(iin_number, client_name)
 					.map(ResponseEntity::ok)
 					.orElseGet(() -> ResponseEntity.notFound().build());
 		}

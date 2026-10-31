@@ -1,5 +1,6 @@
 package com.user.model;
 
+import com.user.utils.UserUtils;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -169,6 +170,15 @@ public class UsersOnlineRegDetails
     private String email_authcode;
     private Integer mobile_verified;
     private String mobile_otp;
+
+    private String client_type;
+    private String pms;
+    private String default_dp;
+    private String cdsl_dpid;
+    private String cdsl_cltid;
+    private String cmbp_id;
+    private String nsdl_dpid;
+    private String nsdl_cltid;
 
     private Date created_date;
 

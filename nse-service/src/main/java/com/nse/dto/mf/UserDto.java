@@ -423,6 +423,15 @@ public class UserDto {
     private String middle_name = "";
     private String last_name = "";
 
+    private String client_type;
+    private String pms;
+    private String default_dp;
+    private String cdsl_dpid;
+    private String cdsl_cltid;
+    private String cmbp_id;
+    private String nsdl_dpid;
+    private String nsdl_cltid;
+
     private String date_of_birth_greeting = "";
 
     public boolean isIs_purchase_allowed() {

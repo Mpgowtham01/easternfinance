@@ -11,6 +11,7 @@ import com.nse.dto.mf.UserDto;
 import com.nse.model.NseOnlineStepUpSchemeMaster;
 import com.nse.model.NseTransactions;
 import com.nse.repository.NseLogRepository;
+import com.nse.repository.NseTransactionJdbcRepository;
 import com.nse.repository.NseTransactionRepository;
 import com.nse.response.CommonResponse;
 import com.nse.response.StatusMessage;
@@ -77,6 +78,9 @@ public class NseAdminReportController
 
     private static final int STEPUP_REPORT_MAX_DAY_GAP = 31;
 
+    // Keeps the order status sync log readable when NSE returns thousands of unmatched rows
+    private static final int UNMATCHED_ORDER_LOG_LIMIT = 25;
+
     private static final List<String> STEPUP_INVESTOR_NAME_KEYS =
             List.of("investor_name", "client_name", "first_holder_name", "holder_name", "user_name");
 
@@ -109,6 +113,9 @@ public class NseAdminReportController
 
     @Autowired
     NseTransactionRepository nseTransactionRepository;
+
+    @Autowired
+    NseTransactionJdbcRepository nseTransactionJdbcRepository;
 
     @Operation(
             summary = "Update UTR Number for Purchase Order",
@@ -3688,7 +3695,14 @@ public class NseAdminReportController
 
             System.out.println("Request Body: " + orderRequest);
 
+            long totalStart = System.currentTimeMillis();
+            System.out.println("🚀 getAdminOrderStatusReport START at " + new Date()
+                    + " | from = " + from_date + " | to = " + to_date + " | client = " + client_name);
+
+            long mfdStart = System.currentTimeMillis();
             BseNseKeyDto mfdDetails = userServiceClient.getByClientName(client_name, token);
+            System.out.println("🔑 getByClientName took " + (System.currentTimeMillis() - mfdStart) + " ms");
+
             if (mfdDetails == null) {
                 return NseUtils.commonResponse(NO_ARN_FOUND, HttpStatus.BAD_REQUEST);
             }
@@ -3698,6 +3712,10 @@ public class NseAdminReportController
 
             collectBrokerOrders(restTemplate, orderRequest, combinedOrders, client_name, userid, report_status_type, mfdDetails,token);
 
+
+            System.out.println("🏁 getAdminOrderStatusReport DONE in "
+                    + (System.currentTimeMillis() - totalStart) + " ms | orders collected = "
+                    + combinedOrders.length() + " | finished at " + new Date());
 
             return ResponseEntity.ok("please click ok to load page!");
 
@@ -3715,7 +3733,10 @@ public class NseAdminReportController
         String brokerCode = mfdDetail.getBrokerCode();
         System.out.println("🔹 Processing brokerCode = " + brokerCode);
 
+        long accessStart = System.currentTimeMillis();
         BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, brokerCode,token);
+        System.out.println("🔑 getBseNseOnlineAccessByClientName took " + (System.currentTimeMillis() - accessStart) + " ms");
+
         if(online_access == null)
         {
             System.out.println("⚠️ NSE Online credentials not found for brokerCode = " + brokerCode);
@@ -3744,34 +3765,111 @@ public class NseAdminReportController
 
         try
         {
+            System.out.println("➡️ [" + brokerCode + "] Calling NSE " + orderStatus_url + " at " + new Date());
+            long nseStart = System.currentTimeMillis();
+
             ResponseEntity<String> orderStatusresponse =
                     restTemplate.postForEntity(orderStatus_url, entity, String.class);
 
-            System.out.println("Response Code for ARN " + brokerCode + ": " + orderStatusresponse.getStatusCode());
+            String responseBody = orderStatusresponse.getBody();
+            System.out.println("Response Code for ARN " + brokerCode + ": " + orderStatusresponse.getStatusCode()
+                    + " | NSE call took " + (System.currentTimeMillis() - nseStart) + " ms"
+                    + " | body size = " + (responseBody == null ? 0 : responseBody.length()) + " chars");
 
-            JSONObject jsonResponse = new JSONObject(orderStatusresponse.getBody());
+            long parseStart = System.currentTimeMillis();
+            JSONObject jsonResponse = new JSONObject(responseBody);
             JSONArray ordersArray = jsonResponse.optJSONArray("report_data");
+            System.out.println("📦 [" + brokerCode + "] Parsed JSON in " + (System.currentTimeMillis() - parseStart)
+                    + " ms | report_data rows = " + (ordersArray == null ? "null" : ordersArray.length()));
 
             if (ordersArray == null || ordersArray.isEmpty()) {
                 System.out.println("⚠️ No data for ARN " + brokerCode);
                 return;
             }
 
+            // Collect every row first, then push them to the DB as one batched statement.
+            // Updating row by row meant one statement + one commit per order, which is what made
+            // this report slow enough to hit the gateway timeout on large date ranges.
+            // Last row wins when NSE repeats an order_id in the same report.
+            Map<String, NseTransactions> pendingUpdates = new LinkedHashMap<>();
+            long buildStart = System.currentTimeMillis();
+
             IntStream.range(0, ordersArray.length()).mapToObj(ordersArray::getJSONObject).forEach(order ->
             {
                 String orderId     = order.optString("order_id");
                 String orderStatus = order.optString("order_status");
                 String orderRemark = order.optString("order_remark");
-                String accountNo   = order.optString("account_no");
-                String amount      = order.optString("amount");
-                String schemecode  = order.optString("scheme_code");
-
-                int rows = nseTransactionRepository.updateMandateStatus(orderStatus, orderRemark, amount, client_name, accountNo, schemecode, orderId, Integer.valueOf(userid));
-
-                System.out.println(rows > 0 ? "✅ Updated " + orderId + " | account " + accountNo + " | status " + orderStatus : "⚠️ No record found for orderId " + orderId);
 
                 combinedOrders.put(order);
+
+                if (orderId == null || orderId.trim().isEmpty()) {
+                    return;
+                }
+
+                NseTransactions tx = new NseTransactions();
+                tx.setReg_id(orderId.trim());
+                tx.setOrder_status(orderStatus);
+                tx.setRemarks(orderRemark);
+                tx.setClient_name(client_name);
+
+                pendingUpdates.put(tx.getReg_id(), tx);
             });
+
+            List<NseTransactions> candidates = new ArrayList<>(pendingUpdates.values());
+            System.out.println("🧱 [" + brokerCode + "] Built " + candidates.size() + " unique order(s) from "
+                    + ordersArray.length() + " row(s) in " + (System.currentTimeMillis() - buildStart) + " ms");
+
+            // NSE returns every order for the date range, but most of them are not ours. Look the ids
+            // up once in chunked IN (...) queries so we only send UPDATEs that can actually change a
+            // row, instead of one table-scanning UPDATE per order.
+            System.out.println("🔍 [" + brokerCode + "] Looking up " + candidates.size()
+                    + " order id(s) already in nse_transactions at " + new Date());
+            long lookupStart = System.currentTimeMillis();
+            List<String> regIds = candidates.stream().map(NseTransactions::getReg_id).collect(Collectors.toList());
+            Map<String, NseTransactionJdbcRepository.OrderStatusRow> existing =
+                    nseTransactionJdbcRepository.findExistingOrderStatuses(client_name, regIds);
+            System.out.println("🔍 [" + brokerCode + "] Lookup done in " + (System.currentTimeMillis() - lookupStart)
+                    + " ms | " + existing.size() + " of " + candidates.size() + " order id(s) exist in DB");
+
+            List<NseTransactions> updates = new ArrayList<>();
+            List<String> unmatchedOrderIds = new ArrayList<>();
+            int unchangedCount = 0;
+
+            for (NseTransactions tx : candidates) {
+                NseTransactionJdbcRepository.OrderStatusRow current = existing.get(tx.getReg_id());
+                if (current == null) {
+                    unmatchedOrderIds.add(tx.getReg_id());
+                } else if (Objects.equals(current.orderStatus(), tx.getOrder_status())
+                        && Objects.equals(current.remarks(), tx.getRemarks())) {
+                    unchangedCount++;
+                } else {
+                    updates.add(tx);
+                }
+            }
+
+            System.out.println("📊 [" + brokerCode + "] " + unmatchedOrderIds.size() + " not in DB | "
+                    + unchangedCount + " already up to date | " + updates.size() + " need updating");
+
+            int updatedCount = 0;
+            long updateStart = System.currentTimeMillis();
+
+            if (updates.isEmpty()) {
+                System.out.println("💾 [" + brokerCode + "] Nothing to update, skipping batch");
+            } else {
+                System.out.println("💾 [" + brokerCode + "] Starting batch update of " + updates.size()
+                        + " order(s) at " + new Date());
+                updatedCount = nseTransactionJdbcRepository.batchUpdateOrderStatus(updates);
+                System.out.println("💾 [" + brokerCode + "] Batch update returned in "
+                        + (System.currentTimeMillis() - updateStart) + " ms");
+            }
+
+            System.out.println("✅ ARN " + brokerCode + ": " + updatedCount + " order(s) updated in "
+                    + (System.currentTimeMillis() - updateStart) + " ms");
+            if (!unmatchedOrderIds.isEmpty()) {
+                System.out.println("⚠️ No record found for " + unmatchedOrderIds.size() + " orderId(s): "
+                        + unmatchedOrderIds.stream().limit(UNMATCHED_ORDER_LOG_LIMIT).collect(Collectors.joining(", "))
+                        + (unmatchedOrderIds.size() > UNMATCHED_ORDER_LOG_LIMIT ? ", ..." : ""));
+            }
 
         } catch (RuntimeException e) {
             System.out.println("❌ Error processing ARN " + brokerCode + ": " + e.getMessage());

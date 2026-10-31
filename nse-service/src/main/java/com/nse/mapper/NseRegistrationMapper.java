@@ -1,13 +1,12 @@
 package com.nse.mapper;
 
 import com.nse.dto.mf.UserDto;
+import com.nse.utils.NseTaxStatus;
+import com.nse.utils.NseUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Component
 public class NseRegistrationMapper {
@@ -24,11 +23,12 @@ public class NseRegistrationMapper {
         regObject.put("tax_status", StringUtils.defaultString(userDto.getTax_status_code()));
         String tax_status = StringUtils.defaultString(userDto.getTax_status_code());
 
-        List<String> taxStatusList = Arrays.asList ("03", "04", "06", "07", "08", "13", "10", "47");
-        if(taxStatusList.contains(tax_status)){
-            regObject.put("gender", "O");
-        }else{
+        // Field 6: mandatory M/F/O/T for individual and minor clients only; entities and HUFs
+        // carry "O" since there is no natural person to describe.
+        if (NseTaxStatus.isIndividual(tax_status)) {
             regObject.put("gender", StringUtils.defaultString(userDto.getGender()));
+        } else {
+            regObject.put("gender", "O");
         }
 
         regObject.put("primary_holder_dob_incorporation", StringUtils.defaultString(userDto.getDate_of_birth()));
@@ -58,9 +58,11 @@ public class NseRegistrationMapper {
         regObject.put("second_holder_pan_exempt", "");
         regObject.put("third_holder_pan_exempt", "");
         regObject.put("guardian_pan_exempt", "");
-        if(userDto.getTax_status_code().equalsIgnoreCase("02")){
+        // A minor rarely holds a PAN of their own, so the guardian's stands in. Must match the
+        // pan_rp / tpin1 substitution the FATCA_COMMON call makes for the same client.
+        if (NseTaxStatus.isMinor(tax_status)) {
             regObject.put("primary_holder_pan", StringUtils.defaultString(userDto.getGuard_pan()));
-        }else{
+        } else {
             regObject.put("primary_holder_pan", StringUtils.defaultString(userDto.getPan()));
         }
         regObject.put("second_holder_pan", StringUtils.defaultString(userDto.getJoint_holder_pan1()));
@@ -77,14 +79,38 @@ public class NseRegistrationMapper {
         regObject.put("third_holder_exempt_category", "");
         regObject.put("guardian_exempt_category", "");
 
-        regObject.put("client_type", "P");
-        regObject.put("pms", "");
-        regObject.put("default_dp", "");
-        regObject.put("cdsl_dpid", "");
-        regObject.put("cdslcltid", "");
-        regObject.put("cmbp_id", "");
-        regObject.put("nsdldpid", "");
-        regObject.put("nsdlcltid", "");
+        String clientType = NseUtils.checkParem(userDto.getClient_type());
+
+        if(clientType.isEmpty())
+        {
+            clientType = "P";
+        }
+
+        if(clientType.equalsIgnoreCase("P"))
+        {
+            regObject.put("client_type", "P");
+            regObject.put("pms", "");
+            regObject.put("default_dp", "");
+            regObject.put("cdsl_dpid", "");
+            regObject.put("cdslcltid", "");
+            regObject.put("cmbp_id", "");
+            regObject.put("nsdldpid", "");
+            regObject.put("nsdlcltid", "");
+        }else
+        {
+            regObject.put("client_type", "D");
+            regObject.put("pms", StringUtils.defaultString(userDto.getPms()));
+            regObject.put("default_dp", StringUtils.defaultString(userDto.getDefault_dp()));
+            if(userDto.getDefault_dp().equalsIgnoreCase("CDSL"))
+            {
+                regObject.put("cdsl_dpid", StringUtils.defaultString(userDto.getCdsl_dpid()));
+                regObject.put("cdslcltid", StringUtils.defaultString(userDto.getCdsl_cltid()));
+            }else{
+                regObject.put("cmbp_id", StringUtils.defaultString(userDto.getCmbp_id()));
+                regObject.put("nsdldpid", StringUtils.defaultString(userDto.getNsdl_dpid()));
+                regObject.put("nsdlcltid", StringUtils.defaultString(userDto.getNsdl_cltid()));
+            }
+        }
 
         regObject.put("account_type_1", StringUtils.defaultString(userDto.getBank_account_type1()));
         regObject.put("account_no_1", StringUtils.defaultString(userDto.getBank_account_number1()));
@@ -134,7 +160,9 @@ public class NseRegistrationMapper {
         regObject.put("email", StringUtils.defaultString(userDto.getEmail()));
         regObject.put("communication_mode", "E");
 
-        if(userDto.getBank_account_type1().equalsIgnoreCase("NE") || userDto.getBank_account_type1().equalsIgnoreCase("NO")){
+        // Fields 82-92 key off the tax status ("MANDATORY FOR NRI, EXCEPT FOR SEAFARER. REFER TAX
+        // STATUS"), not off the bank account type - an NRI may well hold an SB account.
+        if (NseTaxStatus.requiresForeignAddress(tax_status)) {
             regObject.put("foreign_address_1", StringUtils.defaultString(userDto.getNri_address1()));
             regObject.put("foreign_address_2", StringUtils.defaultString(userDto.getNri_address2()));
             regObject.put("foreign_address_3", StringUtils.defaultString(userDto.getNri_address3()));
@@ -196,13 +224,18 @@ public class NseRegistrationMapper {
         regObject.put("third_holder_mobile", StringUtils.defaultString(userDto.getJoint_holder_mobile2()));
         regObject.put("third_holder_mobile_declaration", StringUtils.defaultString(userDto.getJoint_holder_mobile_relation2()));
 
-        regObject.put("guardian_relation", StringUtils.defaultString(userDto.getGuard_relationship()));
+        // Field 121 accepts only 06 (father), 13 (mother) and 23 (court appointed legal guardian).
+        regObject.put("guardian_relation", NseTaxStatus.guardianRelationCode(userDto.getGuard_relationship()));
 
         String nominee_opt = userDto.getNominee_opt();
         nominee_opt = (nominee_opt==null? "":nominee_opt.trim());
 
-        List<String> nominationOptTaxStatusList = Arrays.asList ("02","03", "04", "06", "07", "08", "13", "10", "47", "26", "28");
-        if(nominationOptTaxStatusList.contains(tax_status) || nominee_opt.equalsIgnoreCase("N"))
+        // Field 122 is a mandatory Y/N. Nomination is only offered to individual holders who are
+        // not minors; for everyone else the whole nominee block has to go out empty.
+        boolean nominationDeclined = nominee_opt.equalsIgnoreCase("N")
+                || (nominee_opt.isEmpty() && StringUtils.isBlank(userDto.getNominee1_name()));
+
+        if(!NseTaxStatus.nominationAllowed(tax_status) || nominationDeclined)
         {
             regObject.put("nomination_opt", "N");
             regObject.put("nomination_authentication", "");
@@ -263,7 +296,7 @@ public class NseRegistrationMapper {
             regObject.put("nominee_soa", "");
         }else
         {
-            regObject.put("nomination_opt", nominee_opt);
+            regObject.put("nomination_opt", nominee_opt.isEmpty() ? "Y" : nominee_opt);
             regObject.put("nomination_authentication", nomination_authentication);
 
             // nominee 1

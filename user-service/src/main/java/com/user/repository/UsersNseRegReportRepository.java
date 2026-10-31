@@ -14,4 +14,8 @@ public interface UsersNseRegReportRepository extends JpaRepository<UsersNseRegRe
     Optional<UsersNseRegReport> findFirstByIin_numberAndClient_name(@Param("iin_number") String iin_number,
                                                                     @Param("client_name") String client_name);
 
+    @Query("FROM UsersNseRegReport u WHERE u.iin_number = :iin_number AND u.client_name = :client_name AND u.transaction_date = 'NO'")
+    Optional<UsersNseRegReport> findFirstByIin_numberAndClient_nameInActive(@Param("iin_number") String iin_number,
+                                                                    @Param("client_name") String client_name);
+
 }

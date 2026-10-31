@@ -13,6 +13,7 @@ import com.nse.response.CityStateByPincodeResponse;
 import com.nse.response.CommonResponse;
 import com.nse.response.StatusMessage;
 import com.nse.response.SuccessResponse;
+import com.nse.services.ApiLogService;
 import com.nse.services.LogExceptionService;
 import com.nse.services.NseLogService;
 import com.nse.services.NsePincodeService;
@@ -69,6 +70,9 @@ public class NseOnboardingController {
     }
 
     @Autowired
+    ApiLogService apiLogService;
+
+    @Autowired
     NsePincodeService nsePincodeService;
 
     @Autowired
@@ -119,6 +123,7 @@ public class NseOnboardingController {
             if (!source.equalsIgnoreCase("mobile")
                     && (onlineId == null || onlineId.isEmpty() || !onlineId.matches("-?\\d+")))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Online Id is Not Valid", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Online Id is Not Valid", HttpStatus.BAD_REQUEST);
             }
 
@@ -130,6 +135,7 @@ public class NseOnboardingController {
                     userData = userServiceClient.getMobileAppUserDetailsByOnlineId(Integer.valueOf(userid), token);
                 }catch (FeignException e)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return FeignErrorHandler.handle(e, "User Service", "User not found");
                 }
             }else
@@ -139,6 +145,7 @@ public class NseOnboardingController {
 
             if(userData == null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found, Please try again", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("User not found, Please try again", HttpStatus.BAD_REQUEST);
             }
 
@@ -245,6 +252,7 @@ public class NseOnboardingController {
                     nsekey = userServiceClient.getByClientName(client_name,token);
                 }catch (FeignException.NotFound ex)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
                 }
 
@@ -283,6 +291,7 @@ public class NseOnboardingController {
 
                     if(online_access == null)
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.NOT_FOUND.value(), "", LogUtils.getIpAddr(request), source);
                         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new CommonResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "NSE Online Credentials Not available. Please contact your RM"));
                     }
 
@@ -294,6 +303,7 @@ public class NseOnboardingController {
 
                     if(StringHelper.isEmpty(nse_userid) || StringHelper.isEmpty(nse_memberid) || StringHelper.isEmpty(nse_secret_key) || StringHelper.isEmpty(nse_license_key))
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse("NSE Online Credentials Not available. Please contact your RM", HttpStatus.BAD_REQUEST);
                     }
                     String base64Encoded = AESEncryptionUtilV2.base64EncodedAuth(nse_secret_key, nse_license_key, nse_userid);
@@ -423,6 +433,7 @@ public class NseOnboardingController {
 
                             if ("REG_FAILED".equalsIgnoreCase(reg_status))
                             {
+                                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                                 return NseUtils.commonResponse(reg_remark, HttpStatus.BAD_REQUEST);
                             }
 
@@ -483,14 +494,12 @@ public class NseOnboardingController {
                                     client_occupation_type = "O";
                                 }
 
-                                String pan = userDto.getPan();
-                                String panType = "";
-
-                                if (pan != null && pan.length() >= 4) {
-                                    panType = pan.substring(3, 4).toUpperCase(Locale.ROOT);
-                                }
-
-                                if(!panType.isEmpty() && !panType.equalsIgnoreCase("P"))
+                                // FATCA_COMMON / UBO_APPL: "IF Tax Status Category='Non-Individual'
+                                // OR Tax Status='HUF' Then It can be 'Y' or 'N' Else It should be
+                                // 'N'". Previously inferred from the PAN's 4th character, which
+                                // disagreed with the tax status whenever the holder was a minor
+                                // (the guardian's PAN is the one reported) or held no PAN at all.
+                                if (NseTaxStatus.isEntityForFatca(client_taxstatus))
                                 {
                                     data_src = "P";
                                     nffe_catg = "NA";
@@ -550,8 +559,8 @@ public class NseOnboardingController {
                                 JSONArray fatcaReqArray = new JSONArray();
                                 JSONObject fatcaReqObject = new JSONObject();
 
-                                Set<String> minorTaxCodeList = Set.of("02", "26", "28");
-                                if (minorTaxCodeList.contains(userDto.getTax_status_code())) {
+                                boolean isMinorHolder = NseTaxStatus.isMinor(client_taxstatus);
+                                if (isMinorHolder) {
                                     fatcaReqObject.put("pan_rp", userDto.getGuard_pan());
                                 }else{
                                     fatcaReqObject.put("pan_rp", userDto.getPan());
@@ -568,8 +577,7 @@ public class NseOnboardingController {
                                 fatcaReqObject.put("co_bir_inc", "IN");
                                 fatcaReqObject.put("tax_res1", tax_res1);
 
-                                if (minorTaxCodeList.contains(userDto.getTax_status_code())) {
-
+                                if (isMinorHolder) {
                                     fatcaReqObject.put("tpin1", userDto.getGuard_pan());
                                 }else{
                                     fatcaReqObject.put("tpin1", userDto.getPan());
@@ -600,17 +608,15 @@ public class NseOnboardingController {
                                 fatcaReqObject.put("occ_code", userDto.getOccupation_code().trim());
                                 fatcaReqObject.put("occ_type", NseUtils.getOccupationTypeByCode(userDto.getOccupation_code().trim())); //OCC_TYPE M Character 1  S - Service; B - Business, O - Others;X - Not Categorized
 
-                                if (client_taxstatus.equalsIgnoreCase("01") || client_taxstatus.equalsIgnoreCase("02") ||
-                                        client_taxstatus.equalsIgnoreCase("24") || client_taxstatus.equalsIgnoreCase("21") ||
-                                        client_taxstatus.equalsIgnoreCase("61") || client_taxstatus.equalsIgnoreCase("62") ||
-                                        client_taxstatus.equalsIgnoreCase("26") || client_taxstatus.equalsIgnoreCase("28"))
+                                // EXEMP_CODE is "Mandatory for Non-Individuals"; SDF_FLAG is
+                                // "Default 'Y' for Entities; Optional for Individuals".
+                                if (NseTaxStatus.isEntityForFatca(client_taxstatus))
                                 {
-                                    fatcaReqObject.put("exemp_code", "");
-                                    fatcaReqObject.put("sdf_flag", "");
-
-                                }else{
                                     fatcaReqObject.put("exemp_code", "N");
                                     fatcaReqObject.put("sdf_flag", "Y");
+                                }else{
+                                    fatcaReqObject.put("exemp_code", "");
+                                    fatcaReqObject.put("sdf_flag", "");
                                 }
                                 fatcaReqObject.put("ffi_drnfe", ffi_drnfe);
                                 fatcaReqObject.put("giin_no", giin_no);
@@ -1237,6 +1243,7 @@ public class NseOnboardingController {
                             {
                                 if (fatca_reg_status.equalsIgnoreCase("REG_FAILED"))
                                 {
+                                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), fatca_reg_remark+ " FATCA registration failed. Please contact your RM.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                                     return NseUtils.commonResponse(fatca_reg_remark+ " FATCA registration failed. Please contact your RM.", HttpStatus.BAD_REQUEST);
                                 } else
                                 {
@@ -1258,10 +1265,13 @@ public class NseOnboardingController {
                                         }
                                         if (e.status() == 409)
                                         {
+                                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Duplicate entry for this user.", HttpStatus.CONFLICT.value(), "", LogUtils.getIpAddr(request), source);
                                             return NseUtils.commonResponse("Duplicate entry for this user.", HttpStatus.CONFLICT);
                                         } else if (e.status() == 400) {
+                                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), errorMessage, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                                             return NseUtils.commonResponse(errorMessage, HttpStatus.BAD_REQUEST);
                                         } else {
+                                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Unexpected error from User Service: " + errorMessage, HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                                             return NseUtils.commonResponse("Unexpected error from User Service: " + errorMessage,
                                                     HttpStatus.INTERNAL_SERVER_ERROR);
                                         }
@@ -1278,12 +1288,12 @@ public class NseOnboardingController {
                                         reg.setRm_name(userDto.getRm_name());
                                         reg.setSubbroker_name(userDto.getSubbroker_name());
                                         reg.setIin_number(userDto.getNse_iin_number());
-                                        reg.setIin_created_date(df1.format(new Date()));
+                                        reg.setIin_created_date(df0.format(new Date()));
                                         reg.setForm_updated_date("");
                                         reg.setCheque_updated_date("");
                                         reg.setIin_status("");
                                         reg.setIin_active(1);
-                                        reg.setTransaction_date(df0.format(new Date()));
+                                        reg.setTransaction_date("NO");
                                         reg.setClient_name(client_name);
                                         reg.setMandate_active(0);
                                         reg.setMultiple_reg(multiple_reg != null && multiple_reg.trim().matches("-?\\d+")
@@ -1301,10 +1311,12 @@ public class NseOnboardingController {
                                         userServiceClient.saveUserRegStatus(token);
                                     }
 
+                                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Registration successful", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                                     return NseUtils.commonResponse("Registration successful", HttpStatus.OK);
                                 }
                             } else
                             {
+                                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), fatca_reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                                 return NseUtils.commonResponse(fatca_reg_remark, HttpStatus.BAD_REQUEST);
                             }
                         }else
@@ -1317,6 +1329,7 @@ public class NseOnboardingController {
 
                             String message = json.getString("message");
 
+                            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), message, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                             return NseUtils.commonResponse(message, HttpStatus.BAD_REQUEST);
 
                         }
@@ -1324,18 +1337,22 @@ public class NseOnboardingController {
                     {
                         System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                         ex.printStackTrace();
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }
 
             } else if (userData != null)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), String.valueOf(userData), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return ResponseEntity.ok(userData);
             } else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User details not available. Please contact admin.", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("User details not available. Please contact admin.", HttpStatus.BAD_REQUEST);
             }
 
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Registration successful", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse("Registration successful", HttpStatus.OK);
 
         } catch (Exception ex)
@@ -1343,6 +1360,7 @@ public class NseOnboardingController {
             //logExceptionService.save(Integer.parseInt(userid), client_name, NseUtils.getFullRequestUrl(request), ex.getMessage(), request.getMethod(), NseUtils.getIpAddr(request), source);
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -1593,6 +1611,7 @@ public class NseOnboardingController {
                 users = userServiceClient.getUserById(Integer.valueOf(userid), token);
             } catch (FeignException e)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
             String client_name = users.getClient_name();
@@ -1831,6 +1850,7 @@ public class NseOnboardingController {
                 user =  userServiceClient.getUserDetailsByID(client_name, Integer.valueOf(userid),token);
             }catch (FeignException e)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
@@ -1843,6 +1863,7 @@ public class NseOnboardingController {
                 nse = userServiceClient.getUserBseNseDetailsByNseIINNumberBrokerCode(client_name, iin_number, arn_number,token);
             }catch (FeignException e)
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return FeignErrorHandler.handle(e, "User Service", "User not found");
             }
 
@@ -2106,16 +2127,19 @@ public class NseOnboardingController {
                 System.out.println("userServiceClient.saveUser::gender: " + nse.getGender());
                 userServiceClient.updateUser(nse,token);
 
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), String.valueOf(user.getId()), HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(String.valueOf(user.getId()), HttpStatus.OK);
             }
             else
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User details not available. Please try again!", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("User details not available. Please try again!", HttpStatus.BAD_REQUEST);
             }
 
         }
         catch(Exception ex)
         {
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -2162,6 +2186,7 @@ public class NseOnboardingController {
 
                 if(StringHelper.isEmpty(userid))
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User details not available. Please try again!", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse("User details not available. Please try again!", HttpStatus.BAD_REQUEST);
                 }
 
@@ -2587,6 +2612,7 @@ public class NseOnboardingController {
 
                     if(user == null)
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "User details not available. Please try again!", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse("User details not available. Please try again!", HttpStatus.BAD_REQUEST);
                     }
 
@@ -3292,6 +3318,7 @@ public class NseOnboardingController {
                 BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
                 if(online_access == null)
                 {
+                   apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Online Access Key is Not Present", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                    return ResponseEntity.ok("Online Access Key is Not Present");
                 }
 
@@ -3407,6 +3434,7 @@ public class NseOnboardingController {
                     System.out.println("reg_status= " + reg_status);
                     if(reg_status.equalsIgnoreCase("REG_FAILED"))
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_remark, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return ResponseEntity.ok(reg_remark);
                     }
 
@@ -3467,16 +3495,19 @@ public class NseOnboardingController {
                     // Final response page
                     if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_status + " UCC registered successfully...! RegID: " + reg_id, HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse(reg_status + " UCC registered successfully...! RegID: " + reg_id, HttpStatus.OK);
                     }
                     else
                     {
+                        apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), reg_status + " : " + reg_remark, HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                         return NseUtils.commonResponse(reg_status + " : " + reg_remark, HttpStatus.BAD_REQUEST);
                     }
 
                 }
                 catch(Exception ex)
                 {
+                    apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), ex.getMessage(), HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                     return NseUtils.commonResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
                 }
 
@@ -3485,6 +3516,7 @@ public class NseOnboardingController {
             {
                 System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
                 ex.printStackTrace();
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
@@ -3504,13 +3536,16 @@ public class NseOnboardingController {
 
     @GetMapping("/getCityStateDetailsByPincode")
     public ResponseEntity<?> getCityStateDetailsByPincode(
+            HttpServletRequest request,
             @RequestHeader("Authorization") String token,
-            @RequestParam String pincode)
+            @RequestParam String pincode,
+            @RequestParam(required = false) String source)
     {
         try
         {
             if (!TokenInterceptor.isValidToken(token, secretKey))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "token not valid or empty!", HttpStatus.UNAUTHORIZED.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("token not valid or empty!", HttpStatus.UNAUTHORIZED);
             }
 
@@ -3518,6 +3553,7 @@ public class NseOnboardingController {
 
             if (StringHelper.isEmpty(pincode))
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Please provide the pincode", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Please provide the pincode", HttpStatus.BAD_REQUEST);
             }
 
@@ -3525,6 +3561,7 @@ public class NseOnboardingController {
 
             if (optionalPin.isEmpty())
             {
+                apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "Pincode not found", HttpStatus.BAD_REQUEST.value(), "", LogUtils.getIpAddr(request), source);
                 return NseUtils.commonResponse("Pincode not found", HttpStatus.BAD_REQUEST);
             }
 
@@ -3536,12 +3573,14 @@ public class NseOnboardingController {
                     NseUtils.trimOrEmpty(pin.getState_code())
             );
 
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), "", HttpStatus.OK.value(), "", LogUtils.getIpAddr(request), source);
             return ResponseEntity.ok(new CityStateByPincodeResponse(HttpStatus.OK.value(), "Success", "Success", result));
         }
         catch (Exception ex)
         {
             System.out.println("Exception Date & Time = " + new Date() + " & ERROR = " + ex.getMessage());
             ex.printStackTrace();
+            apiLogService.saveApiLog(token, LogUtils.getApiRequest(request), StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR.value(), "", LogUtils.getIpAddr(request), source);
             return NseUtils.commonResponse(StatusMessage.ExceptionAPIMessage, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

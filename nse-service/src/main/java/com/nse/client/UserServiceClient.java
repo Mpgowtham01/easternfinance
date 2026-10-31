@@ -95,6 +95,13 @@ public interface UserServiceClient {
 
     );
 
+    @GetMapping("/getRegReportInActive")
+    UsersNseRegReportDto getRegReportInActive(
+            @RequestParam("iin_number") String iin_number,
+            @RequestParam("client_name") String client_name, @RequestHeader("Authorization") String token
+
+    );
+
     @GetMapping("/getUsersPortfolioSchemewise")
     List<String> getUsersPortfolioSchemewise(
             @RequestParam("user_id") Integer userId,
@@ -599,4 +606,14 @@ public interface UserServiceClient {
     @GetMapping("/loadMandateDetailsByBankAccNumber")
     List<MandateMasterResponse> loadMandateDetailsByBankAccNumber(@RequestParam("bankAccountNumber")String bankAccountNumber, @RequestParam("nseIinNum")String nseIinNum, @RequestParam("brokerCode")String brokerCode, @RequestParam("onlineFlag")String onlineFlag, @RequestHeader("Authorization") String token);
 
+    @PostMapping("/saveApiLog")
+    void saveApiLog(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) String api_request_url,
+            @RequestParam(required = false) String api_request_body,
+            @RequestParam(required = false) Integer api_status,
+            @RequestParam(required = false) String api_failure_message,
+            @RequestParam(required = false) String ip,
+            @RequestParam(required = false) String source
+    );
 }

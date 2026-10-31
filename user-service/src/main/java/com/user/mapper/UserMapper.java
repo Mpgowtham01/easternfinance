@@ -127,6 +127,16 @@ public class UserMapper
         userDto.setJoint_holder_last_name1(UserUtils.checkParem(userDetails.getJoint_holder_last_name1()));
         userDto.setJoint_holder_middle_name2(UserUtils.checkParem(userDetails.getJoint_holder_middle_name2()));
         userDto.setJoint_holder_last_name2(UserUtils.checkParem(userDetails.getJoint_holder_last_name2()));
+
+        userDto.setClient_type(UserUtils.checkParem(userDetails.getClient_type()));
+        userDto.setPms(UserUtils.checkParem(userDetails.getPms()));
+        userDto.setDefault_dp(UserUtils.checkParem(userDetails.getDefault_dp()));
+        userDto.setCdsl_dpid(UserUtils.checkParem(userDetails.getCdsl_dpid()));
+        userDto.setCdsl_cltid(UserUtils.checkParem(userDetails.getCdsl_cltid()));
+        userDto.setCmbp_id(UserUtils.checkParem(userDetails.getCmbp_id()));
+        userDto.setNsdl_cltid(UserUtils.checkParem(userDetails.getNsdl_cltid()));
+        userDto.setNsdl_dpid(UserUtils.checkParem(userDetails.getNsdl_dpid()));
+
         userDto.setCreated_date(userDetails.getCreated_date());
 
         // Map bank details (up to 3 banks)
@@ -590,6 +600,16 @@ public class UserMapper
         userDto.setFirst_name(UserUtils.checkParem(userDetails.getFirst_name()));
         userDto.setMiddle_name(UserUtils.checkParem(userDetails.getMiddle_name()));
         userDto.setLast_name(UserUtils.checkParem(userDetails.getLast_name()));
+
+        userDto.setClient_type(UserUtils.checkParem(userDetails.getClient_type()));
+        userDto.setPms(UserUtils.checkParem(userDetails.getPms()));
+        userDto.setDefault_dp(UserUtils.checkParem(userDetails.getDefault_dp()));
+        userDto.setCdsl_dpid(UserUtils.checkParem(userDetails.getCdsl_dpid()));
+        userDto.setCdsl_cltid(UserUtils.checkParem(userDetails.getCdsl_cltid()));
+        userDto.setCmbp_id(UserUtils.checkParem(userDetails.getCmbp_id()));
+        userDto.setNsdl_cltid(UserUtils.checkParem(userDetails.getNsdl_cltid()));
+        userDto.setNsdl_dpid(UserUtils.checkParem(userDetails.getNsdl_dpid()));
+
         userDto.setCreated_date(userDetails.getCreated_date());
 
         // Map bank details (up to 3 banks)
