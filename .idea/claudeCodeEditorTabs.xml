@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="d6bfeb5f-9733-4475-8c9e-f5c775cea414" />
+    <option name="activeSessionId" value="a1bc6974-20b5-43bf-9837-9307e5d1b1e1" />
     <option name="openSessionIds">
       <list>
         <option value="98933a04-11fb-477c-b714-16ffb21df484" />
@@ -15,7 +15,7 @@
         <option value="b5fa265c-e3ef-46a2-b759-66c49d8c7837" />
         <option value="e051b986-02c6-4077-b0b4-32f665d23e49" />
         <option value="5d4da02a-be78-489f-b733-db6108758d27" />
-        <option value="d6bfeb5f-9733-4475-8c9e-f5c775cea414" />
+        <option value="a1bc6974-20b5-43bf-9837-9307e5d1b1e1" />
       </list>
     </option>
     <option name="sessionPaths">
@@ -27,8 +27,8 @@
         <entry key="77a02e21-9469-4af5-a7aa-fe2320a7dced" value="/sessions/56f4bbc9-66d0-43e3-8b1c-0ec7b7ca32b8" />
         <entry key="85f0cee4-ef31-45f4-8850-3765a62430a4" value="/sessions/c5927115-71af-4ac3-acca-12af3dd074c3" />
         <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821" />
+        <entry key="a1bc6974-20b5-43bf-9837-9307e5d1b1e1" value="/sessions/b47a8d3b-0c53-45d9-85f3-271b11cfffa0" />
         <entry key="b5fa265c-e3ef-46a2-b759-66c49d8c7837" value="/sessions/66c52061-e49e-4f92-8941-6f6663c883fa" />
-        <entry key="d6bfeb5f-9733-4475-8c9e-f5c775cea414" value="/sessions/57ba225a-8ab8-466a-aa78-410c61207bd9" />
         <entry key="e051b986-02c6-4077-b0b4-32f665d23e49" value="/sessions/d5f9e05f-5b2a-4502-859a-382cf016e902" />
         <entry key="e182074b-354d-4785-b3bc-c0ff86484298" value="/sessions/513ca48d-72f6-4376-a725-256f14d09543" />
         <entry key="f4aad4f3-7842-4082-b93a-94d6ea16596f" value="/sessions/3de0ed80-a8f2-4237-8bf2-bb4e6d3e9b7e" />
@@ -43,8 +43,9 @@
         <entry key="77a02e21-9469-4af5-a7aa-fe2320a7dced" value="Exception Date &amp; Time = Sat Sep 19 10:52:52 IST 20" />
         <entry key="85f0cee4-ef31-45f4-8850-3765a62430a4" value="[ { &quot;id&quot;: 32858, &quot;user_id&quot;: 65" />
         <entry key="98933a04-11fb-477c-b714-16ffb21df484" value="localhost:61789/sessions/15e729f0-94b2-41b2-a3fe-13af4b876821?workingDir=D%3A%2FGithub%2Feasternfinance&amp;panelId=98933a04-11fb-477c-b714-16ffb21df484&amp;theme=dark" />
+        <entry key="a1bc6974-20b5-43bf-9837-9307e5d1b1e1" value="Demat physical validation across six transactions" />
         <entry key="b5fa265c-e3ef-46a2-b759-66c49d8c7837" value="@nse-service/src/main/java/com/nse/controller/NseO" />
-        <entry key="d6bfeb5f-9733-4475-8c9e-f5c775cea414" value="Empty PROV_ORDERS report response" />
+        <entry key="cc94faa1-915c-4d62-ac98-696a2790d18c" value="NseTransactionController transaction_date update" />
         <entry key="e051b986-02c6-4077-b0b4-32f665d23e49" value="create a new api bsensekey is_force_update check t" />
         <entry key="e182074b-354d-4785-b3bc-c0ff86484298" value="http://localhost:8081/nse/getMandateDetailsByClien" />
         <entry key="f4aad4f3-7842-4082-b93a-94d6ea16596f" value="https://efmicroservices.advisorkhoj.com/nse/submit" />
