@@ -1593,7 +1593,15 @@ public class NseOnboardingController {
             @RequestParam(required = false) String joint_holder_mobile2_isd_code,
             @RequestParam(required = false) String arn_number,
             @RequestParam(required = false) String gender,
-            @RequestParam(required = false) String source
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String client_type,
+            @RequestParam(required = false) String pms,
+            @RequestParam(required = false) String default_dp,
+            @RequestParam(required = false) String cdsl_dpid,
+            @RequestParam(required = false) String cdslcltid,
+            @RequestParam(required = false) String cmbp_id,
+            @RequestParam(required = false) String nsdldpid,
+            @RequestParam(required = false) String nsdlcltid
     ){
 
         try {
@@ -1827,6 +1835,14 @@ public class NseOnboardingController {
             arn_number = NseUtils.checkParem(arn_number);
             gender = NseUtils.checkParem(gender);
             nominee_soa = NseUtils.checkParem(nominee_soa);
+            client_type = NseUtils.checkParem(client_type);
+            pms = NseUtils.checkParem(pms);
+            default_dp = NseUtils.checkParem(default_dp);
+            cdsl_dpid = NseUtils.checkParem(cdsl_dpid);
+            cdslcltid = NseUtils.checkParem(cdslcltid);
+            cmbp_id = NseUtils.checkParem(cmbp_id);
+            nsdldpid = NseUtils.checkParem(nsdldpid);
+            nsdlcltid = NseUtils.checkParem(nsdlcltid);
 
             if(nominee_soa.isEmpty())
             {
@@ -2018,6 +2034,15 @@ public class NseOnboardingController {
                 nse.setNri_country(nri_country);
                 nse.setAddress_type_code(address_type);
                 nse.setAddress_type(address_type_desc);
+
+                nse.setClient_type(client_type);
+                nse.setPms(pms);
+                nse.setDefault_dp(default_dp);
+                nse.setCdsl_dpid(cdsl_dpid);
+                nse.setCdsl_cltid(cdslcltid);
+                nse.setCmbp_id(cmbp_id);
+                nse.setNsdl_dpid(nsdldpid);
+                nse.setNsdl_cltid(nsdlcltid);
 
                 //nse.setJoint_holder_place_of_birth1(joint_holder_place_birth);
                 //nse.setJoint_holder_place_of_birth2(joint_holder_place_birth1);
@@ -2228,6 +2253,16 @@ public class NseOnboardingController {
                 String client_pep_code = "";
                 String client_father_husband_guardian = "";
                 String client_guardian_pan = "";
+
+                String client_type = "";
+                String pms = "";
+                String default_dp = "";
+                String cdsl_dpid = "";
+                String cdsl_cltid = "";
+                String cmbp_id = "";
+                String nsdl_dpid = "";
+                String nsdl_cltid = "";
+
                 String joint_holder_name = "";
                 String joint_holder_dob = "";
                 String joint_holder_email  = "";
@@ -2406,6 +2441,14 @@ public class NseOnboardingController {
                     networth_dob = userBseNse.getNetworth_dob().trim();
                     networth_amount = userBseNse.getNetworth_amount().trim();
                     tax_statuscode = userBseNse.getTax_status_code().trim();
+                    client_type = userBseNse.getClient_type().trim();
+                    pms = userBseNse.getPms().trim();
+                    default_dp = userBseNse.getDefault_dp().trim();
+                    cdsl_cltid = userBseNse.getCdsl_cltid().trim();
+                    cdsl_dpid = userBseNse.getCdsl_dpid().trim();
+                    cmbp_id = userBseNse.getCmbp_id().trim();
+                    nsdl_cltid = userBseNse.getNsdl_cltid().trim();
+                    nsdl_dpid = userBseNse.getNsdl_dpid().trim();
                     System.out.println("client_dob= " + client_dob);
                     if(client_dob != null && !client_dob.isEmpty())
                     {
@@ -2655,6 +2698,15 @@ public class NseOnboardingController {
                     address_type = user.getAddress_type_code().trim();
                     networth_dob = user.getNetworth_dob().trim();
                     networth_amount = user.getNetworth_amount().trim();
+
+                    client_type = user.getClient_type().trim();
+                    pms = user.getPms().trim();
+                    default_dp = user.getDefault_dp().trim();
+                    cdsl_cltid = user.getCdsl_cltid().trim();
+                    cdsl_dpid = user.getCdsl_dpid().trim();
+                    cmbp_id = user.getCmbp_id().trim();
+                    nsdl_cltid = user.getNsdl_cltid().trim();
+                    nsdl_dpid = user.getNsdl_dpid().trim();
 
                     System.out.println("client_dob= " + client_dob);
 
@@ -3006,14 +3058,40 @@ public class NseOnboardingController {
                 regObject.put("second_holder_exempt_category", "");
                 regObject.put("third_holder_exempt_category", "");
                 regObject.put("guardian_exempt_category", "");
-                regObject.put("client_type", "P");
-                regObject.put("pms", "");
-                regObject.put("default_dp", "");
-                regObject.put("cdsl_dpid", "");
-                regObject.put("cdslcltid", "");
-                regObject.put("cmbp_id", "");
-                regObject.put("nsdldpid", "");
-                regObject.put("nsdlcltid", "");
+
+                String clientType = NseUtils.checkParem(client_type);
+
+                if(clientType.isEmpty())
+                {
+                    clientType = "P";
+                }
+
+                if(clientType.equalsIgnoreCase("P"))
+                {
+                    regObject.put("client_type", "P");
+                    regObject.put("pms", "");
+                    regObject.put("default_dp", "");
+                    regObject.put("cdsl_dpid", "");
+                    regObject.put("cdslcltid", "");
+                    regObject.put("cmbp_id", "");
+                    regObject.put("nsdldpid", "");
+                    regObject.put("nsdlcltid", "");
+                }else
+                {
+                    regObject.put("client_type", "D");
+                    regObject.put("pms", StringUtils.defaultString(pms));
+                    regObject.put("default_dp", StringUtils.defaultString(default_dp));
+                    if(default_dp.equalsIgnoreCase("CDSL"))
+                    {
+                        regObject.put("cdsl_dpid", StringUtils.defaultString(cdsl_dpid));
+                        regObject.put("cdslcltid", StringUtils.defaultString(cdsl_cltid));
+                    }else{
+                        regObject.put("cmbp_id", StringUtils.defaultString(cmbp_id));
+                        regObject.put("nsdldpid", StringUtils.defaultString(nsdl_dpid));
+                        regObject.put("nsdlcltid", StringUtils.defaultString(nsdl_cltid));
+                    }
+                }
+
                 regObject.put("account_type_1", client_acctype1);
                 regObject.put("account_no_1", client_accno1);
                 regObject.put("micr_no_1", client_micrcode1);

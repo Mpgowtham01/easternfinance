@@ -10040,6 +10040,7 @@ public class NseTransactionController {
             @RequestParam String broker_code,
             @RequestParam String order_id,
             @RequestParam String purchase_type,
+            @RequestParam(required = false) String client_code,
             @RequestParam(required = false) String source) {
 
         try
@@ -10053,6 +10054,7 @@ public class NseTransactionController {
             order_id = NseUtils.checkParem(order_id);
             broker_code = NseUtils.checkParem(broker_code);
             purchase_type = NseUtils.checkParem(purchase_type);
+            client_code = NseUtils.checkParem(client_code);
 
             LocalDate today = LocalDate.now();
             LocalDate fromDate = today.minusDays(6);
@@ -10087,9 +10089,16 @@ public class NseTransactionController {
                 JSONObject orderRequest = new JSONObject();
                 orderRequest.put("from_date", from_date);
                 orderRequest.put("to_date", to_date);
-                orderRequest.put("client_code", "");
+                if(client_code.isEmpty())
+                {
+                    orderRequest.put("client_code", "");
+                    orderRequest.put("product_id", order_id);
+                }else{
+                    orderRequest.put("client_code", client_code);
+                    orderRequest.put("product_id", "");
+                }
                 orderRequest.put("Product_type", PurcahseType);
-                orderRequest.put("product_id", order_id);
+
 
                 BseNseOnlineAccessDto online_access = userServiceClient.getBseNseOnlineAccessByClientName(client_name, broker_code,token);
 

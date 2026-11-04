@@ -4360,6 +4360,15 @@ public class FeignClientUserController
 			users.setJoint_holder_political_code1(userDto.getJoint_holder_political_code1());
 			users.setJoint_holder_political_code2(userDto.getJoint_holder_political_code2());
 
+			users.setClient_type(userDto.getClient_type());
+			users.setPms(userDto.getPms());
+			users.setDefault_dp(userDto.getDefault_dp());
+			users.setCdsl_dpid(userDto.getCdsl_dpid());
+			users.setCdsl_cltid(userDto.getCdsl_cltid());
+			users.setCmbp_id(userDto.getCmbp_id());
+			users.setNsdl_dpid(userDto.getNsdl_dpid());
+			users.setNsdl_cltid(userDto.getNsdl_cltid());
+
 			// Set nominee details
 			nomineeDetails.setNominee_soa(userDto.getNominee_soa());
 			nomineeDetails.setNominee1_type(userDto.getNominee1_type());
