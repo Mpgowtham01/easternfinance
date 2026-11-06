@@ -10041,6 +10041,8 @@ public class NseTransactionController {
             @RequestParam String order_id,
             @RequestParam String purchase_type,
             @RequestParam(required = false) String client_code,
+            @RequestParam(required = false) String from_date,
+            @RequestParam(required = false) String end_date,
             @RequestParam(required = false) String source) {
 
         try
@@ -10055,15 +10057,25 @@ public class NseTransactionController {
             broker_code = NseUtils.checkParem(broker_code);
             purchase_type = NseUtils.checkParem(purchase_type);
             client_code = NseUtils.checkParem(client_code);
+            from_date = NseUtils.checkParem(from_date);
+            end_date = NseUtils.checkParem(end_date);
 
-            LocalDate today = LocalDate.now();
-            LocalDate fromDate = today.minusDays(6);
+            if (from_date.isEmpty() || end_date.isEmpty())
+            {
+                LocalDate today = LocalDate.now();
+                LocalDate fromDate = today.minusDays(6);
+                from_date = fromDate.format(formatter);
+                end_date = today.format(formatter);
+            }
 
-            String from_date = fromDate.format(formatter);
-            String to_date = today.format(formatter);
+//            LocalDate today = LocalDate.now();
+//            LocalDate fromDate = today.minusDays(6);
+//
+//            String from_date = fromDate.format(formatter);
+//            String to_date = today.format(formatter);
 
             System.out.println("from_date " + from_date);
-            System.out.println("to_date " + to_date);
+            System.out.println("end_date " + end_date);
             System.out.println("order_id " + order_id);
 
             String PurcahseType = "";
@@ -10088,7 +10100,7 @@ public class NseTransactionController {
             {
                 JSONObject orderRequest = new JSONObject();
                 orderRequest.put("from_date", from_date);
-                orderRequest.put("to_date", to_date);
+                orderRequest.put("to_date", end_date);
                 if(client_code.isEmpty())
                 {
                     orderRequest.put("client_code", "");
