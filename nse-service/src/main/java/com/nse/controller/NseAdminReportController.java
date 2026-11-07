@@ -3668,7 +3668,7 @@ public class NseAdminReportController
             if (trans_type.isEmpty()) trans_type = "ALL";
 
             if (from_date.isEmpty() || to_date.isEmpty()) {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
                 LocalDate today = LocalDate.now();
                 LocalDate fromDate = today.minusDays(6);
                 from_date = fromDate.format(formatter);
@@ -3684,14 +3684,9 @@ public class NseAdminReportController
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("from_date", from_date);
             orderRequest.put("to_date", to_date);
-            orderRequest.put("trans_type", trans_type);
-            orderRequest.put("order_type", "ALL");
-            orderRequest.put("sub_order_type", "ALL");
+            orderRequest.put("Product_type", "");
+            orderRequest.put("product_id", "");
             orderRequest.put("client_code", "");
-            orderRequest.put("order_status", "All");
-            orderRequest.put("settlement_type", "ALL");
-            orderRequest.put("order_ids", "");
-            orderRequest.put("member_unique_ids", "");
 
             System.out.println("Request Body: " + orderRequest);
 
@@ -3759,9 +3754,11 @@ public class NseAdminReportController
 
         HttpEntity<String> entity = new HttpEntity<>(orderRequest.toString(), headers);
 
-        String orderStatus_url = report_status_type.equalsIgnoreCase("Order Status Report")
-                ? NseApiUrls.nse_order_status
-                : NseApiUrls.nse_preview_order;
+//        String orderStatus_url = report_status_type.equalsIgnoreCase("Order Status Report")
+//                ? NseApiUrls.nse_order_status
+//                : NseApiUrls.nse_preview_order;
+
+        String orderStatus_url = NseApiUrls.order_lifecycle;
 
         try
         {
@@ -3777,8 +3774,16 @@ public class NseAdminReportController
                     + " | body size = " + (responseBody == null ? 0 : responseBody.length()) + " chars");
 
             long parseStart = System.currentTimeMillis();
+//            JSONObject jsonResponse = new JSONObject(responseBody);
+//            JSONArray ordersArray = jsonResponse.optJSONArray("report_data");
+
             JSONObject jsonResponse = new JSONObject(responseBody);
+            if ("F".equalsIgnoreCase(jsonResponse.optString("response_status"))) {
+                System.out.println("❌ [" + brokerCode + "] NSE error_remark = " + jsonResponse.optString("error_remark"));
+                return;
+            }
             JSONArray ordersArray = jsonResponse.optJSONArray("report_data");
+
             System.out.println("📦 [" + brokerCode + "] Parsed JSON in " + (System.currentTimeMillis() - parseStart)
                     + " ms | report_data rows = " + (ordersArray == null ? "null" : ordersArray.length()));
 
@@ -3796,9 +3801,13 @@ public class NseAdminReportController
 
             IntStream.range(0, ordersArray.length()).mapToObj(ordersArray::getJSONObject).forEach(order ->
             {
-                String orderId     = order.optString("order_id");
+//                String orderId     = order.optString("order_id");
+//                String orderStatus = order.optString("order_status");
+//                String orderRemark = order.optString("order_remark");
+
+                String orderId     = order.optString("product_id");
                 String orderStatus = order.optString("order_status");
-                String orderRemark = order.optString("order_remark");
+                String orderRemark = order.optString("order_remark").trim();
 
                 combinedOrders.put(order);
 
