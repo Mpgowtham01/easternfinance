@@ -9724,6 +9724,35 @@ public class NseTransactionController {
                     System.out.println("res_reg_remark            : " + res_reg_remark);
                     System.out.println("res_member_unique_id      : " + res_member_unique_id);
 
+                    if(StringHelper.isNotEmpty(res_start_date))
+                    {
+                        res_start_date = res_start_date.replaceAll("/", "-");
+                    }
+
+                    final String RES_start_date = res_start_date;
+                    CartDto cart = cartList.stream().filter(schemeData -> schemeData.getScheme_product_code().equalsIgnoreCase(res_sch_code) && schemeData.getAmount().equalsIgnoreCase(res_installment_amount) && schemeData.getFolio_no().equalsIgnoreCase(res_folio_no) && schemeData.getStart_date().equalsIgnoreCase(RES_start_date)).findAny().orElse(null);
+
+                    if(cart != null)
+                    {
+                        cart.setPayment_type("");
+                        cart.setPayment_mode("");
+                        cart.setBank_name(bank_name);
+                        cart.setBank_account_number(client_accno);
+                        cart.setBank_ifsc(client_ifsccode);
+                        cart.setBroker_code(broker_code);
+                        cart.setEuin_code(euin);
+
+                        if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
+                        {
+                            cart.setStatus("SUCCESS");
+                            cart.setActive(false);
+                            cart.setStatus_date(new Date());
+                            cart.setPayment_id(String.valueOf(currentTimeMillis));
+                        }
+
+                        master_cart_list.add(cart);
+                    }
+
                     NseOnlineSchemeMaster nseOnlineSchemeMaster = nseOnlineSchemeMasters.stream().filter(obj -> obj.getSchemeCode().equalsIgnoreCase(res_sch_code)).findFirst().orElse(null);
                     System.out.println("nseOnlineSchemeMaster = " + nseOnlineSchemeMaster);
                     if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
@@ -9811,58 +9840,6 @@ public class NseTransactionController {
                     nsetrans.setSubbroker_code(subbroker_code);
                     nsetrans.setCart_id(cart_id_array.get(i));
                     nseTransactionService.save(nsetrans);
-
-                    if(source.equalsIgnoreCase("Mobile"))
-                    {
-                        CartDto cart = cartList.stream().filter(schemeData -> schemeData.getScheme_product_code().equalsIgnoreCase(nseOnlineSchemeMaster.getSchemeCode())).findAny().orElse(null);
-
-                        if(cart != null)
-                        {
-                            cart.setPayment_type("");
-                            cart.setPayment_mode("");
-                            cart.setBank_name(bank_name);
-                            cart.setBank_account_number(client_accno);
-                            cart.setBank_ifsc(client_ifsccode);
-                            cart.setBroker_code(broker_code);
-                            cart.setEuin_code(euin);
-
-                            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
-                            {
-                                cart.setStatus("SUCCESS");
-                                cart.setActive(false);
-                                cart.setStatus_date(new Date());
-                                cart.setPayment_id(String.valueOf(currentTimeMillis));
-                            }
-
-                            master_cart_list.add(cart);
-                        }
-                    }
-
-                    if(!cartid.isEmpty())
-                    {
-                        CartDto cart = cartList.stream().filter(schemeData -> schemeData.getScheme_product_code().equalsIgnoreCase(nseOnlineSchemeMaster.getSchemeCode())).findAny().orElse(null);
-
-                        if(cart != null)
-                        {
-                            cart.setPayment_type("");
-                            cart.setPayment_mode("");
-                            cart.setBank_name(bank_name);
-                            cart.setBank_account_number(client_accno);
-                            cart.setBank_ifsc(client_ifsccode);
-                            cart.setBroker_code(broker_code);
-                            cart.setEuin_code(euin);
-
-                            if(reg_status.equalsIgnoreCase("REG_SUCCESS"))
-                            {
-                                cart.setStatus("SUCCESS");
-                                cart.setActive(false);
-                                cart.setStatus_date(new Date());
-                                cart.setPayment_id(String.valueOf(currentTimeMillis));
-                            }
-
-                            master_cart_list.add(cart);
-                        }
-                    }
 
                     if (reg_status.equalsIgnoreCase("REG_SUCCESS"))
                     {
